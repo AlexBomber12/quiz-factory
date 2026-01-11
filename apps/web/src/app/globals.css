@@ -1,0 +1,36 @@
+:root {
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  background: #f6f5f3;
+  color: #141413;
+}
+
+main {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 64px 24px;
+}
+
+h1 {
+  font-size: 2.5rem;
+  letter-spacing: -0.02em;
+  margin-bottom: 16px;
+}
+
+p {
+  line-height: 1.6;
+}
+
+code {
+  background: #fff4d6;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
