@@ -1,0 +1,356 @@
+{
+  "page_view": {
+    "required_properties": [
+      "tenant_id",
+      "session_id",
+      "distinct_id",
+      "timestamp_utc",
+      "utm_source",
+      "utm_medium",
+      "utm_campaign",
+      "utm_content",
+      "utm_term",
+      "referrer",
+      "country",
+      "language",
+      "device_type"
+    ],
+    "optional_properties": [
+      "test_id",
+      "page_url",
+      "page_type",
+      "event_id",
+      "is_internal"
+    ]
+  },
+  "test_start": {
+    "required_properties": [
+      "tenant_id",
+      "session_id",
+      "distinct_id",
+      "test_id",
+      "timestamp_utc",
+      "utm_source",
+      "utm_medium",
+      "utm_campaign",
+      "utm_content",
+      "utm_term",
+      "referrer",
+      "country",
+      "language",
+      "device_type"
+    ],
+    "optional_properties": [
+      "event_id",
+      "is_internal"
+    ]
+  },
+  "test_complete": {
+    "required_properties": [
+      "tenant_id",
+      "session_id",
+      "distinct_id",
+      "test_id",
+      "timestamp_utc",
+      "utm_source",
+      "utm_medium",
+      "utm_campaign",
+      "utm_content",
+      "utm_term",
+      "referrer",
+      "country",
+      "language",
+      "device_type"
+    ],
+    "optional_properties": [
+      "event_id",
+      "is_internal"
+    ]
+  },
+  "result_preview_view": {
+    "required_properties": [
+      "tenant_id",
+      "session_id",
+      "distinct_id",
+      "test_id",
+      "timestamp_utc",
+      "utm_source",
+      "utm_medium",
+      "utm_campaign",
+      "utm_content",
+      "utm_term",
+      "referrer",
+      "country",
+      "language",
+      "device_type"
+    ],
+    "optional_properties": [
+      "event_id",
+      "is_internal"
+    ]
+  },
+  "paywall_view": {
+    "required_properties": [
+      "tenant_id",
+      "session_id",
+      "distinct_id",
+      "test_id",
+      "timestamp_utc",
+      "utm_source",
+      "utm_medium",
+      "utm_campaign",
+      "utm_content",
+      "utm_term",
+      "referrer",
+      "country",
+      "language",
+      "device_type"
+    ],
+    "optional_properties": [
+      "event_id",
+      "is_internal"
+    ]
+  },
+  "checkout_start": {
+    "required_properties": [
+      "tenant_id",
+      "session_id",
+      "distinct_id",
+      "test_id",
+      "timestamp_utc",
+      "utm_source",
+      "utm_medium",
+      "utm_campaign",
+      "utm_content",
+      "utm_term",
+      "referrer",
+      "country",
+      "language",
+      "device_type"
+    ],
+    "optional_properties": [
+      "purchase_id",
+      "order_id",
+      "event_id",
+      "is_internal"
+    ]
+  },
+  "purchase_success": {
+    "required_properties": [
+      "tenant_id",
+      "session_id",
+      "distinct_id",
+      "test_id",
+      "purchase_id",
+      "amount_gross_eur",
+      "currency",
+      "timestamp_utc",
+      "utm_source",
+      "utm_medium",
+      "utm_campaign",
+      "utm_content",
+      "utm_term",
+      "referrer",
+      "country",
+      "language",
+      "device_type"
+    ],
+    "optional_properties": [
+      "order_id",
+      "event_id",
+      "is_internal"
+    ]
+  },
+  "purchase_failed": {
+    "required_properties": [
+      "tenant_id",
+      "session_id",
+      "distinct_id",
+      "test_id",
+      "purchase_id",
+      "failure_reason",
+      "timestamp_utc",
+      "utm_source",
+      "utm_medium",
+      "utm_campaign",
+      "utm_content",
+      "utm_term",
+      "referrer",
+      "country",
+      "language",
+      "device_type"
+    ],
+    "optional_properties": [
+      "order_id",
+      "event_id",
+      "is_internal"
+    ]
+  },
+  "report_view": {
+    "required_properties": [
+      "tenant_id",
+      "session_id",
+      "distinct_id",
+      "test_id",
+      "purchase_id",
+      "timestamp_utc",
+      "utm_source",
+      "utm_medium",
+      "utm_campaign",
+      "utm_content",
+      "utm_term",
+      "referrer",
+      "country",
+      "language",
+      "device_type"
+    ],
+    "optional_properties": [
+      "event_id",
+      "is_internal"
+    ]
+  },
+  "report_pdf_download": {
+    "required_properties": [
+      "tenant_id",
+      "session_id",
+      "distinct_id",
+      "test_id",
+      "purchase_id",
+      "timestamp_utc",
+      "utm_source",
+      "utm_medium",
+      "utm_campaign",
+      "utm_content",
+      "utm_term",
+      "referrer",
+      "country",
+      "language",
+      "device_type"
+    ],
+    "optional_properties": [
+      "event_id",
+      "is_internal"
+    ]
+  },
+  "upsell_view": {
+    "required_properties": [
+      "tenant_id",
+      "session_id",
+      "distinct_id",
+      "test_id",
+      "purchase_id",
+      "timestamp_utc",
+      "utm_source",
+      "utm_medium",
+      "utm_campaign",
+      "utm_content",
+      "utm_term",
+      "referrer",
+      "country",
+      "language",
+      "device_type"
+    ],
+    "optional_properties": [
+      "upsell_id",
+      "event_id",
+      "is_internal"
+    ]
+  },
+  "upsell_accept": {
+    "required_properties": [
+      "tenant_id",
+      "session_id",
+      "distinct_id",
+      "test_id",
+      "purchase_id",
+      "upsell_id",
+      "timestamp_utc",
+      "utm_source",
+      "utm_medium",
+      "utm_campaign",
+      "utm_content",
+      "utm_term",
+      "referrer",
+      "country",
+      "language",
+      "device_type"
+    ],
+    "optional_properties": [
+      "event_id",
+      "is_internal"
+    ]
+  },
+  "refund_issued": {
+    "required_properties": [
+      "tenant_id",
+      "session_id",
+      "distinct_id",
+      "purchase_id",
+      "refund_id",
+      "refund_amount_eur",
+      "timestamp_utc",
+      "utm_source",
+      "utm_medium",
+      "utm_campaign",
+      "utm_content",
+      "utm_term",
+      "referrer",
+      "country",
+      "language",
+      "device_type"
+    ],
+    "optional_properties": [
+      "test_id",
+      "event_id",
+      "is_internal"
+    ]
+  },
+  "dispute_opened": {
+    "required_properties": [
+      "tenant_id",
+      "session_id",
+      "distinct_id",
+      "purchase_id",
+      "dispute_id",
+      "dispute_fee_eur",
+      "timestamp_utc",
+      "utm_source",
+      "utm_medium",
+      "utm_campaign",
+      "utm_content",
+      "utm_term",
+      "referrer",
+      "country",
+      "language",
+      "device_type"
+    ],
+    "optional_properties": [
+      "test_id",
+      "event_id",
+      "is_internal"
+    ]
+  },
+  "share_click": {
+    "required_properties": [
+      "tenant_id",
+      "session_id",
+      "distinct_id",
+      "test_id",
+      "share_target",
+      "timestamp_utc",
+      "utm_source",
+      "utm_medium",
+      "utm_campaign",
+      "utm_content",
+      "utm_term",
+      "referrer",
+      "country",
+      "language",
+      "device_type"
+    ],
+    "optional_properties": [
+      "event_id",
+      "is_internal"
+    ]
+  }
+}
