@@ -33,6 +33,7 @@ export type AnalyticsEventProperties = {
   locale: string | null;
   purchase_id?: string | null;
   amount_eur?: number | null;
+  currency?: string | null;
   product_type?: string | null;
   payment_provider?: string | null;
   is_upsell?: boolean | null;

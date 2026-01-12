@@ -391,10 +391,11 @@ const handleCheckoutSessionCompleted = async (
       const properties = buildFinanceBaseProperties(metadata, purchaseRow.created_utc);
       properties.purchase_id = purchaseRow.purchase_id;
       properties.amount_eur = purchaseRow.amount_eur;
+      properties.currency = purchaseRow.currency;
       properties.product_type = purchaseRow.product_type;
       properties.payment_provider = "stripe";
       properties.is_upsell = purchaseRow.is_upsell;
-      await deps.captureEvent("purchase_success", properties);
+      void deps.captureEvent("purchase_success", properties).catch(() => null);
     }
   }
 
@@ -428,7 +429,7 @@ const handleChargeRefunded = async (
       properties.refund_id = refundRow.refund_id;
       properties.amount_eur = refundRow.amount_eur;
       properties.payment_provider = "stripe";
-      await deps.captureEvent("refund_issued", properties);
+      void deps.captureEvent("refund_issued", properties).catch(() => null);
     }
   }
 
@@ -467,7 +468,7 @@ const handleDisputeCreated = async (
     properties.dispute_id = disputeRow.dispute_id;
     properties.amount_eur = disputeRow.amount_eur;
     properties.payment_provider = "stripe";
-    await deps.captureEvent("dispute_opened", properties);
+    void deps.captureEvent("dispute_opened", properties).catch(() => null);
   }
 
   return { status: "ok" };
