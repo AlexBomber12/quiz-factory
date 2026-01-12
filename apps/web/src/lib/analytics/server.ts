@@ -1,20 +1,35 @@
 import { NextResponse } from "next/server";
 
-import { buildBaseEventProperties, type AnalyticsEventName } from "./events";
+import {
+  buildBaseEventProperties,
+  type AnalyticsEventName,
+  type AnalyticsEventProperties
+} from "./events";
 import { capturePosthogEvent } from "./posthog";
 import {
+  CLICK_COOKIE_NAME,
+  DISTINCT_COOKIE_NAME,
   SESSION_COOKIE_NAME,
   UTM_COOKIE_NAME,
+  createDistinctId,
   createSessionId,
+  getClickIdsFromCookies,
+  getClickIdsFromRequest,
+  getClickIdsFromSessionStore,
+  getDistinctIdFromRequest,
   getSessionIdFromRequest,
   getUtmFromCookies,
   getUtmFromSessionStore,
   getUtmFromRequest,
+  hasClickIdValues,
   hasUtmValues,
+  mergeClickIds,
   mergeUtm,
   normalizeString,
   parseCookies,
+  serializeClickIdsCookie,
   serializeUtmCookie,
+  storeClickIdsForSession,
   storeUtmForSession
 } from "./session";
 import { resolveTenantId } from "./tenant";
@@ -29,11 +44,17 @@ type AnalyticsRequestBody = {
   language?: unknown;
   device_type?: unknown;
   purchase_id?: unknown;
+  product_type?: unknown;
+  is_upsell?: unknown;
+  pricing_variant?: unknown;
   utm_source?: unknown;
   utm_medium?: unknown;
   utm_campaign?: unknown;
   utm_content?: unknown;
   utm_term?: unknown;
+  fbclid?: unknown;
+  gclid?: unknown;
+  ttclid?: unknown;
 };
 
 const parseJsonBody = async (request: Request): Promise<AnalyticsRequestBody> => {
@@ -62,12 +83,23 @@ const respondBadRequest = (message: string): NextResponse => {
   return NextResponse.json({ error: message }, { status: 400 });
 };
 
+type ResponseExtensionContext = {
+  body: AnalyticsRequestBody;
+  properties: AnalyticsEventProperties;
+  sessionId: string;
+  tenantId: string;
+  distinctId: string;
+  utm: ReturnType<typeof mergeUtm>;
+  clickIds: ReturnType<typeof mergeClickIds>;
+};
+
 export const handleAnalyticsEvent = async (
   request: Request,
   options: {
     event: AnalyticsEventName;
     createSession?: boolean;
     requirePurchaseId?: boolean;
+    extendResponse?: (context: ResponseExtensionContext) => Record<string, unknown>;
   }
 ): Promise<Response> => {
   const body = await parseJsonBody(request);
@@ -79,10 +111,8 @@ export const handleAnalyticsEvent = async (
     return respondBadRequest("test_id is required");
   }
 
-  const distinctId = requireString(body.distinct_id);
-  if (!distinctId) {
-    return respondBadRequest("distinct_id is required");
-  }
+  const distinctIdFromRequest = getDistinctIdFromRequest({ body, cookies });
+  const distinctId = distinctIdFromRequest ?? createDistinctId();
 
   const sessionId = options.createSession
     ? createSessionId()
@@ -91,7 +121,9 @@ export const handleAnalyticsEvent = async (
     return respondBadRequest("session_id is required");
   }
 
-  const hostHeader = request.headers.get("host") ?? url.host;
+  const forwardedHost = request.headers.get("x-forwarded-host");
+  const hostHeader =
+    forwardedHost?.split(",")[0]?.trim() ?? request.headers.get("host") ?? url.host;
   const tenantId = resolveTenantId(hostHeader);
 
   const incomingUtm = getUtmFromRequest({ body, url });
@@ -99,12 +131,18 @@ export const handleAnalyticsEvent = async (
   const sessionUtm = getUtmFromSessionStore(sessionId);
   const mergedUtm = mergeUtm(storedUtm ?? sessionUtm, incomingUtm);
 
+  const incomingClickIds = getClickIdsFromRequest({ body, url });
+  const storedClickIds = getClickIdsFromCookies(cookies);
+  const sessionClickIds = getClickIdsFromSessionStore(sessionId);
+  const mergedClickIds = mergeClickIds(storedClickIds ?? sessionClickIds, incomingClickIds);
+
   const properties = buildBaseEventProperties({
     tenantId,
     sessionId,
     distinctId,
     testId,
     utm: mergedUtm,
+    clickIds: mergedClickIds,
     locale: normalizeString(body.locale),
     referrer: normalizeString(body.referrer),
     country: normalizeString(body.country),
@@ -120,14 +158,38 @@ export const handleAnalyticsEvent = async (
     properties.purchase_id = purchaseId;
   }
 
-  await capturePosthogEvent(options.event, properties);
+  void capturePosthogEvent(options.event, properties).catch(() => null);
 
-  const response = NextResponse.json({
+  const responsePayload: Record<string, unknown> = {
     session_id: sessionId,
     tenant_id: tenantId
-  });
+  };
+
+  if (options.extendResponse) {
+    Object.assign(
+      responsePayload,
+      options.extendResponse({
+        body,
+        properties,
+        sessionId,
+        tenantId,
+        distinctId,
+        utm: mergedUtm,
+        clickIds: mergedClickIds
+      })
+    );
+  }
+
+  const response = NextResponse.json(responsePayload);
 
   response.cookies.set(SESSION_COOKIE_NAME, sessionId, {
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/",
+    secure: process.env.NODE_ENV === "production"
+  });
+
+  response.cookies.set(DISTINCT_COOKIE_NAME, distinctId, {
     httpOnly: true,
     sameSite: "lax",
     path: "/",
@@ -137,6 +199,16 @@ export const handleAnalyticsEvent = async (
   if (hasUtmValues(mergedUtm)) {
     storeUtmForSession(sessionId, mergedUtm);
     response.cookies.set(UTM_COOKIE_NAME, serializeUtmCookie(mergedUtm), {
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/",
+      secure: process.env.NODE_ENV === "production"
+    });
+  }
+
+  if (hasClickIdValues(mergedClickIds)) {
+    storeClickIdsForSession(sessionId, mergedClickIds);
+    response.cookies.set(CLICK_COOKIE_NAME, serializeClickIdsCookie(mergedClickIds), {
       httpOnly: true,
       sameSite: "lax",
       path: "/",

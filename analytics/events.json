@@ -1,4 +1,26 @@
 {
+  "forbidden_properties": [
+    "email",
+    "phone",
+    "full_name",
+    "first_name",
+    "last_name",
+    "address",
+    "exact_gps",
+    "government_id",
+    "answers",
+    "responses",
+    "question_answers",
+    "free_text",
+    "open_text",
+    "card_*",
+    "iban",
+    "billing_*",
+    "cvc",
+    "pan",
+    "ip",
+    "ip_address"
+  ],
   "page_view": {
     "required_properties": [
       "tenant_id",
@@ -20,7 +42,10 @@
       "page_url",
       "page_type",
       "event_id",
-      "is_internal"
+      "is_internal",
+      "fbclid",
+      "gclid",
+      "ttclid"
     ]
   },
   "test_start": {
@@ -42,7 +67,10 @@
     ],
     "optional_properties": [
       "event_id",
-      "is_internal"
+      "is_internal",
+      "fbclid",
+      "gclid",
+      "ttclid"
     ]
   },
   "test_complete": {
@@ -64,7 +92,10 @@
     ],
     "optional_properties": [
       "event_id",
-      "is_internal"
+      "is_internal",
+      "fbclid",
+      "gclid",
+      "ttclid"
     ]
   },
   "result_preview_view": {
@@ -86,7 +117,10 @@
     ],
     "optional_properties": [
       "event_id",
-      "is_internal"
+      "is_internal",
+      "fbclid",
+      "gclid",
+      "ttclid"
     ]
   },
   "paywall_view": {
@@ -108,7 +142,10 @@
     ],
     "optional_properties": [
       "event_id",
-      "is_internal"
+      "is_internal",
+      "fbclid",
+      "gclid",
+      "ttclid"
     ]
   },
   "checkout_start": {
@@ -132,7 +169,10 @@
       "purchase_id",
       "order_id",
       "event_id",
-      "is_internal"
+      "is_internal",
+      "fbclid",
+      "gclid",
+      "ttclid"
     ]
   },
   "purchase_success": {
@@ -142,7 +182,10 @@
       "distinct_id",
       "test_id",
       "purchase_id",
-      "amount_gross_eur",
+      "amount_eur",
+      "product_type",
+      "payment_provider",
+      "is_upsell",
       "currency",
       "timestamp_utc",
       "utm_source",
@@ -158,7 +201,10 @@
     "optional_properties": [
       "order_id",
       "event_id",
-      "is_internal"
+      "is_internal",
+      "fbclid",
+      "gclid",
+      "ttclid"
     ]
   },
   "purchase_failed": {
@@ -183,7 +229,10 @@
     "optional_properties": [
       "order_id",
       "event_id",
-      "is_internal"
+      "is_internal",
+      "fbclid",
+      "gclid",
+      "ttclid"
     ]
   },
   "report_view": {
@@ -206,7 +255,10 @@
     ],
     "optional_properties": [
       "event_id",
-      "is_internal"
+      "is_internal",
+      "fbclid",
+      "gclid",
+      "ttclid"
     ]
   },
   "report_pdf_download": {
@@ -229,7 +281,10 @@
     ],
     "optional_properties": [
       "event_id",
-      "is_internal"
+      "is_internal",
+      "fbclid",
+      "gclid",
+      "ttclid"
     ]
   },
   "upsell_view": {
@@ -253,7 +308,10 @@
     "optional_properties": [
       "upsell_id",
       "event_id",
-      "is_internal"
+      "is_internal",
+      "fbclid",
+      "gclid",
+      "ttclid"
     ]
   },
   "upsell_accept": {
@@ -277,7 +335,10 @@
     ],
     "optional_properties": [
       "event_id",
-      "is_internal"
+      "is_internal",
+      "fbclid",
+      "gclid",
+      "ttclid"
     ]
   },
   "refund_issued": {
@@ -287,7 +348,8 @@
       "distinct_id",
       "purchase_id",
       "refund_id",
-      "refund_amount_eur",
+      "amount_eur",
+      "payment_provider",
       "timestamp_utc",
       "utm_source",
       "utm_medium",
@@ -302,7 +364,10 @@
     "optional_properties": [
       "test_id",
       "event_id",
-      "is_internal"
+      "is_internal",
+      "fbclid",
+      "gclid",
+      "ttclid"
     ]
   },
   "dispute_opened": {
@@ -312,7 +377,8 @@
       "distinct_id",
       "purchase_id",
       "dispute_id",
-      "dispute_fee_eur",
+      "amount_eur",
+      "payment_provider",
       "timestamp_utc",
       "utm_source",
       "utm_medium",
@@ -327,7 +393,10 @@
     "optional_properties": [
       "test_id",
       "event_id",
-      "is_internal"
+      "is_internal",
+      "fbclid",
+      "gclid",
+      "ttclid"
     ]
   },
   "share_click": {
@@ -350,7 +419,10 @@
     ],
     "optional_properties": [
       "event_id",
-      "is_internal"
+      "is_internal",
+      "fbclid",
+      "gclid",
+      "ttclid"
     ]
   }
 }

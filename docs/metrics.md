@@ -12,11 +12,13 @@
 - Multi-tenant: tenant_id identifies a site (domain + language + country + audience).
 - No user accounts; users are anonymous.
 - Revenue is recognized only from backend payment facts, not from client pixels.
+- Raw timestamps are stored in UTC.
+- Daily marts use a single configurable reporting timezone, default UTC.
 
 ## 3. Core identifiers
 - tenant_id: format `tenant-<slug>`; generated in tenant provisioning.
-- distinct_id: format `uuid_v4`; generated client-side on first visit and stored in local storage.
-- session_id: format `uuid_v4`; generated on test_start to identify a single test attempt.
+- distinct_id: format `uuid_v4`; canonical anonymous visitor id (visitor_id); generated client-side on first visit and stored in local storage.
+- session_id: format `uuid_v4`; canonical attempt id (attempt_id); generated on test_start to identify a single test attempt.
 - test_id: format `test-<slug>`; generated in content pipeline and stored in the test catalog.
 - purchase_id: format `uuid_v4`; generated in backend checkout service when a payment intent is created.
 - order_id: format `order-<slug>`; generated in order service when separate from purchase_id, otherwise equal to purchase_id.
@@ -58,14 +60,14 @@ Required dimensions for every fact row:
 - result_preview_view: test_id.
 - paywall_view: test_id.
 - checkout_start: test_id.
-- purchase_success: test_id, purchase_id, amount_gross_eur, currency.
+- purchase_success: test_id, purchase_id, amount_eur, product_type, payment_provider, is_upsell, currency.
 - purchase_failed: test_id, purchase_id, failure_reason.
 - report_view: test_id, purchase_id.
 - report_pdf_download: test_id, purchase_id.
 - upsell_view: test_id, purchase_id.
 - upsell_accept: test_id, purchase_id, upsell_id.
-- refund_issued: purchase_id, refund_id, refund_amount_eur.
-- dispute_opened: purchase_id, dispute_id, dispute_fee_eur.
+- refund_issued: purchase_id, refund_id, amount_eur, payment_provider.
+- dispute_opened: purchase_id, dispute_id, amount_eur, payment_provider.
 - share_click: test_id, share_target.
 - purchase_success MUST be emitted server-side after Stripe webhook confirmation.
 - Each event MUST include tenant_id, session_id, distinct_id, test_id (when applicable), timestamp_utc, and all UTM fields (may be null).
@@ -130,6 +132,8 @@ Required dimensions for every fact row:
 ## 10. Privacy and retention
 - Do not store raw free-text answers unless explicitly required.
 - Prefer storing only derived scores per scale.
+- Stripe raw payloads may contain PII and must not be stored in analytics raw tables.
+- Only minimal Stripe facts and our own metadata keys are allowed.
 - Retention defaults (example):
   - raw events retained 18 months.
   - finance facts retained 7 years (accounting needs).

@@ -8,6 +8,14 @@ type CapturePayload = {
   timestamp: string;
 };
 
+const RETRY_ATTEMPTS = 3;
+const RETRY_BASE_DELAY_MS = 200;
+
+const sleep = (ms: number): Promise<void> =>
+  new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+
 export const capturePosthogEvent = async (
   eventName: AnalyticsEventName,
   properties: AnalyticsEventProperties,
@@ -29,13 +37,27 @@ export const capturePosthogEvent = async (
     timestamp: properties.timestamp_utc
   };
 
-  const response = await fetchFn(url, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json"
-    },
-    body: JSON.stringify(payload)
-  });
+  for (let attempt = 0; attempt < RETRY_ATTEMPTS; attempt += 1) {
+    try {
+      const response = await fetchFn(url, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
 
-  return { ok: response.ok, skipped: false };
+      if (response.ok) {
+        return { ok: true, skipped: false };
+      }
+    } catch {
+      // Best-effort retry.
+    }
+
+    if (attempt < RETRY_ATTEMPTS - 1) {
+      await sleep(RETRY_BASE_DELAY_MS * Math.pow(2, attempt));
+    }
+  }
+
+  return { ok: false, skipped: false };
 };
