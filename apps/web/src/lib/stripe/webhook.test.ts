@@ -166,5 +166,6 @@ describe("stripe webhook processing", () => {
     const [eventName, properties] = captureEvent.mock.calls[0] ?? [];
     expect(eventName).toBe("purchase_success");
     expect(properties.session_id).toBe("session-abc");
+    expect(properties.currency).toBe("eur");
   });
 });

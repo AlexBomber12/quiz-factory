@@ -27,7 +27,7 @@ Queue (in order)
 - Depends on: PR-ANALYTICS-01 and PR-FIX-ANALYTICS-01
 
 3) PR-ANALYTICS-03: Stripe Webhooks, Finance Facts, and Tracking Alignment
-- Status: TODO
+- Status: DOING
 - Tasks file: tasks/PR-ANALYTICS-03.md
 - Depends on: PR-ANALYTICS-02
 - Outcome:
