@@ -1,0 +1,148 @@
+import { NextResponse } from "next/server";
+
+import { buildBaseEventProperties, type AnalyticsEventName } from "./events";
+import { capturePosthogEvent } from "./posthog";
+import {
+  SESSION_COOKIE_NAME,
+  UTM_COOKIE_NAME,
+  createSessionId,
+  getSessionIdFromRequest,
+  getUtmFromCookies,
+  getUtmFromSessionStore,
+  getUtmFromRequest,
+  hasUtmValues,
+  mergeUtm,
+  normalizeString,
+  parseCookies,
+  serializeUtmCookie,
+  storeUtmForSession
+} from "./session";
+import { resolveTenantId } from "./tenant";
+
+type AnalyticsRequestBody = {
+  test_id?: unknown;
+  distinct_id?: unknown;
+  session_id?: unknown;
+  locale?: unknown;
+  referrer?: unknown;
+  country?: unknown;
+  language?: unknown;
+  device_type?: unknown;
+  purchase_id?: unknown;
+  utm_source?: unknown;
+  utm_medium?: unknown;
+  utm_campaign?: unknown;
+  utm_content?: unknown;
+  utm_term?: unknown;
+};
+
+const parseJsonBody = async (request: Request): Promise<AnalyticsRequestBody> => {
+  const contentType = request.headers.get("content-type") ?? "";
+  if (!contentType.includes("application/json")) {
+    return {};
+  }
+
+  try {
+    return (await request.json()) as AnalyticsRequestBody;
+  } catch {
+    return {};
+  }
+};
+
+const requireString = (value: unknown): string | null => {
+  const normalized = normalizeString(value);
+  if (!normalized) {
+    return null;
+  }
+
+  return normalized;
+};
+
+const respondBadRequest = (message: string): NextResponse => {
+  return NextResponse.json({ error: message }, { status: 400 });
+};
+
+export const handleAnalyticsEvent = async (
+  request: Request,
+  options: {
+    event: AnalyticsEventName;
+    createSession?: boolean;
+    requirePurchaseId?: boolean;
+  }
+): Promise<Response> => {
+  const body = await parseJsonBody(request);
+  const cookies = parseCookies(request.headers.get("cookie"));
+  const url = new URL(request.url);
+
+  const testId = requireString(body.test_id);
+  if (!testId) {
+    return respondBadRequest("test_id is required");
+  }
+
+  const distinctId = requireString(body.distinct_id);
+  if (!distinctId) {
+    return respondBadRequest("distinct_id is required");
+  }
+
+  const sessionId = options.createSession
+    ? createSessionId()
+    : getSessionIdFromRequest({ body, cookies });
+  if (!sessionId) {
+    return respondBadRequest("session_id is required");
+  }
+
+  const hostHeader = request.headers.get("host") ?? url.host;
+  const tenantId = resolveTenantId(hostHeader);
+
+  const incomingUtm = getUtmFromRequest({ body, url });
+  const storedUtm = getUtmFromCookies(cookies);
+  const sessionUtm = getUtmFromSessionStore(sessionId);
+  const mergedUtm = mergeUtm(storedUtm ?? sessionUtm, incomingUtm);
+
+  const properties = buildBaseEventProperties({
+    tenantId,
+    sessionId,
+    distinctId,
+    testId,
+    utm: mergedUtm,
+    locale: normalizeString(body.locale),
+    referrer: normalizeString(body.referrer),
+    country: normalizeString(body.country),
+    language: normalizeString(body.language),
+    deviceType: normalizeString(body.device_type)
+  });
+
+  const purchaseId = normalizeString(body.purchase_id);
+  if (options.requirePurchaseId && !purchaseId) {
+    return respondBadRequest("purchase_id is required");
+  }
+  if (purchaseId) {
+    properties.purchase_id = purchaseId;
+  }
+
+  await capturePosthogEvent(options.event, properties);
+
+  const response = NextResponse.json({
+    session_id: sessionId,
+    tenant_id: tenantId
+  });
+
+  response.cookies.set(SESSION_COOKIE_NAME, sessionId, {
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/",
+    secure: process.env.NODE_ENV === "production"
+  });
+
+  if (hasUtmValues(mergedUtm)) {
+    storeUtmForSession(sessionId, mergedUtm);
+    response.cookies.set(UTM_COOKIE_NAME, serializeUtmCookie(mergedUtm), {
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/",
+      secure: process.env.NODE_ENV === "production"
+    });
+  }
+
+  return response;
+};
