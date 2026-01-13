@@ -107,3 +107,12 @@ uv sync --frozen
 uv run dbt deps
 uv run dbt compile
 ```
+
+Incremental lookback check for same day spend updates:
+
+1. Load a spend CSV for today into raw_costs.ad_spend_daily.
+2. Run `uv run dbt build --select stg_ad_spend_daily mart_spend_mapped_daily mart_pnl_daily`.
+3. Record the total ad_spend_eur for today in marts.mart_pnl_daily.
+4. Re-import corrected spend for the same date.
+5. Re-run the same dbt build command.
+6. Confirm the totals reflect the corrected spend for today.

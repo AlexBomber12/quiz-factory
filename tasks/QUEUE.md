@@ -142,7 +142,7 @@ Queue (in order)
   - platform collisions no longer corrupt P&L
 
 16) PR-ANALYTICS-15: Incremental Robustness (Same-Day Updates and Late Events)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-ANALYTICS-15.md
 - Depends on: PR-ANALYTICS-14
 - Outcome:

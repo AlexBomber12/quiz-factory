@@ -8,7 +8,13 @@
 }}
 
 {% set incremental_date %}
-(select coalesce(max(date), date('1900-01-01')) from {{ this }})
+(
+  select date_sub(
+    coalesce(max(date), date('1900-01-01')),
+    interval {{ var("incremental_lookback_days") }} day
+  )
+  from {{ this }}
+)
 {% endset %}
 
 with events_base as (

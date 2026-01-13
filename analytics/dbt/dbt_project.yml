@@ -17,3 +17,4 @@ models:
 
 vars:
   reporting_timezone: "UTC"
+  incremental_lookback_days: 2

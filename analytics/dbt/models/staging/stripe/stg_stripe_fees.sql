@@ -22,8 +22,11 @@ filtered as (
   select *
   from source
   {% if is_incremental() %}
-  where created_utc > (
-    select coalesce(max(created_utc), timestamp('1900-01-01'))
+  where created_utc >= (
+    select timestamp_sub(
+      coalesce(max(created_utc), timestamp('1900-01-01')),
+      interval {{ var("incremental_lookback_days") }} day
+    )
     from {{ this }}
   )
   {% endif %}
