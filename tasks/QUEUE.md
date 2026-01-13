@@ -54,7 +54,7 @@ Queue (in order)
   - incremental models and tests
 
 6) PR-ANALYTICS-06: Dashboards (P&L Daily, Funnel Daily) (Revised)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-ANALYTICS-06.md
 - Depends on: PR-ANALYTICS-05
 - Outcome:
