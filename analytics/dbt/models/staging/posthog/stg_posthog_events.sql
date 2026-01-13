@@ -21,7 +21,8 @@ with source as (
     json_value(properties, '$.session_id') as session_id,
     json_value(properties, '$.locale') as locale,
     json_value(properties, '$.device_type') as device_type,
-    json_value(properties, '$.utm_source') as utm_source,
+    {{ normalize_utm_source("json_value(properties, '$.utm_source')") }}
+      as utm_source,
     json_value(properties, '$.utm_medium') as utm_medium,
     json_value(properties, '$.utm_campaign') as utm_campaign,
     json_value(properties, '$.utm_content') as utm_content,

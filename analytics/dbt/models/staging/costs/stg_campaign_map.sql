@@ -9,7 +9,7 @@
 
 with source as (
   select
-    lower(platform) as platform,
+    {{ normalize_utm_source('platform') }} as platform,
     account_id,
     campaign_id,
     utm_campaign,

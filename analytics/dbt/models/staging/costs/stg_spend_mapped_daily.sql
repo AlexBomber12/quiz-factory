@@ -8,6 +8,7 @@ with spend as (
   select
     date,
     platform,
+    utm_source,
     account_id,
     campaign_id,
     campaign_name,
@@ -33,6 +34,7 @@ mapped as (
   select
     s.date,
     s.platform,
+    s.utm_source,
     s.account_id,
     s.campaign_id,
     s.campaign_name,
@@ -56,6 +58,7 @@ mapped as (
 select
   date,
   platform,
+  utm_source,
   account_id,
   campaign_id,
   campaign_name,
