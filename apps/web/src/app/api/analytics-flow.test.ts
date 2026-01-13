@@ -112,7 +112,10 @@ describe("analytics flow", () => {
     const sessionId = startPayload.session_id as string;
 
     expect(sessionId).toBeTruthy();
-    expect(startResponse.headers.get("set-cookie")).toContain("qf_session_id");
+    const startCookies = startResponse.headers.get("set-cookie") ?? "";
+    expect(startCookies).toContain("qf_session_id");
+    expect(startCookies).toContain("qf_utm=");
+    expect(startCookies).toContain("Max-Age=");
 
     const followupBody = { ...baseBody, session_id: sessionId };
     const pageViewResponse = await pageView(

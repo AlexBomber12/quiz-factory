@@ -11,28 +11,21 @@ import {
   DISTINCT_COOKIE_NAME,
   SESSION_COOKIE_NAME,
   UTM_COOKIE_NAME,
+  type ClickIdParams,
   createDistinctId,
   createSessionId,
-  getClickIdsFromCookies,
-  getClickIdsFromRequest,
-  getClickIdsFromSessionStore,
   getDistinctIdFromRequest,
   getSessionIdFromRequest,
-  getUtmFromCookies,
-  getUtmFromSessionStore,
-  getUtmFromRequest,
-  hasClickIdValues,
-  hasUtmValues,
-  mergeClickIds,
-  mergeUtm,
+  getTrackingContextFromRequest,
   normalizeString,
   parseCookies,
   serializeClickIdsCookie,
   serializeUtmCookie,
-  storeClickIdsForSession,
-  storeUtmForSession
+  type UtmParams
 } from "./session";
 import { resolveLocale, resolveTenant } from "../tenants/resolve";
+
+const TRACKING_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 90;
 
 type AnalyticsRequestBody = {
   test_id?: unknown;
@@ -93,8 +86,8 @@ type ResponseExtensionContext = {
   sessionId: string;
   tenantId: string;
   distinctId: string;
-  utm: ReturnType<typeof mergeUtm>;
-  clickIds: ReturnType<typeof mergeClickIds>;
+  utm: UtmParams;
+  clickIds: ClickIdParams;
 };
 
 export const handleAnalyticsEvent = async (
@@ -132,23 +125,16 @@ export const handleAnalyticsEvent = async (
     acceptLanguage: request.headers.get("accept-language")
   });
 
-  const incomingUtm = getUtmFromRequest({ body, url });
-  const storedUtm = getUtmFromCookies(cookies);
-  const sessionUtm = getUtmFromSessionStore(sessionId);
-  const mergedUtm = mergeUtm(storedUtm ?? sessionUtm, incomingUtm);
-
-  const incomingClickIds = getClickIdsFromRequest({ body, url });
-  const storedClickIds = getClickIdsFromCookies(cookies);
-  const sessionClickIds = getClickIdsFromSessionStore(sessionId);
-  const mergedClickIds = mergeClickIds(storedClickIds ?? sessionClickIds, incomingClickIds);
+  const { utm, clickIds, shouldSetUtmCookie, shouldSetClickIdsCookie } =
+    getTrackingContextFromRequest({ cookies, url });
 
   const properties = buildBaseEventProperties({
     tenantId,
     sessionId,
     distinctId,
     testId,
-    utm: mergedUtm,
-    clickIds: mergedClickIds,
+    utm,
+    clickIds,
     locale,
     referrer: normalizeString(body.referrer),
     country: normalizeString(body.country),
@@ -203,8 +189,8 @@ export const handleAnalyticsEvent = async (
         sessionId,
         tenantId,
         distinctId,
-        utm: mergedUtm,
-        clickIds: mergedClickIds
+        utm,
+        clickIds
       })
     );
   }
@@ -225,20 +211,20 @@ export const handleAnalyticsEvent = async (
     secure: process.env.NODE_ENV === "production"
   });
 
-  if (hasUtmValues(mergedUtm)) {
-    storeUtmForSession(sessionId, mergedUtm);
-    response.cookies.set(UTM_COOKIE_NAME, serializeUtmCookie(mergedUtm), {
+  if (shouldSetUtmCookie) {
+    response.cookies.set(UTM_COOKIE_NAME, serializeUtmCookie(utm), {
       httpOnly: true,
+      maxAge: TRACKING_COOKIE_MAX_AGE_SECONDS,
       sameSite: "lax",
       path: "/",
       secure: process.env.NODE_ENV === "production"
     });
   }
 
-  if (hasClickIdValues(mergedClickIds)) {
-    storeClickIdsForSession(sessionId, mergedClickIds);
-    response.cookies.set(CLICK_COOKIE_NAME, serializeClickIdsCookie(mergedClickIds), {
+  if (shouldSetClickIdsCookie) {
+    response.cookies.set(CLICK_COOKIE_NAME, serializeClickIdsCookie(clickIds), {
       httpOnly: true,
+      maxAge: TRACKING_COOKIE_MAX_AGE_SECONDS,
       sameSite: "lax",
       path: "/",
       secure: process.env.NODE_ENV === "production"
