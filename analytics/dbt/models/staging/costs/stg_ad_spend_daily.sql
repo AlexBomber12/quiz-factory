@@ -10,7 +10,8 @@
 with source as (
   select
     cast(date as date) as date,
-    lower(platform) as platform,
+    {{ normalize_utm_source('platform') }} as platform,
+    {{ normalize_utm_source('platform') }} as utm_source,
     account_id,
     campaign_id,
     campaign_name,

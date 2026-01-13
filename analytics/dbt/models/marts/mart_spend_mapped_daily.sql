@@ -1,9 +1,9 @@
 {{
   config(
     materialized='incremental',
-    unique_key=['date', 'platform', 'utm_campaign'],
+    unique_key=['date', 'utm_source', 'utm_campaign'],
     partition_by={'field': 'date', 'data_type': 'date'},
-    cluster_by=['platform', 'utm_campaign']
+    cluster_by=['utm_source', 'utm_campaign']
   )
 }}
 
@@ -15,6 +15,7 @@ with mapped as (
   select
     date,
     platform,
+    utm_source,
     utm_campaign,
     amount_eur,
     impressions,
@@ -27,10 +28,11 @@ with mapped as (
 
 select
   date,
-  platform,
+  utm_source,
   utm_campaign,
+  max(platform) as platform,
   sum(amount_eur) as amount_eur,
   sum(impressions) as impressions,
   sum(clicks) as clicks
 from mapped
-group by date, platform, utm_campaign
+group by date, utm_source, utm_campaign

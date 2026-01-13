@@ -76,7 +76,9 @@ purchase_attribution as (
     coalesce(e_by_id.tenant_id, e_by_session.tenant_id, p.tenant_id) as tenant_id,
     coalesce(e_by_id.test_id, e_by_session.test_id, p.test_id) as test_id,
     coalesce(e_by_id.locale, e_by_session.locale, p.locale) as locale,
-    coalesce(e_by_id.utm_source, e_by_session.utm_source, p.utm_source) as utm_source,
+    {{ normalize_utm_source(
+      "coalesce(e_by_id.utm_source, e_by_session.utm_source, p.utm_source)"
+    ) }} as utm_source,
     coalesce(e_by_id.utm_campaign, e_by_session.utm_campaign, p.utm_campaign) as utm_campaign,
     coalesce(e_by_id.referrer, e_by_session.referrer) as referrer
   from purchases p
@@ -363,13 +365,14 @@ costs_by_key as (
 spend_by_campaign as (
   select
     date,
-    lower(utm_campaign) as utm_campaign,
+    utm_source,
+    utm_campaign,
     sum(amount_eur) as ad_spend_eur
   from {{ ref('mart_spend_mapped_daily') }}
   {% if is_incremental() %}
     where date >= {{ incremental_date }}
   {% endif %}
-  group by date, lower(utm_campaign)
+  group by date, utm_source, utm_campaign
 ),
 
 all_keys as (
@@ -399,7 +402,18 @@ keys_with_campaign as (
     test_id,
     locale,
     channel_key,
-    split(channel_key, ':')[safe_offset(1)] as utm_campaign
+    case
+      when channel_key in ('direct', 'organic', 'referral') then null
+      when strpos(channel_key, ':') > 0
+        then split(channel_key, ':')[safe_offset(0)]
+      else null
+    end as utm_source,
+    case
+      when channel_key in ('direct', 'organic', 'referral') then null
+      when strpos(channel_key, ':') > 0
+        then split(channel_key, ':')[safe_offset(1)]
+      else null
+    end as utm_campaign
   from all_keys
 )
 
@@ -440,4 +454,5 @@ left join costs_by_key c
   and k.channel_key = c.channel_key
 left join spend_by_campaign s
   on k.date = s.date
+  and k.utm_source = s.utm_source
   and k.utm_campaign = s.utm_campaign
