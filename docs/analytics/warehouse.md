@@ -12,6 +12,9 @@ Datasets:
 
 Bootstrap with `analytics/bigquery/warehouse_bootstrap.sql`. The script sets the dataset location to EU for all datasets.
 
+dbt writes staging models to the tmp dataset and marts models to the marts dataset.
+Warning: incorrect schema name generation can create unexpected datasets like tmp_tmp or tmp_marts.
+
 All analytics datasets must live in the same location to avoid cross-location queries.
 
 Migration note:

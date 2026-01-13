@@ -118,7 +118,7 @@ Queue (in order)
   - BigQuery export contains no real IP values
 
 13) PR-ANALYTICS-12: dbt Dataset Naming Fix (No tmp_tmp, No tmp_marts)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-ANALYTICS-12.md
 - Depends on: PR-OPS-POSTHOG-01
 - Outcome:
