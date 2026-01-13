@@ -117,6 +117,55 @@ Queue (in order)
   - PostHog instance is configured to discard client IP data (documented and verified)
   - BigQuery export contains no real IP values
 
+13) PR-ANALYTICS-12: dbt Dataset Naming Fix (No tmp_tmp, No tmp_marts)
+- Status: TODO
+- Tasks file: tasks/PR-ANALYTICS-12.md
+- Depends on: PR-OPS-POSTHOG-01
+- Outcome:
+  - dbt writes staging models into dataset tmp and marts into dataset marts exactly
+  - no unexpected datasets are created by dbt
+
+14) PR-ANALYTICS-13: Remove In-Memory Session Stores for UTM and Click IDs
+- Status: TODO
+- Tasks file: tasks/PR-ANALYTICS-13.md
+- Depends on: PR-ANALYTICS-12
+- Outcome:
+  - no in-memory Maps for UTM or click ids
+  - cookies are the single source of truth for tracking context
+
+15) PR-ANALYTICS-14: Spend Attribution Hardening (No utm_campaign Collisions)
+- Status: TODO
+- Tasks file: tasks/PR-ANALYTICS-14.md
+- Depends on: PR-ANALYTICS-13
+- Outcome:
+  - spend is joined by a collision-safe key (utm_source + utm_campaign)
+  - platform collisions no longer corrupt P&L
+
+16) PR-ANALYTICS-15: Incremental Robustness (Same-Day Updates and Late Events)
+- Status: TODO
+- Tasks file: tasks/PR-ANALYTICS-15.md
+- Depends on: PR-ANALYTICS-14
+- Outcome:
+  - dbt incremental models support same-day re-imports and late events via lookback
+
+17) PR-ANALYTICS-16: P&L Visibility on Zero-Traffic Days
+- Status: TODO
+- Tasks file: tasks/PR-ANALYTICS-16.md
+- Depends on: PR-ANALYTICS-15
+- Outcome:
+  - P&L includes cost-only days and negative days
+  - shared cost allocation is safe when visits are 0
+
+18) PR-OPS-POSTHOG-02: Privacy Enforcement and Access Boundaries
+- Status: TODO
+- Tasks file: tasks/PR-OPS-POSTHOG-02.md
+- Depends on: PR-ANALYTICS-16
+- Outcome:
+  - raw_posthog.events_clean exists and excludes ip
+  - dbt staging reads from the clean view
+  - privacy.md documents access boundaries and retention
+
+
 Execution rules (apply to every PR)
 - Work on exactly 1 PR at a time.
 - Create a new branch from main named pr-analytics-0X-<short-slug> (or pr-ops-<name> for ops PRs).
