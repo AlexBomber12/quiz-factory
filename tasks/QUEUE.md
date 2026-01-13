@@ -99,7 +99,7 @@ Queue (in order)
   - mart_funnel_daily visits and unique_visitors are non-zero and meaningful
 
 11) PR-ANALYTICS-11: Implement analytics/events.json (Full Coverage) + Contract Enforcement
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-ANALYTICS-11.md
 - Depends on: PR-ANALYTICS-10
 - Outcome:

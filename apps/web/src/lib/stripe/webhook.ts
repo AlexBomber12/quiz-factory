@@ -402,6 +402,33 @@ const handleCheckoutSessionCompleted = async (
   return { status: "ok" };
 };
 
+const handleCheckoutSessionFailed = async (
+  event: StripeWebhookEvent,
+  deps: StripeWebhookDependencies,
+  receivedAt: Date
+): Promise<StripeWebhookResult> => {
+  if (deps.captureEvent) {
+    const session = event.data.object as StripeCheckoutSession;
+    const metadata = parseStripeMetadata(session.metadata);
+    const purchaseId =
+      metadata.purchase_id ??
+      normalizeString(session.client_reference_id) ??
+      normalizeString(session.payment_intent) ??
+      normalizeString(session.id) ??
+      "unknown";
+
+    const properties = buildFinanceBaseProperties(
+      metadata,
+      toIsoStringFromSeconds(event.created, receivedAt)
+    );
+    properties.purchase_id = purchaseId;
+    properties.failure_reason = event.type;
+    void deps.captureEvent("purchase_failed", properties).catch(() => null);
+  }
+
+  return { status: "ok" };
+};
+
 const handleChargeRefunded = async (
   event: StripeWebhookEvent,
   deps: StripeWebhookDependencies,
@@ -488,6 +515,9 @@ export const handleStripeWebhookEvent = async (
   switch (event.type) {
     case "checkout.session.completed":
       return handleCheckoutSessionCompleted(event, deps, receivedAt);
+    case "checkout.session.async_payment_failed":
+    case "checkout.session.expired":
+      return handleCheckoutSessionFailed(event, deps, receivedAt);
     case "charge.refunded":
       return handleChargeRefunded(event, deps, receivedAt);
     case "charge.dispute.created":
