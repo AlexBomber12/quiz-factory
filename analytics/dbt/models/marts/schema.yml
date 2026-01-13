@@ -24,3 +24,7 @@ models:
       - name: locale
         tests:
           - not_null
+      - name: contribution_margin_eur
+        tests:
+          - not_null:
+              where: "net_revenue_eur is not null"

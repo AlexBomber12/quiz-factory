@@ -63,7 +63,7 @@ Queue (in order)
   - alerting spec
 
 7) PR-ANALYTICS-07: Costs, Ad Spend Import (1 channel), Campaign Mapping, and Profit Marts (Revised)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-ANALYTICS-07.md
 - Depends on: PR-ANALYTICS-06
 - Outcome:

@@ -1,7 +1,7 @@
 {{
   config(
     materialized='incremental',
-    unique_key=['platform', 'account_id', 'campaign_id', 'utm_campaign', 'valid_from'],
+    unique_key=['platform', 'account_id', 'campaign_id', 'valid_from'],
     partition_by={'field': 'valid_from', 'data_type': 'date'},
     cluster_by=['platform', 'account_id', 'campaign_id']
   )
