@@ -1,5 +1,5 @@
-CREATE SCHEMA IF NOT EXISTS raw_stripe;
-CREATE SCHEMA IF NOT EXISTS tmp;
+CREATE SCHEMA IF NOT EXISTS raw_stripe OPTIONS(location = "EU");
+CREATE SCHEMA IF NOT EXISTS tmp OPTIONS(location = "EU");
 
 CREATE TABLE IF NOT EXISTS raw_stripe.webhook_events_min (
   stripe_event_id STRING,

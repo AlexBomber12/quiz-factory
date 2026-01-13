@@ -72,7 +72,7 @@ Queue (in order)
   - contribution margin and CAC computed in marts
 
 8) PR-ANALYTICS-08: BigQuery EU Location Alignment and dbt Schema Fix
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-ANALYTICS-08.md
 - Depends on: PR-ANALYTICS-07
 - Outcome:

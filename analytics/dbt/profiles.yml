@@ -4,8 +4,9 @@ quiz_factory:
     dev:
       type: bigquery
       method: oauth
+      # Recommended env vars: DBT_BIGQUERY_PROJECT, DBT_BIGQUERY_LOCATION=EU
       project: "{{ env_var('DBT_BIGQUERY_PROJECT', 'quiz-factory-analytics') }}"
-      dataset: "{{ env_var('DBT_BIGQUERY_DATASET', 'analytics') }}"
+      dataset: "{{ env_var('DBT_BIGQUERY_DATASET', 'tmp') }}"
       location: "{{ env_var('DBT_BIGQUERY_LOCATION', 'EU') }}"
       threads: 1
       timeout_seconds: 300
