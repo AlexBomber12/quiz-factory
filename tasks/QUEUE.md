@@ -109,7 +109,7 @@ Queue (in order)
   - a test asserts code event names match analytics/events.json keys
 
 12) PR-OPS-POSTHOG-01: Drop IP capture and disable GeoIP enrichment
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-OPS-POSTHOG-01.md
 - Depends on: PR-ANALYTICS-11
 - Outcome:
