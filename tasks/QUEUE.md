@@ -37,7 +37,7 @@ Queue (in order)
   - tracking identifiers aligned (distinct_id vs session_id)
 
 4) PR-ANALYTICS-04: BigQuery Bootstrap, PostHog Export Wiring, dbt Scaffold (Revised)
-- Status: TODO
+- Status: DOING
 - Tasks file: tasks/PR-ANALYTICS-04.md
 - Depends on: PR-ANALYTICS-03
 - Outcome:
