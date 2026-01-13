@@ -46,6 +46,8 @@ type AnalyticsRequestBody = {
   page_url?: unknown;
   page_type?: unknown;
   purchase_id?: unknown;
+  share_target?: unknown;
+  upsell_id?: unknown;
   product_type?: unknown;
   is_upsell?: unknown;
   pricing_variant?: unknown;
@@ -165,6 +167,24 @@ export const handleAnalyticsEvent = async (
   if (options.event === "page_view") {
     properties.page_url = normalizeString(body.page_url);
     properties.page_type = normalizeString(body.page_type);
+  }
+
+  if (options.event === "share_click") {
+    const shareTarget = requireString(body.share_target);
+    if (!shareTarget) {
+      return respondBadRequest("share_target is required");
+    }
+    properties.share_target = shareTarget;
+  }
+
+  const upsellId = requireString(body.upsell_id);
+  if (options.event === "upsell_accept") {
+    if (!upsellId) {
+      return respondBadRequest("upsell_id is required");
+    }
+    properties.upsell_id = upsellId;
+  } else if (options.event === "upsell_view" && upsellId) {
+    properties.upsell_id = upsellId;
   }
 
   void capturePosthogEvent(options.event, properties).catch(() => null);

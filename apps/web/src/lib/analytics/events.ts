@@ -1,17 +1,24 @@
 import type { ClickIdParams, UtmParams } from "./session";
 
-export type AnalyticsEventName =
-  | "purchase_success"
-  | "refund_issued"
-  | "dispute_opened"
-  | "page_view"
-  | "test_start"
-  | "test_complete"
-  | "result_preview_view"
-  | "paywall_view"
-  | "checkout_start"
-  | "report_view"
-  | "report_pdf_download";
+export const ANALYTICS_EVENT_NAMES = [
+  "page_view",
+  "test_start",
+  "test_complete",
+  "result_preview_view",
+  "paywall_view",
+  "checkout_start",
+  "purchase_success",
+  "purchase_failed",
+  "report_view",
+  "report_pdf_download",
+  "upsell_view",
+  "upsell_accept",
+  "refund_issued",
+  "dispute_opened",
+  "share_click"
+] as const;
+
+export type AnalyticsEventName = (typeof ANALYTICS_EVENT_NAMES)[number];
 
 export type AnalyticsEventProperties = {
   tenant_id: string;
@@ -35,13 +42,16 @@ export type AnalyticsEventProperties = {
   page_url?: string | null;
   page_type?: string | null;
   purchase_id?: string | null;
+  failure_reason?: string | null;
   amount_eur?: number | null;
   currency?: string | null;
   product_type?: string | null;
   payment_provider?: string | null;
   is_upsell?: boolean | null;
+  upsell_id?: string | null;
   refund_id?: string | null;
   dispute_id?: string | null;
+  share_target?: string | null;
 };
 
 export const buildBaseEventProperties = (input: {
