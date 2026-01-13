@@ -1,6 +1,7 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 
 import { POST as checkoutStart } from "./checkout/start/route";
+import { POST as pageView } from "./page/view/route";
 import { POST as paywallView } from "./paywall/view/route";
 import { POST as testComplete } from "./test/complete/route";
 import { POST as testStart } from "./test/start/route";
@@ -114,6 +115,16 @@ describe("analytics flow", () => {
     expect(startResponse.headers.get("set-cookie")).toContain("qf_session_id");
 
     const followupBody = { ...baseBody, session_id: sessionId };
+    const pageViewResponse = await pageView(
+      buildRequest(
+        "https://tenant.example.com/api/page/view",
+        { ...followupBody, page_type: "attempt" },
+        jar.header()
+      )
+    );
+    jar.addFromResponse(pageViewResponse);
+    await pageViewResponse.json();
+
     const completeResponse = await testComplete(
       buildRequest("https://tenant.example.com/api/test/complete", followupBody, jar.header())
     );
@@ -135,8 +146,12 @@ describe("analytics flow", () => {
     );
     await checkoutResponse.json();
 
+    const pageViewEvent = capturedEvents.find((event) => event.event === "page_view");
+    expect(pageViewEvent).toBeTruthy();
+    expect(pageViewEvent?.properties.session_id).toBe(sessionId);
+
     const events = capturedEvents.filter((event) =>
-      ["test_start", "test_complete", "paywall_view", "checkout_start"].includes(
+      ["page_view", "test_start", "test_complete", "paywall_view", "checkout_start"].includes(
         event.event
       )
     );

@@ -73,7 +73,7 @@ Required dimensions for every fact row:
 - Each event MUST include tenant_id, session_id, distinct_id, test_id (when applicable), timestamp_utc, and all UTM fields (may be null).
 
 ## 5. Funnel metrics (definitions and formulas)
-- Visits: count of visit sessions derived from page_view events.
+- Visits: count of visit sessions derived from page_view events on attempt pages.
 - Unique visitors: count of distinct distinct_id in the period.
 - Test starts: count of test_start events.
 - Test completions: count of test_complete events.

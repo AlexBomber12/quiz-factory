@@ -43,6 +43,8 @@ type AnalyticsRequestBody = {
   country?: unknown;
   language?: unknown;
   device_type?: unknown;
+  page_url?: unknown;
+  page_type?: unknown;
   purchase_id?: unknown;
   product_type?: unknown;
   is_upsell?: unknown;
@@ -98,6 +100,7 @@ export const handleAnalyticsEvent = async (
   options: {
     event: AnalyticsEventName;
     createSession?: boolean;
+    requireTestId?: boolean;
     requirePurchaseId?: boolean;
     extendResponse?: (context: ResponseExtensionContext) => Record<string, unknown>;
   }
@@ -107,7 +110,7 @@ export const handleAnalyticsEvent = async (
   const url = new URL(request.url);
 
   const testId = requireString(body.test_id);
-  if (!testId) {
+  if (options.requireTestId !== false && !testId) {
     return respondBadRequest("test_id is required");
   }
 
@@ -157,6 +160,11 @@ export const handleAnalyticsEvent = async (
   }
   if (purchaseId) {
     properties.purchase_id = purchaseId;
+  }
+
+  if (options.event === "page_view") {
+    properties.page_url = normalizeString(body.page_url);
+    properties.page_type = normalizeString(body.page_type);
   }
 
   void capturePosthogEvent(options.event, properties).catch(() => null);

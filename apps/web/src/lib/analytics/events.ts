@@ -4,6 +4,7 @@ export type AnalyticsEventName =
   | "purchase_success"
   | "refund_issued"
   | "dispute_opened"
+  | "page_view"
   | "test_start"
   | "test_complete"
   | "result_preview_view"
@@ -16,7 +17,7 @@ export type AnalyticsEventProperties = {
   tenant_id: string;
   session_id: string;
   distinct_id: string;
-  test_id: string;
+  test_id: string | null;
   timestamp_utc: string;
   utm_source: string | null;
   utm_medium: string | null;
@@ -31,6 +32,8 @@ export type AnalyticsEventProperties = {
   language: string | null;
   device_type: string | null;
   locale: string | null;
+  page_url?: string | null;
+  page_type?: string | null;
   purchase_id?: string | null;
   amount_eur?: number | null;
   currency?: string | null;
@@ -45,7 +48,7 @@ export const buildBaseEventProperties = (input: {
   tenantId: string;
   sessionId: string;
   distinctId: string;
-  testId: string;
+  testId: string | null;
   utm: UtmParams;
   clickIds?: ClickIdParams | null;
   locale?: string | null;
