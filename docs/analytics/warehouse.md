@@ -58,6 +58,10 @@ When PostHog adds fields:
 2. Keep properties, set, and set_once as JSON so new properties do not require schema changes.
 3. Re-run exports after the schema update to backfill new fields if needed.
 
+## Reconciliation thresholds
+
+Daily reconciliation between Stripe purchases and purchase_success events is acceptable within 2 percent for counts and gross revenue. Use an absolute floor of 5 purchases and 50 EUR to avoid noise on low volume days. Larger drift should trigger investigation.
+
 ## Security and access
 
 - Do not commit service account keys.

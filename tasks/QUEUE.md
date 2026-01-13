@@ -46,7 +46,7 @@ Queue (in order)
   - dbt scaffold ready
 
 5) PR-ANALYTICS-05: dbt Marts (P&L Daily, Funnel Daily, Unit Econ) + Data Quality (Revised)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-ANALYTICS-05.md
 - Depends on: PR-ANALYTICS-04
 - Outcome:
