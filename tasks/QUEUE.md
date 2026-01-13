@@ -82,7 +82,7 @@ Queue (in order)
   - no cross-location queries
 
 9) PR-ANALYTICS-09: Tenant Registry and Locale Resolution
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-ANALYTICS-09.md
 - Depends on: PR-ANALYTICS-08
 - Outcome:

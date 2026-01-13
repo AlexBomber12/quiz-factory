@@ -1,0 +1,9 @@
+{
+  "tenants": [
+    {
+      "tenant_id": "tenant-tenant-example-com",
+      "domains": ["tenant.example.com"],
+      "default_locale": "en"
+    }
+  ]
+}
