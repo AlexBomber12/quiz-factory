@@ -12,6 +12,29 @@ These rules apply to any PR task in this repo:
 - Generate artifacts via `scripts/make-review-artifacts.sh`.
 - Provide a short report (what changed, how verified, manual test steps if applicable).
 
+## Standard PR Runbook (Default Workflow)
+
+### Rules
+- Preflight: `git status --porcelain` must be empty; if not, stop and list dirty files.
+- Task selection: if `tasks/QUEUE.md` exists, pick the earliest `DOING` entry; otherwise pick the earliest `TODO` entry whose dependencies are `DONE`. Extract `PR_ID` exactly as written in QUEUE. Extract `TASK_FILE` from the `Tasks file:` line, do not guess filenames. If no selectable task exists, stop and report the first blocked `TODO` and missing dependencies.
+- Branching: `git fetch origin main`. Create a branch from `origin/main` named `pr-<sanitized-pr-id>` where sanitized is lowercase, `.` -> `-`, keep `[a-z0-9-]`.
+- Implementation: implement exactly `TASK_FILE` scope, no extra refactors or dependency upgrades unless required. `tasks/PR-*.md` files are immutable during execution unless explicitly instructed; do not create new tasks mid-run.
+- CI: single source of truth. If `scripts/ci.sh` exists, run it; else follow AGENTS-defined command; else fall back to platform scripts. Fix and rerun until exit code 0; do not claim success otherwise.
+- Artifacts: always generate `artifacts/ci.log` and `artifacts/pr.patch`. Prefer `scripts/make-review-artifacts.*` if present; else specify manual commands used.
+- QUEUE update: update only the `- Status:` line for the selected PR entry. Set Status to `DONE` after CI is green and before push.
+- Commit/Push/PR: commit message "`<PR_ID>: <short summary>`"; push branch; open PR if `gh` is available, otherwise print manual steps.
+- Final report: include `PR_ID`, `TASK_FILE`, branch, CI cmd, artifacts, commit hash, PR link or next steps.
+
+### Checklist
+- [ ] Preflight: `git status --porcelain` is empty; if not, stop and list dirty files.
+- [ ] Select task from `tasks/QUEUE.md` per rules; capture `PR_ID` and `TASK_FILE`.
+- [ ] `git fetch origin main`; create a branch from `origin/main` named `pr-<sanitized-pr-id>`.
+- [ ] Implement only `TASK_FILE` scope; avoid extra refactors or dependency upgrades.
+- [ ] Run CI until exit 0; generate artifacts (`artifacts/ci.log`, `artifacts/pr.patch`).
+- [ ] Update only the selected PR `- Status:` line in `tasks/QUEUE.md` to `DONE`.
+- [ ] Commit with "`<PR_ID>: <short summary>`"; push; open PR or provide manual steps.
+- [ ] Final report with required fields.
+
 ## Tasks Stability and Queue Updates
 - tasks/ is the source of truth. During implementation of a PR task, treat `tasks/PR-*.md` files as immutable unless explicitly instructed to change them.
 - The agent must not create or modify any `tasks/PR-*.md` other than the currently selected PR task file, unless explicitly instructed.
@@ -25,3 +48,7 @@ These rules apply to any PR task in this repo:
 
 ## Two Worktrees (Optional)
 - To avoid unexpected changes, keep planning edits to tasks/ in a separate worktree from the implementation worktree when running long agent sessions.
+
+## Lessons Learned (Append-Only)
+- Any recurring annoyance or failure mode must be recorded here as a rule or automation idea.
+- Keep entries short: Symptom -> Rule -> Automation.
