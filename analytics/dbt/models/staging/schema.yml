@@ -1,0 +1,82 @@
+version: 2
+
+sources:
+  - name: raw_posthog
+    schema: raw_posthog
+    tables:
+      - name: events
+        loaded_at_field: timestamp
+        freshness:
+          warn_after:
+            count: 12
+            period: hour
+          error_after:
+            count: 24
+            period: hour
+  - name: raw_stripe
+    schema: raw_stripe
+    tables:
+      - name: purchases
+      - name: refunds
+      - name: disputes
+      - name: fees
+  - name: raw_costs
+    schema: raw_costs
+    tables:
+      - name: costs_daily
+      - name: ad_spend_daily
+      - name: campaign_map
+
+models:
+  - name: stg_posthog_events
+    columns:
+      - name: event_name
+        tests:
+          - not_null
+          - accepted_values:
+              values:
+                - page_view
+                - test_start
+                - test_complete
+                - result_preview_view
+                - paywall_view
+                - checkout_start
+                - purchase_success
+                - purchase_failed
+                - report_view
+                - report_pdf_download
+                - upsell_view
+                - upsell_accept
+                - refund_issued
+                - dispute_opened
+                - share_click
+      - name: tenant_id
+        tests:
+          - not_null
+      - name: locale
+        tests:
+          - not_null
+
+  - name: stg_stripe_purchases
+    columns:
+      - name: purchase_id
+        tests:
+          - not_null
+
+  - name: stg_stripe_refunds
+    columns:
+      - name: purchase_id
+        tests:
+          - not_null
+
+  - name: stg_stripe_disputes
+    columns:
+      - name: purchase_id
+        tests:
+          - not_null
+
+  - name: stg_stripe_fees
+    columns:
+      - name: purchase_id
+        tests:
+          - not_null

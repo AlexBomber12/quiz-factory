@@ -1,0 +1,26 @@
+version: 2
+
+models:
+  - name: mart_funnel_daily
+    columns:
+      - name: date
+        tests:
+          - not_null
+      - name: tenant_id
+        tests:
+          - not_null
+      - name: locale
+        tests:
+          - not_null
+
+  - name: mart_pnl_daily
+    columns:
+      - name: date
+        tests:
+          - not_null
+      - name: tenant_id
+        tests:
+          - not_null
+      - name: locale
+        tests:
+          - not_null
