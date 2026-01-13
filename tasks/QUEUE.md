@@ -91,7 +91,7 @@ Queue (in order)
   - tenant resolution supports 200 domains without code changes
 
 10) PR-ANALYTICS-10: Implement page_view
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-ANALYTICS-10.md
 - Depends on: PR-ANALYTICS-09
 - Outcome:
