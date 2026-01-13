@@ -10,6 +10,10 @@ clean-targets: ["target", "dbt_packages"]
 models:
   quiz_factory:
     +materialized: view
+    staging:
+      +schema: tmp
+    marts:
+      +schema: marts
 
 vars:
   reporting_timezone: "UTC"

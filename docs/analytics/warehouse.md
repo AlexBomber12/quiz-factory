@@ -2,7 +2,7 @@
 
 ## Datasets and location
 
-Use a single BigQuery location for all analytics datasets. Current standard location is US.
+Use a single BigQuery location for all analytics datasets. Current standard location is EU.
 
 Datasets:
 - raw_posthog
@@ -10,7 +10,13 @@ Datasets:
 - marts
 - tmp
 
-Bootstrap with `analytics/bigquery/warehouse_bootstrap.sql`. The script sets the dataset location to US for all datasets.
+Bootstrap with `analytics/bigquery/warehouse_bootstrap.sql`. The script sets the dataset location to EU for all datasets.
+
+All analytics datasets must live in the same location to avoid cross-location queries.
+
+Migration note:
+- BigQuery datasets cannot change location in place.
+- If any existing datasets are in US, create a new EU analytics project or recreate datasets in EU and re-point PostHog and Stripe ingestion to EU.
 
 ## Core tables and partitioning
 
@@ -70,7 +76,7 @@ Daily reconciliation between Stripe purchases and purchase_success events is acc
 
 ## Smoke checks
 
-Connectivity check:
+Connectivity check for EU datasets:
 
 ```sql
 SELECT *

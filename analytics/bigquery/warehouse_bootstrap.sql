@@ -1,9 +1,9 @@
 -- BigQuery bootstrap for analytics datasets and core tables.
 
-CREATE SCHEMA IF NOT EXISTS raw_posthog OPTIONS(location = "US");
-CREATE SCHEMA IF NOT EXISTS raw_costs OPTIONS(location = "US");
-CREATE SCHEMA IF NOT EXISTS marts OPTIONS(location = "US");
-CREATE SCHEMA IF NOT EXISTS tmp OPTIONS(location = "US");
+CREATE SCHEMA IF NOT EXISTS raw_posthog OPTIONS(location = "EU");
+CREATE SCHEMA IF NOT EXISTS raw_costs OPTIONS(location = "EU");
+CREATE SCHEMA IF NOT EXISTS marts OPTIONS(location = "EU");
+CREATE SCHEMA IF NOT EXISTS tmp OPTIONS(location = "EU");
 
 CREATE TABLE IF NOT EXISTS raw_posthog.events (
   uuid STRING,
