@@ -3,7 +3,7 @@
 These rules apply to any PR task in this repo:
 
 - Always use `tasks/PR-*.md` workflow.
-- Branch naming convention `pr-<area>-<id>-<slug>`.
+- Branch naming convention `pr-<sanitized-pr-id>` (lowercase, `.` -> `-`, keep `[a-z0-9-]`).
 - No secrets.
 - All definitions are governed by `docs/metrics.md`.
 - Read the relevant `tasks/PR-xx.md` before starting.
@@ -43,8 +43,7 @@ These rules apply to any PR task in this repo:
 
 ## Queue Status Rules
 - When starting work on PR-XXX, set its status to DOING in `tasks/QUEUE.md`.
-- Never set status to DONE unless you can verify the PR is merged into origin/main, because DONE is defined as merged.
-- When implementation is complete and local CI is green but the PR is not merged yet, keep status as DOING and include in the final report: "Queue remains DOING until merge".
+- Set status to DONE after CI is green and before push.
 
 ## Two Worktrees (Optional)
 - To avoid unexpected changes, keep planning edits to tasks/ in a separate worktree from the implementation worktree when running long agent sessions.
