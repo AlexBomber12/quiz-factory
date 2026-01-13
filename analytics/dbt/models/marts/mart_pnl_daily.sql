@@ -200,21 +200,244 @@ fact_rows as (
     f.fee_eur as payment_fees_eur
   from fees f
   left join purchase_attribution_channel p on f.purchase_id = p.purchase_id
+),
+
+pnl_base as (
+  select
+    date,
+    tenant_id,
+    test_id,
+    locale,
+    channel_key,
+    sum(gross_revenue_eur) as gross_revenue_eur,
+    sum(refunds_eur) as refunds_eur,
+    sum(disputes_eur) as disputes_eur,
+    sum(payment_fees_eur) as payment_fees_eur,
+    sum(gross_revenue_eur)
+      - sum(refunds_eur)
+      - sum(disputes_eur)
+      - sum(payment_fees_eur) as net_revenue_eur
+  from fact_rows
+  group by date, tenant_id, test_id, locale, channel_key
+),
+
+funnel_visits as (
+  select
+    date,
+    tenant_id,
+    test_id,
+    locale,
+    channel_key,
+    visits
+  from {{ ref('mart_funnel_daily') }}
+  {% if is_incremental() %}
+    where date >= {{ incremental_date }}
+  {% endif %}
+),
+
+tenant_visits as (
+  select
+    date,
+    tenant_id,
+    sum(visits) as visits
+  from funnel_visits
+  group by date, tenant_id
+),
+
+tenant_locale_visits as (
+  select
+    date,
+    tenant_id,
+    locale,
+    sum(visits) as visits
+  from funnel_visits
+  group by date, tenant_id, locale
+),
+
+total_visits as (
+  select
+    date,
+    sum(visits) as visits
+  from tenant_visits
+  group by date
+),
+
+direct_costs as (
+  select
+    date,
+    cost_type,
+    amount_eur,
+    tenant_id,
+    locale
+  from {{ ref('stg_costs_daily') }}
+  where tenant_id is not null
+  {% if is_incremental() %}
+    and date >= {{ incremental_date }}
+  {% endif %}
+),
+
+shared_costs as (
+  select
+    date,
+    cost_type,
+    amount_eur
+  from {{ ref('stg_costs_daily') }}
+  where tenant_id is null
+    and cost_type in ('infra', 'tools')
+  {% if is_incremental() %}
+    and date >= {{ incremental_date }}
+  {% endif %}
+),
+
+direct_costs_allocated as (
+  select
+    f.date,
+    f.tenant_id,
+    f.test_id,
+    f.locale,
+    f.channel_key,
+    c.cost_type,
+    c.amount_eur
+      * safe_divide(
+          f.visits,
+          case
+            when c.locale is null then tv.visits
+            else tlv.visits
+          end
+        ) as amount_eur
+  from direct_costs c
+  join funnel_visits f
+    on c.date = f.date
+    and c.tenant_id = f.tenant_id
+    and (c.locale is null or c.locale = f.locale)
+  left join tenant_visits tv
+    on f.date = tv.date
+    and f.tenant_id = tv.tenant_id
+  left join tenant_locale_visits tlv
+    on f.date = tlv.date
+    and f.tenant_id = tlv.tenant_id
+    and f.locale = tlv.locale
+),
+
+shared_costs_allocated as (
+  select
+    f.date,
+    f.tenant_id,
+    f.test_id,
+    f.locale,
+    f.channel_key,
+    c.cost_type,
+    c.amount_eur * safe_divide(f.visits, tv.visits) as amount_eur
+  from shared_costs c
+  join funnel_visits f
+    on c.date = f.date
+  left join total_visits tv
+    on f.date = tv.date
+),
+
+costs_allocated as (
+  select *
+  from direct_costs_allocated
+
+  union all
+
+  select *
+  from shared_costs_allocated
+),
+
+costs_by_key as (
+  select
+    date,
+    tenant_id,
+    test_id,
+    locale,
+    channel_key,
+    sum(case when cost_type = 'content' then amount_eur else 0 end) as content_cost_eur,
+    sum(case when cost_type = 'infra' then amount_eur else 0 end) as infra_cost_eur,
+    sum(case when cost_type = 'tools' then amount_eur else 0 end) as tools_cost_eur,
+    sum(case when cost_type = 'other' then amount_eur else 0 end) as other_cost_eur
+  from costs_allocated
+  group by date, tenant_id, test_id, locale, channel_key
+),
+
+spend_by_campaign as (
+  select
+    date,
+    lower(utm_campaign) as utm_campaign,
+    sum(amount_eur) as ad_spend_eur
+  from {{ ref('mart_spend_mapped_daily') }}
+  {% if is_incremental() %}
+    where date >= {{ incremental_date }}
+  {% endif %}
+  group by date, lower(utm_campaign)
+),
+
+all_keys as (
+  select
+    date,
+    tenant_id,
+    test_id,
+    locale,
+    channel_key
+  from pnl_base
+
+  union distinct
+
+  select
+    date,
+    tenant_id,
+    test_id,
+    locale,
+    channel_key
+  from funnel_visits
+),
+
+keys_with_campaign as (
+  select
+    date,
+    tenant_id,
+    test_id,
+    locale,
+    channel_key,
+    split(channel_key, ':')[safe_offset(1)] as utm_campaign
+  from all_keys
 )
 
 select
-  date,
-  tenant_id,
-  test_id,
-  locale,
-  channel_key,
-  sum(gross_revenue_eur) as gross_revenue_eur,
-  sum(refunds_eur) as refunds_eur,
-  sum(disputes_eur) as disputes_eur,
-  sum(payment_fees_eur) as payment_fees_eur,
-  sum(gross_revenue_eur)
-    - sum(refunds_eur)
-    - sum(disputes_eur)
-    - sum(payment_fees_eur) as net_revenue_eur
-from fact_rows
-group by date, tenant_id, test_id, locale, channel_key
+  k.date,
+  k.tenant_id,
+  k.test_id,
+  k.locale,
+  k.channel_key,
+  coalesce(p.gross_revenue_eur, 0) as gross_revenue_eur,
+  coalesce(p.refunds_eur, 0) as refunds_eur,
+  coalesce(p.disputes_eur, 0) as disputes_eur,
+  coalesce(p.payment_fees_eur, 0) as payment_fees_eur,
+  coalesce(p.net_revenue_eur, 0) as net_revenue_eur,
+  coalesce(s.ad_spend_eur, 0) as ad_spend_eur,
+  coalesce(c.content_cost_eur, 0) as content_cost_eur,
+  coalesce(c.infra_cost_eur, 0) as infra_cost_eur,
+  coalesce(c.tools_cost_eur, 0) as tools_cost_eur,
+  coalesce(c.other_cost_eur, 0) as other_cost_eur,
+  coalesce(p.net_revenue_eur, 0)
+    - coalesce(s.ad_spend_eur, 0)
+    - coalesce(c.content_cost_eur, 0)
+    - coalesce(c.infra_cost_eur, 0)
+    - coalesce(c.tools_cost_eur, 0)
+    - coalesce(c.other_cost_eur, 0) as contribution_margin_eur
+from keys_with_campaign k
+left join pnl_base p
+  on k.date = p.date
+  and k.tenant_id = p.tenant_id
+  and k.test_id = p.test_id
+  and k.locale = p.locale
+  and k.channel_key = p.channel_key
+left join costs_by_key c
+  on k.date = c.date
+  and k.tenant_id = c.tenant_id
+  and k.test_id = c.test_id
+  and k.locale = c.locale
+  and k.channel_key = c.channel_key
+left join spend_by_campaign s
+  on k.date = s.date
+  and k.utm_campaign = s.utm_campaign

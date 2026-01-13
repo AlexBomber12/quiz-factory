@@ -19,7 +19,9 @@ with pnl as (
     locale,
     channel_key,
     gross_revenue_eur,
-    net_revenue_eur
+    net_revenue_eur,
+    contribution_margin_eur,
+    ad_spend_eur
   from {{ ref('mart_pnl_daily') }}
   {% if is_incremental() %}
     where date >= {{ incremental_date }}
@@ -41,24 +43,192 @@ funnel as (
   {% endif %}
 ),
 
+purchase_events as (
+  select
+    purchase_id,
+    session_id,
+    tenant_id,
+    test_id,
+    locale,
+    utm_source,
+    utm_campaign,
+    referrer,
+    timestamp_utc
+  from {{ ref('stg_posthog_events') }}
+  where event_name = 'purchase_success'
+    and coalesce(is_internal, false) = false
+  {% if is_incremental() %}
+    and date(timestamp_utc, '{{ var("reporting_timezone") }}') >= {{ incremental_date }}
+  {% endif %}
+),
+
+purchase_events_by_id as (
+  select *
+  from purchase_events
+  where purchase_id is not null
+  qualify row_number() over (
+    partition by purchase_id
+    order by timestamp_utc desc
+  ) = 1
+),
+
+purchase_events_by_session as (
+  select *
+  from purchase_events
+  where session_id is not null
+  qualify row_number() over (
+    partition by session_id
+    order by timestamp_utc desc
+  ) = 1
+),
+
+purchases as (
+  select
+    purchase_id,
+    session_id,
+    created_utc,
+    tenant_id,
+    test_id,
+    locale,
+    distinct_id,
+    utm_source,
+    utm_campaign
+  from {{ ref('stg_stripe_purchases') }}
+  {% if is_incremental() %}
+    where date(created_utc, '{{ var("reporting_timezone") }}') >= {{ incremental_date }}
+  {% endif %}
+),
+
+purchase_attribution as (
+  select
+    p.purchase_id,
+    p.session_id,
+    p.distinct_id,
+    date(p.created_utc, '{{ var("reporting_timezone") }}') as purchase_date,
+    coalesce(e_by_id.tenant_id, e_by_session.tenant_id, p.tenant_id) as tenant_id,
+    coalesce(e_by_id.test_id, e_by_session.test_id, p.test_id) as test_id,
+    coalesce(e_by_id.locale, e_by_session.locale, p.locale) as locale,
+    coalesce(e_by_id.utm_source, e_by_session.utm_source, p.utm_source) as utm_source,
+    coalesce(e_by_id.utm_campaign, e_by_session.utm_campaign, p.utm_campaign) as utm_campaign,
+    coalesce(e_by_id.referrer, e_by_session.referrer) as referrer
+  from purchases p
+  left join purchase_events_by_id e_by_id on p.purchase_id = e_by_id.purchase_id
+  left join purchase_events_by_session e_by_session on p.session_id = e_by_session.session_id
+),
+
+purchase_attribution_channel as (
+  select
+    *,
+    case
+      when nullif(trim(utm_source), '') is not null
+        or nullif(trim(utm_campaign), '') is not null then
+        lower(
+          concat(
+            coalesce(nullif(trim(utm_source), ''), 'unknown'),
+            ':',
+            coalesce(nullif(trim(utm_campaign), ''), 'unknown')
+          )
+        )
+      when nullif(trim(referrer), '') is null then 'direct'
+      when regexp_contains(
+        lower(referrer),
+        r'(google\\.|bing\\.|yahoo\\.|duckduckgo\\.|yandex\\.|baidu\\.)'
+      ) then 'organic'
+      else 'referral'
+    end as channel_key
+  from purchase_attribution
+),
+
+first_purchase_by_distinct as (
+  select
+    distinct_id,
+    min(date(created_utc, '{{ var("reporting_timezone") }}')) as first_purchase_date
+  from {{ ref('stg_stripe_purchases') }}
+  where distinct_id is not null
+  group by distinct_id
+),
+
+first_time_purchases as (
+  select
+    p.purchase_date as date,
+    p.tenant_id,
+    p.test_id,
+    p.locale,
+    p.channel_key,
+    count(distinct p.distinct_id) as first_time_purchasers_count
+  from purchase_attribution_channel p
+  join first_purchase_by_distinct f
+    on p.distinct_id = f.distinct_id
+    and p.purchase_date = f.first_purchase_date
+  {% if is_incremental() %}
+    where p.purchase_date >= {{ incremental_date }}
+  {% endif %}
+  group by date, tenant_id, test_id, locale, channel_key
+),
+
+all_keys as (
+  select
+    date,
+    tenant_id,
+    test_id,
+    locale,
+    channel_key
+  from pnl
+
+  union distinct
+
+  select
+    date,
+    tenant_id,
+    test_id,
+    locale,
+    channel_key
+  from funnel
+
+  union distinct
+
+  select
+    date,
+    tenant_id,
+    test_id,
+    locale,
+    channel_key
+  from first_time_purchases
+),
+
 joined as (
   select
-    coalesce(p.date, f.date) as date,
-    coalesce(p.tenant_id, f.tenant_id) as tenant_id,
-    coalesce(p.test_id, f.test_id) as test_id,
-    coalesce(p.locale, f.locale) as locale,
-    coalesce(p.channel_key, f.channel_key) as channel_key,
+    k.date,
+    k.tenant_id,
+    k.test_id,
+    k.locale,
+    k.channel_key,
     p.gross_revenue_eur,
     p.net_revenue_eur,
+    p.contribution_margin_eur,
+    p.ad_spend_eur,
     f.purchases,
-    f.visits
-  from pnl p
-  full outer join funnel f
-    on p.date = f.date
-    and p.tenant_id = f.tenant_id
-    and p.test_id = f.test_id
-    and p.locale = f.locale
-    and p.channel_key = f.channel_key
+    f.visits,
+    ftp.first_time_purchasers_count
+  from all_keys k
+  left join pnl p
+    on k.date = p.date
+    and k.tenant_id = p.tenant_id
+    and k.test_id = p.test_id
+    and k.locale = p.locale
+    and k.channel_key = p.channel_key
+  left join funnel f
+    on k.date = f.date
+    and k.tenant_id = f.tenant_id
+    and k.test_id = f.test_id
+    and k.locale = f.locale
+    and k.channel_key = f.channel_key
+  left join first_time_purchases ftp
+    on k.date = ftp.date
+    and k.tenant_id = ftp.tenant_id
+    and k.test_id = ftp.test_id
+    and k.locale = ftp.locale
+    and k.channel_key = ftp.channel_key
 )
 
 select
@@ -68,6 +238,7 @@ select
   locale,
   channel_key,
   safe_divide(gross_revenue_eur, purchases) as aov_eur,
-  safe_divide(net_revenue_eur, purchases) as profit_per_purchase_eur,
-  safe_divide(net_revenue_eur, visits) as profit_per_visit_eur
+  safe_divide(contribution_margin_eur, purchases) as profit_per_purchase_eur,
+  safe_divide(contribution_margin_eur, visits) as profit_per_visit_eur,
+  safe_divide(ad_spend_eur, first_time_purchasers_count) as cac_eur
 from joined

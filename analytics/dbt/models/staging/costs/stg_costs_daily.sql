@@ -1,7 +1,7 @@
 {{
   config(
     materialized='incremental',
-    unique_key=['date', 'cost_type', 'tenant_id', 'locale'],
+    unique_key=['date', 'cost_type', 'tenant_id', 'locale', 'notes'],
     partition_by={'field': 'date', 'data_type': 'date'},
     cluster_by=['cost_type', 'tenant_id']
   )
