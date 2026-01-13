@@ -29,11 +29,18 @@ export const capturePosthogEvent = async (
   const host = process.env.POSTHOG_HOST ?? "https://app.posthog.com";
   const url = new URL("/capture/", host).toString();
 
+  const propertiesWithGeo: AnalyticsEventProperties & { $geoip_disable?: boolean } = {
+    ...properties
+  };
+  if (!Object.prototype.hasOwnProperty.call(propertiesWithGeo, "$geoip_disable")) {
+    propertiesWithGeo.$geoip_disable = true;
+  }
+
   const payload: CapturePayload = {
     api_key: apiKey,
     event: eventName,
     distinct_id: properties.distinct_id,
-    properties,
+    properties: propertiesWithGeo,
     timestamp: properties.timestamp_utc
   };
 

@@ -23,6 +23,7 @@ Migration note:
 raw_posthog.events
 - PostHog events model with JSON properties
 - Columns: uuid, event, properties, elements, set, set_once, distinct_id, team_id, ip, site_url, timestamp, bq_ingested_timestamp
+- IP values must be discarded at ingestion and the ip column should be NULL for new rows.
 - Partition by DATE(timestamp)
 - Cluster by event, distinct_id
 
@@ -54,6 +55,16 @@ Events model only for now.
    - Table ID: events
    - Model: events
    - Properties fields as JSON where the option is available
+
+## PostHog privacy settings
+
+Enable IP discard in the PostHog UI:
+- Settings - Project - Data management - Discard client IP data toggle.
+
+Verification:
+1. Capture a test event from a server-side endpoint.
+2. In PostHog, open the event and confirm IP is not shown.
+3. In BigQuery, confirm new rows in raw_posthog.events have ip IS NULL if the column exists.
 
 ## Schema evolution policy
 
