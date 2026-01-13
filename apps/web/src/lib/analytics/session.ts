@@ -28,9 +28,6 @@ const EMPTY_CLICK_IDS: ClickIdParams = {
   ttclid: null
 };
 
-const sessionUtmStore = new Map<string, UtmParams>();
-const sessionClickIdStore = new Map<string, ClickIdParams>();
-
 const normalizeString = (value: unknown): string | null => {
   if (typeof value !== "string") {
     return null;
@@ -95,76 +92,20 @@ export const normalizeClickIds = (
   return normalized;
 };
 
-export const mergeUtm = (
-  existing: UtmParams | null,
-  incoming?: Partial<Record<UtmField, string | null | undefined>>
-): UtmParams => {
-  const normalizedIncoming = normalizeUtm(incoming);
-  if (!existing) {
-    return normalizedIncoming;
-  }
-
-  const merged: UtmParams = { ...existing };
-  for (const field of UTM_FIELDS) {
-    if (!merged[field] && normalizedIncoming[field]) {
-      merged[field] = normalizedIncoming[field];
-    }
-  }
-
-  return merged;
-};
-
-export const mergeClickIds = (
-  existing: ClickIdParams | null,
-  incoming?: Partial<Record<ClickIdField, string | null | undefined>>
-): ClickIdParams => {
-  const normalizedIncoming = normalizeClickIds(incoming);
-  if (!existing) {
-    return normalizedIncoming;
-  }
-
-  const merged: ClickIdParams = { ...existing };
-  for (const field of CLICK_ID_FIELDS) {
-    if (!merged[field] && normalizedIncoming[field]) {
-      merged[field] = normalizedIncoming[field];
-    }
-  }
-
-  return merged;
-};
-
-export const getUtmFromRequest = (options: {
-  body?: Record<string, unknown>;
-  url?: URL;
-}): Partial<Record<UtmField, string | null>> => {
-  const body = options.body ?? {};
-  const url = options.url;
-
+const getUtmFromQuery = (url: URL): UtmParams => {
   const incoming: Partial<Record<UtmField, string | null>> = {};
   for (const field of UTM_FIELDS) {
-    const fromBody = normalizeString(body[field]);
-    const fromQuery = normalizeString(url?.searchParams.get(field));
-    incoming[field] = fromBody ?? fromQuery;
+    incoming[field] = normalizeString(url.searchParams.get(field));
   }
-
-  return incoming;
+  return normalizeUtm(incoming);
 };
 
-export const getClickIdsFromRequest = (options: {
-  body?: Record<string, unknown>;
-  url?: URL;
-}): Partial<Record<ClickIdField, string | null>> => {
-  const body = options.body ?? {};
-  const url = options.url;
-
+const getClickIdsFromQuery = (url: URL): ClickIdParams => {
   const incoming: Partial<Record<ClickIdField, string | null>> = {};
   for (const field of CLICK_ID_FIELDS) {
-    const fromBody = normalizeString(body[field]);
-    const fromQuery = normalizeString(url?.searchParams.get(field));
-    incoming[field] = fromBody ?? fromQuery;
+    incoming[field] = normalizeString(url.searchParams.get(field));
   }
-
-  return incoming;
+  return normalizeClickIds(incoming);
 };
 
 export const hasUtmValues = (utm: UtmParams): boolean => {
@@ -175,34 +116,66 @@ export const hasClickIdValues = (clickIds: ClickIdParams): boolean => {
   return CLICK_ID_FIELDS.some((field) => Boolean(clickIds[field]));
 };
 
-export const parseUtmCookie = (value: string | undefined): UtmParams | null => {
-  if (!value) {
-    return null;
-  }
-
+const safeDecodeCookieValue = (value: string): string => {
   try {
-    const parsed = JSON.parse(decodeURIComponent(value)) as Partial<
-      Record<UtmField, string | null>
-    >;
-    return normalizeUtm(parsed);
+    return decodeURIComponent(value);
   } catch {
-    return null;
+    return value;
   }
 };
 
-export const parseClickIdsCookie = (value: string | undefined): ClickIdParams | null => {
+const parseCookieObject = (
+  value: string | undefined
+): Record<string, string | null | undefined> | null => {
   if (!value) {
     return null;
   }
 
-  try {
-    const parsed = JSON.parse(decodeURIComponent(value)) as Partial<
-      Record<ClickIdField, string | null>
-    >;
-    return normalizeClickIds(parsed);
-  } catch {
-    return null;
+  const candidates = [value];
+  const decodedOnce = safeDecodeCookieValue(value);
+  if (decodedOnce !== value) {
+    candidates.push(decodedOnce);
   }
+  const decodedTwice = safeDecodeCookieValue(decodedOnce);
+  if (decodedTwice !== decodedOnce && decodedTwice !== value) {
+    candidates.push(decodedTwice);
+  }
+
+  for (const candidate of candidates) {
+    let parsed: unknown = null;
+    try {
+      parsed = JSON.parse(candidate);
+    } catch {
+      parsed = null;
+    }
+
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      return parsed as Record<string, string | null | undefined>;
+    }
+
+    if (typeof parsed === "string") {
+      try {
+        const nested = JSON.parse(parsed) as unknown;
+        if (nested && typeof nested === "object" && !Array.isArray(nested)) {
+          return nested as Record<string, string | null | undefined>;
+        }
+      } catch {
+        continue;
+      }
+    }
+  }
+
+  return null;
+};
+
+export const parseUtmCookie = (value: string | undefined): UtmParams | null => {
+  const parsed = parseCookieObject(value);
+  return parsed ? normalizeUtm(parsed) : null;
+};
+
+export const parseClickIdsCookie = (value: string | undefined): ClickIdParams | null => {
+  const parsed = parseCookieObject(value);
+  return parsed ? normalizeClickIds(parsed) : null;
 };
 
 export const serializeUtmCookie = (utm: UtmParams): string => {
@@ -244,23 +217,40 @@ export const getClickIdsFromCookies = (
   return parseClickIdsCookie(cookies[CLICK_COOKIE_NAME]);
 };
 
-export const getUtmFromSessionStore = (sessionId: string): UtmParams | null => {
-  return sessionUtmStore.get(sessionId) ?? null;
+export type TrackingContext = {
+  utm: UtmParams;
+  clickIds: ClickIdParams;
+  shouldSetUtmCookie: boolean;
+  shouldSetClickIdsCookie: boolean;
 };
 
-export const getClickIdsFromSessionStore = (sessionId: string): ClickIdParams | null => {
-  return sessionClickIdStore.get(sessionId) ?? null;
-};
+export const getTrackingContextFromRequest = (options: {
+  cookies: Record<string, string>;
+  url: URL;
+}): TrackingContext => {
+  const storedUtm = getUtmFromCookies(options.cookies);
+  const storedClickIds = getClickIdsFromCookies(options.cookies);
 
-export const storeUtmForSession = (sessionId: string, utm: UtmParams): void => {
-  sessionUtmStore.set(sessionId, utm);
-};
+  const storedUtmHasValues = storedUtm ? hasUtmValues(storedUtm) : false;
+  const storedClickIdsHaveValues = storedClickIds
+    ? hasClickIdValues(storedClickIds)
+    : false;
 
-export const storeClickIdsForSession = (
-  sessionId: string,
-  clickIds: ClickIdParams
-): void => {
-  sessionClickIdStore.set(sessionId, clickIds);
+  const queryUtm = getUtmFromQuery(options.url);
+  const queryClickIds = getClickIdsFromQuery(options.url);
+
+  const resolvedUtm =
+    storedUtmHasValues && storedUtm ? storedUtm : queryUtm;
+  const resolvedClickIds =
+    storedClickIdsHaveValues && storedClickIds ? storedClickIds : queryClickIds;
+
+  return {
+    utm: resolvedUtm,
+    clickIds: resolvedClickIds,
+    shouldSetUtmCookie: !storedUtmHasValues && hasUtmValues(queryUtm),
+    shouldSetClickIdsCookie:
+      !storedClickIdsHaveValues && hasClickIdValues(queryClickIds)
+  };
 };
 
 export {

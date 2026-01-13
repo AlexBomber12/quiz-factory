@@ -126,7 +126,7 @@ Queue (in order)
   - no unexpected datasets are created by dbt
 
 14) PR-ANALYTICS-13: Remove In-Memory Session Stores for UTM and Click IDs
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-ANALYTICS-13.md
 - Depends on: PR-ANALYTICS-12
 - Outcome:
