@@ -32,7 +32,7 @@ import {
   storeClickIdsForSession,
   storeUtmForSession
 } from "./session";
-import { resolveTenantId } from "./tenant";
+import { resolveLocale, resolveTenant } from "../tenants/resolve";
 
 type AnalyticsRequestBody = {
   test_id?: unknown;
@@ -121,10 +121,11 @@ export const handleAnalyticsEvent = async (
     return respondBadRequest("session_id is required");
   }
 
-  const forwardedHost = request.headers.get("x-forwarded-host");
-  const hostHeader =
-    forwardedHost?.split(",")[0]?.trim() ?? request.headers.get("host") ?? url.host;
-  const tenantId = resolveTenantId(hostHeader);
+  const { tenantId, defaultLocale } = resolveTenant(request.headers, url.host);
+  const locale = resolveLocale({
+    defaultLocale,
+    acceptLanguage: request.headers.get("accept-language")
+  });
 
   const incomingUtm = getUtmFromRequest({ body, url });
   const storedUtm = getUtmFromCookies(cookies);
@@ -143,7 +144,7 @@ export const handleAnalyticsEvent = async (
     testId,
     utm: mergedUtm,
     clickIds: mergedClickIds,
-    locale: normalizeString(body.locale),
+    locale,
     referrer: normalizeString(body.referrer),
     country: normalizeString(body.country),
     language: normalizeString(body.language),
