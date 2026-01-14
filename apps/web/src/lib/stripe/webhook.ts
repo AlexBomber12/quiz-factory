@@ -2,6 +2,7 @@ import { createHmac, timingSafeEqual } from "crypto";
 
 import type { AnalyticsEventProperties, AnalyticsEventName } from "../analytics/events";
 import { normalizeString } from "../analytics/session";
+import { validateAnalyticsEventPayload } from "../analytics/validate";
 import { parseStripeMetadata } from "./metadata";
 import type {
   StripeAnalyticsStore,
@@ -312,6 +313,26 @@ const buildFinanceBaseProperties = (
   };
 };
 
+const captureValidatedEvent = (
+  eventName: AnalyticsEventName,
+  properties: AnalyticsEventProperties,
+  deps: StripeWebhookDependencies
+): void => {
+  if (!deps.captureEvent) {
+    return;
+  }
+
+  const validation = validateAnalyticsEventPayload(
+    eventName,
+    properties as Record<string, unknown>
+  );
+  if (!validation.ok) {
+    return;
+  }
+
+  void deps.captureEvent(eventName, properties).catch(() => null);
+};
+
 const resolveChargeMetadata = async (
   charge: StripeCharge,
   stripeClient?: StripeClient | null
@@ -386,17 +407,15 @@ const handleCheckoutSessionCompleted = async (
       await deps.store.recordFee(feeRow);
     }
 
-    if (deps.captureEvent) {
-      const metadata = parseStripeMetadata(session.metadata);
-      const properties = buildFinanceBaseProperties(metadata, purchaseRow.created_utc);
-      properties.purchase_id = purchaseRow.purchase_id;
-      properties.amount_eur = purchaseRow.amount_eur;
-      properties.currency = purchaseRow.currency;
-      properties.product_type = purchaseRow.product_type;
-      properties.payment_provider = "stripe";
-      properties.is_upsell = purchaseRow.is_upsell;
-      void deps.captureEvent("purchase_success", properties).catch(() => null);
-    }
+    const metadata = parseStripeMetadata(session.metadata);
+    const properties = buildFinanceBaseProperties(metadata, purchaseRow.created_utc);
+    properties.purchase_id = purchaseRow.purchase_id;
+    properties.amount_eur = purchaseRow.amount_eur;
+    properties.currency = purchaseRow.currency;
+    properties.product_type = purchaseRow.product_type;
+    properties.payment_provider = "stripe";
+    properties.is_upsell = purchaseRow.is_upsell ?? false;
+    captureValidatedEvent("purchase_success", properties, deps);
   }
 
   return { status: "ok" };
@@ -407,24 +426,22 @@ const handleCheckoutSessionFailed = async (
   deps: StripeWebhookDependencies,
   receivedAt: Date
 ): Promise<StripeWebhookResult> => {
-  if (deps.captureEvent) {
-    const session = event.data.object as StripeCheckoutSession;
-    const metadata = parseStripeMetadata(session.metadata);
-    const purchaseId =
-      metadata.purchase_id ??
-      normalizeString(session.client_reference_id) ??
-      normalizeString(session.payment_intent) ??
-      normalizeString(session.id) ??
-      "unknown";
+  const session = event.data.object as StripeCheckoutSession;
+  const metadata = parseStripeMetadata(session.metadata);
+  const purchaseId =
+    metadata.purchase_id ??
+    normalizeString(session.client_reference_id) ??
+    normalizeString(session.payment_intent) ??
+    normalizeString(session.id) ??
+    "unknown";
 
-    const properties = buildFinanceBaseProperties(
-      metadata,
-      toIsoStringFromSeconds(event.created, receivedAt)
-    );
-    properties.purchase_id = purchaseId;
-    properties.failure_reason = event.type;
-    void deps.captureEvent("purchase_failed", properties).catch(() => null);
-  }
+  const properties = buildFinanceBaseProperties(
+    metadata,
+    toIsoStringFromSeconds(event.created, receivedAt)
+  );
+  properties.purchase_id = purchaseId;
+  properties.failure_reason = event.type;
+  captureValidatedEvent("purchase_failed", properties, deps);
 
   return { status: "ok" };
 };
@@ -450,13 +467,13 @@ const handleChargeRefunded = async (
     };
 
     const inserted = await deps.store.recordRefund(refundRow);
-    if (inserted && deps.captureEvent) {
+    if (inserted) {
       const properties = buildFinanceBaseProperties(metadata, refundRow.created_utc);
       properties.purchase_id = purchaseId ?? refundRow.refund_id;
       properties.refund_id = refundRow.refund_id;
       properties.amount_eur = refundRow.amount_eur;
       properties.payment_provider = "stripe";
-      void deps.captureEvent("refund_issued", properties).catch(() => null);
+      captureValidatedEvent("refund_issued", properties, deps);
     }
   }
 
@@ -489,13 +506,13 @@ const handleDisputeCreated = async (
   };
 
   const inserted = await deps.store.recordDispute(disputeRow);
-  if (inserted && deps.captureEvent) {
+  if (inserted) {
     const properties = buildFinanceBaseProperties(metadata, disputeRow.created_utc);
     properties.purchase_id = purchaseId ?? disputeRow.dispute_id;
     properties.dispute_id = disputeRow.dispute_id;
     properties.amount_eur = disputeRow.amount_eur;
     properties.payment_provider = "stripe";
-    void deps.captureEvent("dispute_opened", properties).catch(() => null);
+    captureValidatedEvent("dispute_opened", properties, deps);
   }
 
   return { status: "ok" };
