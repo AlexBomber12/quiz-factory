@@ -444,22 +444,6 @@ purchase_keys as (
   from purchase_attribution_channel
 ),
 
-spend_keys as (
-  select
-    date,
-    '__unallocated__' as tenant_id,
-    '__unallocated__' as test_id,
-    '__unallocated__' as locale,
-    lower(
-      concat(
-        coalesce(nullif(trim(utm_source), ''), 'unknown'),
-        ':',
-        coalesce(nullif(trim(utm_campaign), ''), 'unknown')
-      )
-    ) as channel_key
-  from spend_by_campaign
-),
-
 cost_keys as (
   select
     date,
@@ -470,7 +454,7 @@ cost_keys as (
   from costs_allocated
 ),
 
-all_keys as (
+base_keys as (
   select
     date,
     tenant_id,
@@ -507,7 +491,43 @@ all_keys as (
     test_id,
     locale,
     channel_key
-  from spend_keys
+  from cost_keys
+),
+
+spend_keys as (
+  select
+    s.date,
+    '__unallocated__' as tenant_id,
+    '__unallocated__' as test_id,
+    '__unallocated__' as locale,
+    lower(
+      concat(
+        coalesce(nullif(trim(s.utm_source), ''), 'unknown'),
+        ':',
+        coalesce(nullif(trim(s.utm_campaign), ''), 'unknown')
+      )
+    ) as channel_key
+  from spend_by_campaign s
+  left join base_keys b
+    on s.date = b.date
+    and lower(
+      concat(
+        coalesce(nullif(trim(s.utm_source), ''), 'unknown'),
+        ':',
+        coalesce(nullif(trim(s.utm_campaign), ''), 'unknown')
+      )
+    ) = b.channel_key
+  where b.date is null
+),
+
+all_keys as (
+  select
+    date,
+    tenant_id,
+    test_id,
+    locale,
+    channel_key
+  from base_keys
 
   union distinct
 
@@ -517,7 +537,7 @@ all_keys as (
     test_id,
     locale,
     channel_key
-  from cost_keys
+  from spend_keys
 ),
 
 keys_with_campaign as (
