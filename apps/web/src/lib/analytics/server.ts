@@ -7,6 +7,11 @@ import {
 } from "./events";
 import { capturePosthogEvent } from "./posthog";
 import {
+  coerceAnalyticsPayload,
+  validateAnalyticsEventPayload,
+  type AnalyticsValidationError
+} from "./validate";
+import {
   CLICK_COOKIE_NAME,
   DISTINCT_COOKIE_NAME,
   SESSION_COOKIE_NAME,
@@ -54,14 +59,14 @@ type AnalyticsRequestBody = {
   ttclid?: unknown;
 };
 
-const parseJsonBody = async (request: Request): Promise<AnalyticsRequestBody> => {
+const parseJsonBody = async (request: Request): Promise<Record<string, unknown>> => {
   const contentType = request.headers.get("content-type") ?? "";
   if (!contentType.includes("application/json")) {
     return {};
   }
 
   try {
-    return (await request.json()) as AnalyticsRequestBody;
+    return (await request.json()) as Record<string, unknown>;
   } catch {
     return {};
   }
@@ -76,9 +81,15 @@ const requireString = (value: unknown): string | null => {
   return normalized;
 };
 
-const respondBadRequest = (message: string): NextResponse => {
-  return NextResponse.json({ error: message }, { status: 400 });
+const respondBadRequest = (error: AnalyticsValidationError): NextResponse => {
+  return NextResponse.json({ error }, { status: 400 });
 };
+
+const missingRequiredError = (field: string): AnalyticsValidationError => ({
+  code: "missing_required",
+  message: `${field} is required.`,
+  details: { missing: [field] }
+});
 
 type ResponseExtensionContext = {
   body: AnalyticsRequestBody;
@@ -100,13 +111,14 @@ export const handleAnalyticsEvent = async (
     extendResponse?: (context: ResponseExtensionContext) => Record<string, unknown>;
   }
 ): Promise<Response> => {
-  const body = await parseJsonBody(request);
+  const rawBody = await parseJsonBody(request);
+  const body = coerceAnalyticsPayload(rawBody) as AnalyticsRequestBody;
   const cookies = parseCookies(request.headers.get("cookie"));
   const url = new URL(request.url);
 
   const testId = requireString(body.test_id);
   if (options.requireTestId !== false && !testId) {
-    return respondBadRequest("test_id is required");
+    return respondBadRequest(missingRequiredError("test_id"));
   }
 
   const distinctIdFromRequest = getDistinctIdFromRequest({ body, cookies });
@@ -116,7 +128,7 @@ export const handleAnalyticsEvent = async (
     ? createSessionId()
     : getSessionIdFromRequest({ body, cookies });
   if (!sessionId) {
-    return respondBadRequest("session_id is required");
+    return respondBadRequest(missingRequiredError("session_id"));
   }
 
   const { tenantId, defaultLocale } = resolveTenant(request.headers, url.host);
@@ -144,7 +156,7 @@ export const handleAnalyticsEvent = async (
 
   const purchaseId = normalizeString(body.purchase_id);
   if (options.requirePurchaseId && !purchaseId) {
-    return respondBadRequest("purchase_id is required");
+    return respondBadRequest(missingRequiredError("purchase_id"));
   }
   if (purchaseId) {
     properties.purchase_id = purchaseId;
@@ -158,7 +170,7 @@ export const handleAnalyticsEvent = async (
   if (options.event === "share_click") {
     const shareTarget = requireString(body.share_target);
     if (!shareTarget) {
-      return respondBadRequest("share_target is required");
+      return respondBadRequest(missingRequiredError("share_target"));
     }
     properties.share_target = shareTarget;
   }
@@ -166,11 +178,19 @@ export const handleAnalyticsEvent = async (
   const upsellId = requireString(body.upsell_id);
   if (options.event === "upsell_accept") {
     if (!upsellId) {
-      return respondBadRequest("upsell_id is required");
+      return respondBadRequest(missingRequiredError("upsell_id"));
     }
     properties.upsell_id = upsellId;
   } else if (options.event === "upsell_view" && upsellId) {
     properties.upsell_id = upsellId;
+  }
+
+  const validation = validateAnalyticsEventPayload(options.event, {
+    ...body,
+    ...properties
+  });
+  if (!validation.ok) {
+    return respondBadRequest(validation.error);
   }
 
   void capturePosthogEvent(options.event, properties).catch(() => null);
