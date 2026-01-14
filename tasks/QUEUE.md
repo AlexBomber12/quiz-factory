@@ -30,141 +30,125 @@ Queue (in order)
 - Status: DONE
 - Tasks file: tasks/PR-ANALYTICS-03.md
 - Depends on: PR-ANALYTICS-02
-- Outcome:
-  - Stripe webhooks stored as raw-minimized facts (no PII)
-  - normalized purchases/refunds/disputes/fees tables in BigQuery
-  - backend-only finance events emitted to PostHog
-  - tracking identifiers aligned (distinct_id vs session_id)
 
 4) PR-ANALYTICS-04: BigQuery Bootstrap, PostHog Export Wiring, dbt Scaffold
 - Status: DONE
 - Tasks file: tasks/PR-ANALYTICS-04.md
 - Depends on: PR-ANALYTICS-03
-- Outcome:
-  - raw_posthog/raw_costs/marts datasets and tables
-  - PostHog BigQuery export configured for events model
-  - dbt scaffold ready
 
 5) PR-ANALYTICS-05: dbt Marts (P&L Daily, Funnel Daily, Unit Econ) + Data Quality
 - Status: DONE
 - Tasks file: tasks/PR-ANALYTICS-05.md
 - Depends on: PR-ANALYTICS-04
-- Outcome:
-  - marts tables built via dbt (including reconciliation)
-  - incremental models and tests
 
 6) PR-ANALYTICS-06: Dashboards (P&L Daily, Funnel Daily)
 - Status: DONE
 - Tasks file: tasks/PR-ANALYTICS-06.md
 - Depends on: PR-ANALYTICS-05
-- Outcome:
-  - reproducible dashboard specs
-  - canonical SQL library
-  - alerting spec
 
-7) PR-ANALYTICS-07: Costs and Ad Spend Import (1 channel) + Profit Marts
+7) PR-ANALYTICS-07: Costs, Ad Spend Import (1 channel), Campaign Mapping, and Profit Marts
 - Status: DONE
 - Tasks file: tasks/PR-ANALYTICS-07.md
 - Depends on: PR-ANALYTICS-06
-- Outcome:
-  - costs and spend loaded (CSV-first)
-  - spend mapped via campaign_map
-  - contribution margin and CAC computed in marts
 
 8) PR-ANALYTICS-08: BigQuery EU Location Alignment and dbt Schema Fix
 - Status: DONE
 - Tasks file: tasks/PR-ANALYTICS-08.md
 - Depends on: PR-ANALYTICS-07
-- Outcome:
-  - BigQuery bootstrap scripts use EU location
-  - dbt outputs staging models to tmp and marts models to marts dataset
-  - docs reflect EU as the standard
-  - no cross-location queries
 
 9) PR-ANALYTICS-09: Tenant Registry and Locale Resolution
 - Status: DONE
 - Tasks file: tasks/PR-ANALYTICS-09.md
 - Depends on: PR-ANALYTICS-08
-- Outcome:
-  - tenant_id and locale are resolved server-side from tenant config (Accept-Language fallback)
-  - locale is always non-null in server-side tracking and finance events
-  - tenant resolution supports 200 domains without code changes
 
 10) PR-ANALYTICS-10: Implement page_view
 - Status: DONE
 - Tasks file: tasks/PR-ANALYTICS-10.md
 - Depends on: PR-ANALYTICS-09
-- Outcome:
-  - page_view event is emitted for each attempt at least once
-  - mart_funnel_daily visits and unique_visitors are non-zero and meaningful
 
 11) PR-ANALYTICS-11: Implement analytics/events.json (Full Coverage) + Contract Enforcement
 - Status: DONE
 - Tasks file: tasks/PR-ANALYTICS-11.md
 - Depends on: PR-ANALYTICS-10
-- Outcome:
-  - every event defined in analytics/events.json has a corresponding API route or backend emission path
-  - purchase_failed is emitted from Stripe failure webhooks
-  - share_click and upsell events have server-side routes
-  - a test asserts code event names match analytics/events.json keys
 
 12) PR-OPS-POSTHOG-01: Drop IP capture and disable GeoIP enrichment
 - Status: DONE
 - Tasks file: tasks/PR-OPS-POSTHOG-01.md
 - Depends on: PR-ANALYTICS-11
-- Outcome:
-  - PostHog capture payload sets $geoip_disable=true for server-side events
-  - PostHog instance is configured to discard client IP data (documented and verified)
-  - BigQuery export contains no real IP values
 
-13) PR-ANALYTICS-12: dbt Dataset Naming Fix (No tmp_tmp, No tmp_marts)
+13) PR-ANALYTICS-12: dbt dataset naming fix
 - Status: DONE
 - Tasks file: tasks/PR-ANALYTICS-12.md
 - Depends on: PR-OPS-POSTHOG-01
-- Outcome:
-  - dbt writes staging models into dataset tmp and marts into dataset marts exactly
-  - no unexpected datasets are created by dbt
 
-14) PR-ANALYTICS-13: Remove In-Memory Session Stores for UTM and Click IDs
+14) PR-ANALYTICS-13: Remove in-memory session stores
 - Status: DONE
 - Tasks file: tasks/PR-ANALYTICS-13.md
 - Depends on: PR-ANALYTICS-12
-- Outcome:
-  - no in-memory Maps for UTM or click ids
-  - cookies are the single source of truth for tracking context
 
-15) PR-ANALYTICS-14: Spend Attribution Hardening (No utm_campaign Collisions)
+15) PR-ANALYTICS-14: Spend attribution hardening
 - Status: DONE
 - Tasks file: tasks/PR-ANALYTICS-14.md
 - Depends on: PR-ANALYTICS-13
-- Outcome:
-  - spend is joined by a collision-safe key (utm_source + utm_campaign)
-  - platform collisions no longer corrupt P&L
 
-16) PR-ANALYTICS-15: Incremental Robustness (Same-Day Updates and Late Events)
+16) PR-ANALYTICS-15: Incremental robustness
 - Status: DONE
 - Tasks file: tasks/PR-ANALYTICS-15.md
 - Depends on: PR-ANALYTICS-14
-- Outcome:
-  - dbt incremental models support same-day re-imports and late events via lookback
 
-17) PR-ANALYTICS-16: P&L Visibility on Zero-Traffic Days
+17) PR-ANALYTICS-16: P&L visibility on zero-traffic days
 - Status: DONE
 - Tasks file: tasks/PR-ANALYTICS-16.md
 - Depends on: PR-ANALYTICS-15
-- Outcome:
-  - P&L includes cost-only days and negative days
-  - shared cost allocation is safe when visits are 0
 
-18) PR-OPS-POSTHOG-02: Privacy Enforcement and Access Boundaries
+18) PR-OPS-POSTHOG-02: Privacy enforcement and access
 - Status: DONE
 - Tasks file: tasks/PR-OPS-POSTHOG-02.md
 - Depends on: PR-ANALYTICS-16
-- Outcome:
-  - raw_posthog.events_clean exists and excludes ip
-  - dbt staging reads from the clean view
-  - privacy.md documents access boundaries and retention
 
+19) PR-ANALYTICS-17: dbt Safety Checks and Cost-only Day Sanity
+- Status: TODO
+- Tasks file: tasks/PR-ANALYTICS-17.md
+- Depends on: PR-OPS-POSTHOG-02
+- Outcome:
+  - dbt build fails if unexpected datasets or schemas are created
+  - sanity checks prevent silent regressions in P&L completeness
+
+20) PR-ANALYTICS-18: Runtime Event Validation and Sanitization
+- Status: TODO
+- Tasks file: tasks/PR-ANALYTICS-18.md
+- Depends on: PR-ANALYTICS-17
+- Outcome:
+  - all event API routes validate payloads (required fields, forbidden fields)
+  - no accidental PII or forbidden keys can enter tracking
+  - validation is shared and enforced consistently
+
+21) PR-TENANTS-02: Tenant Provisioning CLI and CI Validation
+- Status: TODO
+- Tasks file: tasks/PR-TENANTS-02.md
+- Depends on: PR-ANALYTICS-18
+- Outcome:
+  - tenants.json can be generated and validated automatically
+  - domains uniqueness and locale correctness are enforced in CI
+  - provisioning scales to 200 domains without manual edits
+
+22) PR-OPS-BQ-01: BigQuery Retention and Cost Control Automation
+- Status: TODO
+- Tasks file: tasks/PR-OPS-BQ-01.md
+- Depends on: PR-TENANTS-02
+- Outcome:
+  - retention policy is codified (SQL and runbook)
+  - raw datasets do not grow without bounds
+  - changes are safe and reversible
+
+23) PR-ANALYTICS-19: Automated Ad Spend Import (Meta) + Operationalization
+- Status: TODO
+- Tasks file: tasks/PR-ANALYTICS-19.md
+- Depends on: PR-OPS-BQ-01
+- Outcome:
+  - daily Meta ad spend is imported automatically into raw_costs.ad_spend_daily
+  - idempotent merges prevent double counting
+  - CSV fallback remains supported
 
 Execution rules (apply to every PR)
 - Work on exactly 1 PR at a time.
@@ -172,7 +156,7 @@ Execution rules (apply to every PR)
 - Implement only what the tasks file requests.
 - Run the project test gate locally before committing.
 - Do not commit secrets. Do not add or modify .env except .env.example if the task explicitly says so.
-- When green, commit with message "PR-ANALYTICS-0X: <short summary>" (or "PR-OPS-POSTHOG-01: <summary>") and push the branch.
+- When green, commit with message "PR-ANALYTICS-0X: <short summary>" (or "PR-OPS-...: <summary>") and push the branch.
 
 Definition of Done (global)
 - A single query of marts.mart_pnl_daily clearly shows:
