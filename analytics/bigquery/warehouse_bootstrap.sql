@@ -22,6 +22,15 @@ CREATE TABLE IF NOT EXISTS raw_posthog.events (
 PARTITION BY DATE(timestamp)
 CLUSTER BY event, distinct_id;
 
+CREATE OR REPLACE VIEW raw_posthog.events_clean AS
+SELECT
+  uuid,
+  event,
+  properties,
+  distinct_id,
+  timestamp
+FROM raw_posthog.events;
+
 CREATE TABLE IF NOT EXISTS raw_costs.costs_daily (
   date DATE,
   cost_type STRING,
