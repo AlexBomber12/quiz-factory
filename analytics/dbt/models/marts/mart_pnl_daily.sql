@@ -325,6 +325,33 @@ direct_costs_allocated as (
     on f.date = tlv.date
     and f.tenant_id = tlv.tenant_id
     and f.locale = tlv.locale
+  where case
+    when c.locale is null then coalesce(tv.visits, 0)
+    else coalesce(tlv.visits, 0)
+  end > 0
+),
+
+direct_costs_unallocated as (
+  select
+    c.date,
+    c.tenant_id,
+    '__unallocated__' as test_id,
+    coalesce(c.locale, '__unallocated__') as locale,
+    '__unallocated__' as channel_key,
+    c.cost_type,
+    c.amount_eur as amount_eur
+  from direct_costs c
+  left join tenant_visits tv
+    on c.date = tv.date
+    and c.tenant_id = tv.tenant_id
+  left join tenant_locale_visits tlv
+    on c.date = tlv.date
+    and c.tenant_id = tlv.tenant_id
+    and c.locale = tlv.locale
+  where case
+    when c.locale is null then coalesce(tv.visits, 0)
+    else coalesce(tlv.visits, 0)
+  end = 0
 ),
 
 shared_costs_allocated as (
@@ -341,6 +368,22 @@ shared_costs_allocated as (
     on c.date = f.date
   left join total_visits tv
     on f.date = tv.date
+  where coalesce(tv.visits, 0) > 0
+),
+
+shared_costs_unallocated as (
+  select
+    c.date,
+    '__unallocated__' as tenant_id,
+    '__unallocated__' as test_id,
+    '__unallocated__' as locale,
+    '__unallocated__' as channel_key,
+    c.cost_type,
+    c.amount_eur as amount_eur
+  from shared_costs c
+  left join total_visits tv
+    on c.date = tv.date
+  where coalesce(tv.visits, 0) = 0
 ),
 
 costs_allocated as (
@@ -350,7 +393,17 @@ costs_allocated as (
   union all
 
   select *
+  from direct_costs_unallocated
+
+  union all
+
+  select *
   from shared_costs_allocated
+
+  union all
+
+  select *
+  from shared_costs_unallocated
 ),
 
 costs_by_key as (
@@ -381,7 +434,27 @@ spend_by_campaign as (
   group by date, utm_source, utm_campaign
 ),
 
-all_keys as (
+purchase_keys as (
+  select
+    purchase_date as date,
+    tenant_id,
+    test_id,
+    locale,
+    channel_key
+  from purchase_attribution_channel
+),
+
+cost_keys as (
+  select
+    date,
+    tenant_id,
+    test_id,
+    locale,
+    channel_key
+  from costs_allocated
+),
+
+base_keys as (
   select
     date,
     tenant_id,
@@ -399,6 +472,72 @@ all_keys as (
     locale,
     channel_key
   from funnel_visits
+
+  union distinct
+
+  select
+    date,
+    tenant_id,
+    test_id,
+    locale,
+    channel_key
+  from purchase_keys
+
+  union distinct
+
+  select
+    date,
+    tenant_id,
+    test_id,
+    locale,
+    channel_key
+  from cost_keys
+),
+
+spend_keys as (
+  select
+    s.date,
+    '__unallocated__' as tenant_id,
+    '__unallocated__' as test_id,
+    '__unallocated__' as locale,
+    lower(
+      concat(
+        coalesce(nullif(trim(s.utm_source), ''), 'unknown'),
+        ':',
+        coalesce(nullif(trim(s.utm_campaign), ''), 'unknown')
+      )
+    ) as channel_key
+  from spend_by_campaign s
+  left join base_keys b
+    on s.date = b.date
+    and lower(
+      concat(
+        coalesce(nullif(trim(s.utm_source), ''), 'unknown'),
+        ':',
+        coalesce(nullif(trim(s.utm_campaign), ''), 'unknown')
+      )
+    ) = b.channel_key
+  where b.date is null
+),
+
+all_keys as (
+  select
+    date,
+    tenant_id,
+    test_id,
+    locale,
+    channel_key
+  from base_keys
+
+  union distinct
+
+  select
+    date,
+    tenant_id,
+    test_id,
+    locale,
+    channel_key
+  from spend_keys
 ),
 
 keys_with_campaign as (
