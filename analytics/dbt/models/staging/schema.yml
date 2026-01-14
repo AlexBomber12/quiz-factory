@@ -13,6 +13,8 @@ sources:
           error_after:
             count: 24
             period: hour
+      - name: events_clean
+        loaded_at_field: timestamp
   - name: raw_stripe
     schema: raw_stripe
     tables:

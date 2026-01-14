@@ -157,7 +157,7 @@ Queue (in order)
   - shared cost allocation is safe when visits are 0
 
 18) PR-OPS-POSTHOG-02: Privacy Enforcement and Access Boundaries
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-OPS-POSTHOG-02.md
 - Depends on: PR-ANALYTICS-16
 - Outcome:

@@ -34,7 +34,7 @@ with source as (
     json_value(properties, '$.purchase_id') as purchase_id,
     safe_cast(json_value(properties, '$.amount_eur') as numeric) as amount_eur,
     safe_cast(json_value(properties, '$.is_internal') as bool) as is_internal
-  from {{ source('raw_posthog', 'events') }}
+  from {{ source('raw_posthog', 'events_clean') }}
 ),
 filtered as (
   select *
