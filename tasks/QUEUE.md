@@ -149,7 +149,7 @@ Queue (in order)
   - dbt incremental models support same-day re-imports and late events via lookback
 
 17) PR-ANALYTICS-16: P&L Visibility on Zero-Traffic Days
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-ANALYTICS-16.md
 - Depends on: PR-ANALYTICS-15
 - Outcome:
