@@ -107,7 +107,7 @@ Queue (in order)
 - Depends on: PR-ANALYTICS-16
 
 19) PR-ANALYTICS-17: dbt Safety Checks and Cost-only Day Sanity
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-ANALYTICS-17.md
 - Depends on: PR-OPS-POSTHOG-02
 - Outcome:
