@@ -72,6 +72,11 @@ run_analytics() {
   export DBT_PROFILES_DIR="$PWD"
   uv run dbt deps
   uv run dbt parse
+  if [[ "${CI:-}" == "true" || "${CI:-}" == "1" ]]; then
+    uv run dbt build
+  else
+    echo "Skipping dbt build outside CI; set CI=true to run analytics tests."
+  fi
   popd >/dev/null
 }
 
