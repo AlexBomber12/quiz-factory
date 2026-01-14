@@ -25,8 +25,11 @@ filtered as (
   select *
   from source
   {% if is_incremental() %}
-  where date > (
-    select coalesce(max(date), date('1900-01-01'))
+  where date >= (
+    select date_sub(
+      coalesce(max(date), date('1900-01-01')),
+      interval {{ var("incremental_lookback_days") }} day
+    )
     from {{ this }}
   )
   {% endif %}
