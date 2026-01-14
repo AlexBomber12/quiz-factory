@@ -1,7 +1,7 @@
 # Analytics Safety Checks
 
 ## What the guards do
-- Dataset guard: the `schema_dataset_guard` dbt test fails if any dbt model relation is found outside the `tmp` and `marts` datasets.
+- Dataset guard: `analytics/dbt/tests/schema_dataset_guard.sql` runs as a dbt data test and fails if any dbt model relation is found outside the `tmp` and `marts` datasets.
 - Cost or spend gap check: `mart_pnl_missing_cost_spend_daily` returns dates where costs or spend exist but `marts.mart_pnl_daily` has no rows for the date.
 - Cost contribution gap check: `mart_pnl_missing_cost_contribution_daily` returns dates where costs exist but `marts.mart_pnl_daily` has no cost allocations.
 
