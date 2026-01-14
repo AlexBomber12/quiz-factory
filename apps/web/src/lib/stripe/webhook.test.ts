@@ -134,6 +134,11 @@ describe("stripe webhook processing", () => {
 
   it("replays a checkout event and emits purchase_success", async () => {
     const event = buildCheckoutCompletedEvent();
+    const metadata = event.data.object.metadata as Record<
+      string,
+      string | null | undefined
+    >;
+    metadata.is_upsell = undefined;
     const store = new InMemoryStripeAnalyticsStore();
     const captureEvent = vi.fn(async (name: string, properties: Record<string, unknown>) => ({
       name,
@@ -167,5 +172,6 @@ describe("stripe webhook processing", () => {
     expect(eventName).toBe("purchase_success");
     expect(properties.session_id).toBe("session-abc");
     expect(properties.currency).toBe("eur");
+    expect(properties.is_upsell).toBe(false);
   });
 });

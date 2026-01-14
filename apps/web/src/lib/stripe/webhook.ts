@@ -414,7 +414,7 @@ const handleCheckoutSessionCompleted = async (
     properties.currency = purchaseRow.currency;
     properties.product_type = purchaseRow.product_type;
     properties.payment_provider = "stripe";
-    properties.is_upsell = purchaseRow.is_upsell;
+    properties.is_upsell = purchaseRow.is_upsell ?? false;
     captureValidatedEvent("purchase_success", properties, deps);
   }
 
