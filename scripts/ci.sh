@@ -49,6 +49,8 @@ run_app() {
   pnpm typecheck
   pnpm test
   pnpm build
+  echo "==> Tenants validation"
+  python3 "$ROOT_DIR/scripts/tenants/validate_tenants.py"
 }
 
 ensure_uv() {
