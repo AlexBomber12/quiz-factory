@@ -133,7 +133,7 @@ Queue (in order)
   - provisioning scales to 200 domains without manual edits
 
 22) PR-OPS-BQ-01: BigQuery Retention and Cost Control Automation
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-OPS-BQ-01.md
 - Depends on: PR-TENANTS-02
 - Outcome:
