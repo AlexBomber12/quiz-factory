@@ -142,7 +142,7 @@ Queue (in order)
   - changes are safe and reversible
 
 23) PR-ANALYTICS-19: Automated Ad Spend Import (Meta) + Operationalization
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-ANALYTICS-19.md
 - Depends on: PR-OPS-BQ-01
 - Outcome:

@@ -71,6 +71,8 @@ run_analytics() {
   if [[ "$SKIP_UV_SYNC" -eq 0 ]]; then
     uv sync --frozen
   fi
+  echo "==> Importer unit tests"
+  uv run python "$ROOT_DIR/scripts/importers/meta_ads_to_bq_test.py"
   export DBT_PROFILES_DIR="$PWD"
   uv run dbt deps
   uv run dbt parse
