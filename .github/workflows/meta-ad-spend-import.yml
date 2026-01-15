@@ -45,5 +45,6 @@ jobs:
           uv sync --frozen
           uv run python ../../scripts/importers/meta_ads_to_bq.py
           export DBT_PROFILES_DIR="$PWD"
+          export DBT_BIGQUERY_PROJECT="${BQ_PROJECT_ID}"
           uv run dbt deps
           uv run dbt build
