@@ -115,7 +115,7 @@ Queue (in order)
   - sanity checks prevent silent regressions in P&L completeness
 
 20) PR-ANALYTICS-18: Runtime Event Validation and Sanitization
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-ANALYTICS-18.md
 - Depends on: PR-ANALYTICS-17
 - Outcome:
