@@ -115,7 +115,7 @@ Queue (in order)
   - sanity checks prevent silent regressions in P&L completeness
 
 20) PR-ANALYTICS-18: Runtime Event Validation and Sanitization
-- Status: DONE
+- Status: TODO
 - Tasks file: tasks/PR-ANALYTICS-18.md
 - Depends on: PR-ANALYTICS-17
 - Outcome:
@@ -124,7 +124,7 @@ Queue (in order)
   - validation is shared and enforced consistently
 
 21) PR-TENANTS-02: Tenant Provisioning CLI and CI Validation
-- Status: DONE
+- Status: TODO
 - Tasks file: tasks/PR-TENANTS-02.md
 - Depends on: PR-ANALYTICS-18
 - Outcome:
