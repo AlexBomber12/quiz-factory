@@ -124,7 +124,7 @@ Queue (in order)
   - validation is shared and enforced consistently
 
 21) PR-TENANTS-02: Tenant Provisioning CLI and CI Validation
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-TENANTS-02.md
 - Depends on: PR-ANALYTICS-18
 - Outcome:
