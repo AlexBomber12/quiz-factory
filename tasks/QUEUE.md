@@ -184,7 +184,7 @@ Queue (in order)
   - high-cardinality fields are sanitized and kept out of marts
 
 28) PR-OPS-POSTHOG-03: PostHog Hardening and Backups
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-OPS-POSTHOG-03.md
 - Depends on: PR-OPS-POSTHOG-02
 - Outcome:
