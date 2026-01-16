@@ -131,14 +131,22 @@ else
     --user "$CH_USER" \
     --multiquery < "$ch_schema_file"
 
-  for table_file in "$ch_tables_dir"/*.native.gz; do
-    table_name="$(basename "$table_file" .native.gz)"
-    gzip -dc "$table_file" | "${ch_env[@]}" clickhouse-client \
-      --host "$CH_HOST" \
-      --port "$CH_PORT" \
-      --user "$CH_USER" \
-      --query "INSERT INTO $CH_DB.$table_name FORMAT Native"
-  done
+  shopt -s nullglob
+  table_files=("$ch_tables_dir"/*.native.gz)
+  shopt -u nullglob
+
+  if [[ ${#table_files[@]} -eq 0 ]]; then
+    log "No ClickHouse table dumps found, skipping data restore"
+  else
+    for table_file in "${table_files[@]}"; do
+      table_name="$(basename "$table_file" .native.gz)"
+      gzip -dc "$table_file" | "${ch_env[@]}" clickhouse-client \
+        --host "$CH_HOST" \
+        --port "$CH_PORT" \
+        --user "$CH_USER" \
+        --query "INSERT INTO $CH_DB.$table_name FORMAT Native"
+    done
+  fi
 fi
 
 log "Restore complete"
