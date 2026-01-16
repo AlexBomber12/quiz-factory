@@ -48,12 +48,26 @@ SELECT
     gross_revenue_diff_eur,
     purchase_count_diff_pct,
     gross_revenue_diff_pct,
+    (
+      stripe_purchase_count IS NULL
+      OR event_purchase_count IS NULL
+      OR stripe_gross_revenue_eur IS NULL
+      OR event_gross_revenue_eur IS NULL
+    ) AS missing_side,
     max_pct AS drift_threshold_pct,
     min_purchase_diff AS min_purchase_diff,
     min_revenue_diff AS min_revenue_diff
   )) AS details_json,
-  CAST(GREATEST(ABS(purchase_count_diff_pct), ABS(gross_revenue_diff_pct)) AS NUMERIC)
-    AS metric_value,
+  CAST(
+    CASE
+      WHEN stripe_purchase_count IS NULL
+        OR event_purchase_count IS NULL
+        OR stripe_gross_revenue_eur IS NULL
+        OR event_gross_revenue_eur IS NULL
+        THEN 1
+      ELSE GREATEST(ABS(purchase_count_diff_pct), ABS(gross_revenue_diff_pct))
+    END AS NUMERIC
+  ) AS metric_value,
   CAST(max_pct AS NUMERIC) AS threshold_value
 FROM drift
 WHERE (
@@ -62,4 +76,9 @@ WHERE (
 ) OR (
   ABS(gross_revenue_diff_pct) > max_pct
   AND ABS(gross_revenue_diff_eur) > min_revenue_diff
+) OR (
+  stripe_purchase_count IS NULL
+  OR event_purchase_count IS NULL
+  OR stripe_gross_revenue_eur IS NULL
+  OR event_gross_revenue_eur IS NULL
 );
