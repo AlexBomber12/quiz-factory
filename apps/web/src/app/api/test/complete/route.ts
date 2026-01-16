@@ -35,5 +35,8 @@ export const POST = async (request: Request): Promise<Response> => {
     return bodyResponse;
   }
 
-  return handleAnalyticsEvent(request, { event: "test_complete" });
+  return handleAnalyticsEvent(request, {
+    event: "test_complete",
+    requireAttemptToken: true
+  });
 };

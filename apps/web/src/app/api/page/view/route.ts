@@ -35,5 +35,9 @@ export const POST = async (request: Request): Promise<Response> => {
     return bodyResponse;
   }
 
-  return handleAnalyticsEvent(request, { event: "page_view", requireTestId: false });
+  return handleAnalyticsEvent(request, {
+    event: "page_view",
+    requireTestId: false,
+    requireAttemptToken: true
+  });
 };

@@ -37,6 +37,7 @@ export const POST = async (request: Request): Promise<Response> => {
 
   return handleAnalyticsEvent(request, {
     event: "upsell_accept",
-    requirePurchaseId: true
+    requirePurchaseId: true,
+    requireAttemptToken: true
   });
 };

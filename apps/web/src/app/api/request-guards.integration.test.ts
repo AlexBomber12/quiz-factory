@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { resetRateLimitState } from "../../lib/security/request_guards";
+import { issueAttemptToken } from "../../lib/security/attempt_token";
 
 import { POST as pageView } from "./page/view/route";
 
@@ -32,6 +33,7 @@ const buildRequest = (
 
 describe("request guard integration", () => {
   let envSnapshot: Partial<Record<(typeof ENV_KEYS)[number], string | undefined>>;
+  let attemptTokenSecret: string | undefined;
 
   beforeEach(() => {
     envSnapshot = {};
@@ -39,6 +41,8 @@ describe("request guard integration", () => {
       envSnapshot[key] = process.env[key];
       delete process.env[key];
     }
+    attemptTokenSecret = process.env.ATTEMPT_TOKEN_SECRET;
+    process.env.ATTEMPT_TOKEN_SECRET = "test-attempt-secret";
     resetRateLimitState();
   });
 
@@ -50,6 +54,11 @@ describe("request guard integration", () => {
       } else {
         process.env[key] = value;
       }
+    }
+    if (attemptTokenSecret === undefined) {
+      delete process.env.ATTEMPT_TOKEN_SECRET;
+    } else {
+      process.env.ATTEMPT_TOKEN_SECRET = attemptTokenSecret;
     }
     resetRateLimitState();
   });
@@ -68,7 +77,19 @@ describe("request guard integration", () => {
     process.env.RATE_LIMIT_WINDOW_SECONDS = "60";
 
     const cookie = "qf_distinct_id=rate-limit-user";
-    const body = { session_id: "session-123" };
+    const attemptToken = issueAttemptToken(
+      {
+        tenant_id: "tenant-tenant-example-com",
+        session_id: "session-123",
+        distinct_id: "rate-limit-user"
+      },
+      60
+    );
+    const body = {
+      session_id: "session-123",
+      distinct_id: "rate-limit-user",
+      attempt_token: attemptToken
+    };
 
     const first = await pageView(buildRequest("tenant.example.com", body, cookie));
     expect(first.status).toBe(200);

@@ -35,5 +35,9 @@ export const POST = async (request: Request): Promise<Response> => {
     return bodyResponse;
   }
 
-  return handleAnalyticsEvent(request, { event: "test_start", createSession: true });
+  return handleAnalyticsEvent(request, {
+    event: "test_start",
+    createSession: true,
+    issueAttemptToken: true
+  });
 };

@@ -35,5 +35,5 @@ export const POST = async (request: Request): Promise<Response> => {
     return bodyResponse;
   }
 
-  return handleAnalyticsEvent(request, { event: "share_click" });
+  return handleAnalyticsEvent(request, { event: "share_click", requireAttemptToken: true });
 };

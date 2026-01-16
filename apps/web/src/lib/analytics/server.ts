@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 
 import {
@@ -5,6 +6,7 @@ import {
   type AnalyticsEventName,
   type AnalyticsEventProperties
 } from "./events";
+import { shouldEmitEvent } from "./event_dedup";
 import { capturePosthogEvent } from "./posthog";
 import {
   coerceAnalyticsPayload,
@@ -28,6 +30,13 @@ import {
   serializeUtmCookie,
   type UtmParams
 } from "./session";
+import {
+  ATTEMPT_TOKEN_COOKIE_NAME,
+  assertAttemptTokenMatchesContext,
+  issueAttemptToken,
+  resolveAttemptTokenTtlSeconds,
+  verifyAttemptToken
+} from "../security/attempt_token";
 import { resolveLocale, resolveTenant } from "../tenants/resolve";
 
 const TRACKING_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 90;
@@ -36,6 +45,8 @@ type AnalyticsRequestBody = {
   test_id?: unknown;
   distinct_id?: unknown;
   session_id?: unknown;
+  attempt_token?: unknown;
+  event_id?: unknown;
   locale?: unknown;
   referrer?: unknown;
   country?: unknown;
@@ -85,11 +96,25 @@ const respondBadRequest = (error: AnalyticsValidationError): NextResponse => {
   return NextResponse.json({ error }, { status: 400 });
 };
 
+const respondUnauthorized = (message: string): NextResponse => {
+  return NextResponse.json({ error: message }, { status: 401 });
+};
+
 const missingRequiredError = (field: string): AnalyticsValidationError => ({
   code: "missing_required",
   message: `${field} is required.`,
   details: { missing: [field] }
 });
+
+const getAttemptTokenFromRequest = (options: {
+  body: AnalyticsRequestBody;
+  cookies: Record<string, string>;
+}): string | null => {
+  return (
+    requireString(options.body.attempt_token) ??
+    requireString(options.cookies[ATTEMPT_TOKEN_COOKIE_NAME])
+  );
+};
 
 type ResponseExtensionContext = {
   body: AnalyticsRequestBody;
@@ -108,6 +133,8 @@ export const handleAnalyticsEvent = async (
     createSession?: boolean;
     requireTestId?: boolean;
     requirePurchaseId?: boolean;
+    requireAttemptToken?: boolean;
+    issueAttemptToken?: boolean;
     extendResponse?: (context: ResponseExtensionContext) => Record<string, unknown>;
   }
 ): Promise<Response> => {
@@ -136,6 +163,30 @@ export const handleAnalyticsEvent = async (
     defaultLocale,
     acceptLanguage: request.headers.get("accept-language")
   });
+
+  if (options.requireAttemptToken) {
+    const requestAttemptToken = getAttemptTokenFromRequest({ body, cookies });
+    if (!requestAttemptToken) {
+      return respondUnauthorized("Attempt token is required.");
+    }
+
+    let verifiedToken: ReturnType<typeof verifyAttemptToken>;
+    try {
+      verifiedToken = verifyAttemptToken(requestAttemptToken);
+    } catch {
+      return respondUnauthorized("Attempt token is invalid.");
+    }
+
+    try {
+      assertAttemptTokenMatchesContext(verifiedToken, {
+        tenant_id: tenantId,
+        session_id: sessionId,
+        distinct_id: distinctId
+      });
+    } catch {
+      return respondUnauthorized("Attempt token does not match request context.");
+    }
+  }
 
   const { utm, clickIds, shouldSetUtmCookie, shouldSetClickIdsCookie } =
     getTrackingContextFromRequest({ cookies, url });
@@ -185,6 +236,9 @@ export const handleAnalyticsEvent = async (
     properties.upsell_id = upsellId;
   }
 
+  const eventId = requireString(body.event_id) ?? randomUUID();
+  properties.event_id = eventId;
+
   const validation = validateAnalyticsEventPayload(options.event, {
     ...body,
     ...properties
@@ -193,12 +247,32 @@ export const handleAnalyticsEvent = async (
     return respondBadRequest(validation.error);
   }
 
-  void capturePosthogEvent(options.event, properties).catch(() => null);
+  if (shouldEmitEvent(eventId)) {
+    void capturePosthogEvent(options.event, properties).catch(() => null);
+  }
+
+  let attemptToken: string | null = null;
+  let attemptTokenTtlSeconds: number | null = null;
+  if (options.issueAttemptToken) {
+    attemptTokenTtlSeconds = resolveAttemptTokenTtlSeconds();
+    attemptToken = issueAttemptToken(
+      {
+        tenant_id: tenantId,
+        session_id: sessionId,
+        distinct_id: distinctId
+      },
+      attemptTokenTtlSeconds
+    );
+  }
 
   const responsePayload: Record<string, unknown> = {
     session_id: sessionId,
     tenant_id: tenantId
   };
+
+  if (attemptToken) {
+    responsePayload.attempt_token = attemptToken;
+  }
 
   if (options.extendResponse) {
     Object.assign(
@@ -230,6 +304,16 @@ export const handleAnalyticsEvent = async (
     path: "/",
     secure: process.env.NODE_ENV === "production"
   });
+
+  if (attemptToken && attemptTokenTtlSeconds) {
+    response.cookies.set(ATTEMPT_TOKEN_COOKIE_NAME, attemptToken, {
+      httpOnly: true,
+      maxAge: attemptTokenTtlSeconds,
+      sameSite: "lax",
+      path: "/",
+      secure: process.env.NODE_ENV === "production"
+    });
+  }
 
   if (shouldSetUtmCookie) {
     response.cookies.set(UTM_COOKIE_NAME, serializeUtmCookie(utm), {
