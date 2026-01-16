@@ -150,6 +150,55 @@ Queue (in order)
   - idempotent merges prevent double counting
   - CSV fallback remains supported
 
+24) PR-SECURITY-01: Edge Rate Limiting and Domain Allowlist
+- Status: TODO
+- Tasks file: tasks/PR-SECURITY-01.md
+- Depends on: PR-OPS-POSTHOG-02
+- Outcome:
+  - public API routes are rate limited and protected from abuse
+  - only known tenant domains can call event endpoints
+  - request size limits and method guards are enforced
+
+25) PR-SECURITY-02: Attempt Token and Replay Protection
+- Status: TODO
+- Tasks file: tasks/PR-SECURITY-02.md
+- Depends on: PR-SECURITY-01
+- Outcome:
+  - attempt-scoped routes require a signed attempt_token
+  - replay attempts do not duplicate events
+
+26) PR-ANALYTICS-20: BigQuery Cost Observability and Budget Guardrails
+- Status: TODO
+- Tasks file: tasks/PR-ANALYTICS-20.md
+- Depends on: PR-OPS-POSTHOG-02
+- Outcome:
+  - daily BigQuery cost table is available
+  - budget guardrails and query hygiene are documented
+
+27) PR-ANALYTICS-21: Event Volume Control and High-Cardinality Policy
+- Status: TODO
+- Tasks file: tasks/PR-ANALYTICS-21.md
+- Depends on: PR-ANALYTICS-20
+- Outcome:
+  - page_view volume is bounded by default
+  - high-cardinality fields are sanitized and kept out of marts
+
+28) PR-OPS-POSTHOG-03: PostHog Hardening and Backups
+- Status: TODO
+- Tasks file: tasks/PR-OPS-POSTHOG-03.md
+- Depends on: PR-OPS-POSTHOG-02
+- Outcome:
+  - PostHog operational runbook exists
+  - backup and restore scripts exist
+
+29) PR-OPS-BQ-02: Scheduled Anomaly Checks and Alerts
+- Status: TODO
+- Tasks file: tasks/PR-OPS-BQ-02.md
+- Depends on: PR-ANALYTICS-20
+- Outcome:
+  - anomaly checks are codified as scheduled query templates
+  - alert runbook exists and alerts are stored in marts.alert_events
+
 Execution rules (apply to every PR)
 - Work on exactly 1 PR at a time.
 - Create a new branch from main named pr-analytics-0X-<short-slug> (or pr-ops-<name> for ops PRs).
