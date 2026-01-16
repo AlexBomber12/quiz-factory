@@ -30,7 +30,16 @@ with source as (
     json_value(properties, '$.fbclid') as fbclid,
     json_value(properties, '$.gclid') as gclid,
     json_value(properties, '$.ttclid') as ttclid,
-    json_value(properties, '$.referrer') as referrer,
+    case
+      when nullif(trim(json_value(properties, '$.referrer')), '') is null then null
+      when regexp_contains(json_value(properties, '$.referrer'), r'^https?://') then
+        regexp_extract(json_value(properties, '$.referrer'), r'^https?://([^/]+)')
+      when regexp_contains(json_value(properties, '$.referrer'), r'^//') then
+        regexp_extract(json_value(properties, '$.referrer'), r'^//([^/]+)')
+      when regexp_contains(json_value(properties, '$.referrer'), r'^[^/]+\\.[^/]+') then
+        regexp_extract(json_value(properties, '$.referrer'), r'^([^/]+)')
+      else null
+    end as referrer,
     json_value(properties, '$.purchase_id') as purchase_id,
     safe_cast(json_value(properties, '$.amount_eur') as numeric) as amount_eur,
     safe_cast(json_value(properties, '$.is_internal') as bool) as is_internal
