@@ -36,7 +36,7 @@ with source as (
         regexp_extract(json_value(properties, '$.referrer'), r'^https?://([^/]+)')
       when regexp_contains(json_value(properties, '$.referrer'), r'^//') then
         regexp_extract(json_value(properties, '$.referrer'), r'^//([^/]+)')
-      when regexp_contains(json_value(properties, '$.referrer'), r'^[^/]+\\.[^/]+') then
+      when regexp_contains(json_value(properties, '$.referrer'), r'^[^/]+\.[^/]+') then
         regexp_extract(json_value(properties, '$.referrer'), r'^([^/]+)')
       else null
     end as referrer,
