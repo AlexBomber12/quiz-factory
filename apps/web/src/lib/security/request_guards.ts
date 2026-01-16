@@ -113,6 +113,21 @@ const parseForwardedFor = (value: string | null): string | null => {
 };
 
 const rateLimitState = new Map<string, RateLimitEntry>();
+const RATE_LIMIT_CLEANUP_INTERVAL_MS = 60 * 1000;
+let lastRateLimitCleanup = 0;
+
+const cleanupRateLimitState = (now: number): void => {
+  if (now - lastRateLimitCleanup < RATE_LIMIT_CLEANUP_INTERVAL_MS) {
+    return;
+  }
+
+  lastRateLimitCleanup = now;
+  for (const [key, entry] of rateLimitState) {
+    if (entry.resetAt <= now) {
+      rateLimitState.delete(key);
+    }
+  }
+};
 
 const resolveRateLimitConfig = (
   options: RateLimitOptions
@@ -302,6 +317,7 @@ export const rateLimit = (request: Request, options: RateLimitOptions): Response
   }
 
   const now = Date.now();
+  cleanupRateLimitState(now);
   const windowMs = config.windowSeconds * 1000;
   const entry = rateLimitState.get(key);
 
