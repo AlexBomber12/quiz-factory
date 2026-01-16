@@ -1,4 +1,3 @@
-import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 
 import {
@@ -236,7 +235,9 @@ export const handleAnalyticsEvent = async (
     properties.upsell_id = upsellId;
   }
 
-  const eventId = requireString(body.event_id) ?? randomUUID();
+  const providedEventId = requireString(body.event_id);
+  const fallbackEventId = `${options.event}:${properties.timestamp_utc}:${sessionId}`;
+  const eventId = providedEventId ?? fallbackEventId;
   properties.event_id = eventId;
 
   const validation = validateAnalyticsEventPayload(options.event, {
