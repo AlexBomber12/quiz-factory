@@ -160,7 +160,7 @@ Queue (in order)
   - request size limits and method guards are enforced
 
 25) PR-SECURITY-02: Attempt Token and Replay Protection
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-SECURITY-02.md
 - Depends on: PR-SECURITY-01
 - Outcome:

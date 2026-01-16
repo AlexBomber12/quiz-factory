@@ -57,6 +57,7 @@ export const POST = async (request: Request): Promise<Response> => {
 
   return handleAnalyticsEvent(request, {
     event: "checkout_start",
+    requireAttemptToken: true,
     extendResponse: ({ body, properties, utm, clickIds }) => {
       const productType = normalizeString(body.product_type);
       const pricingVariant = normalizeString(body.pricing_variant);

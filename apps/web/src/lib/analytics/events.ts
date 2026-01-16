@@ -25,6 +25,7 @@ export type AnalyticsEventProperties = {
   session_id: string;
   distinct_id: string;
   test_id: string | null;
+  event_id?: string | null;
   timestamp_utc: string;
   utm_source: string | null;
   utm_medium: string | null;

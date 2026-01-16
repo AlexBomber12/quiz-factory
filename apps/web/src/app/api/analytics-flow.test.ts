@@ -5,6 +5,7 @@ import { POST as pageView } from "./page/view/route";
 import { POST as paywallView } from "./paywall/view/route";
 import { POST as testComplete } from "./test/complete/route";
 import { POST as testStart } from "./test/start/route";
+import { resetEventDedupCache } from "../../lib/analytics/event_dedup";
 
 type CapturedEvent = {
   event: string;
@@ -76,6 +77,8 @@ describe("analytics flow", () => {
     capturedEvents.length = 0;
     process.env.POSTHOG_SERVER_KEY = "test-server-key";
     process.env.POSTHOG_HOST = "https://posthog.test";
+    process.env.ATTEMPT_TOKEN_SECRET = "test-attempt-secret";
+    resetEventDedupCache();
 
     const fetchSpy = vi.fn(async (_url: string, options?: { body?: unknown }) => {
       const payload = options?.body ? JSON.parse(options.body as string) : null;
@@ -92,6 +95,7 @@ describe("analytics flow", () => {
     vi.unstubAllGlobals();
     delete process.env.POSTHOG_SERVER_KEY;
     delete process.env.POSTHOG_HOST;
+    delete process.env.ATTEMPT_TOKEN_SECRET;
   });
 
   it("keeps the same session_id across the funnel", async () => {
@@ -110,14 +114,21 @@ describe("analytics flow", () => {
     jar.addFromResponse(startResponse);
     const startPayload = await startResponse.json();
     const sessionId = startPayload.session_id as string;
+    const attemptToken = startPayload.attempt_token as string;
 
     expect(sessionId).toBeTruthy();
+    expect(attemptToken).toBeTruthy();
     const startCookies = startResponse.headers.get("set-cookie") ?? "";
     expect(startCookies).toContain("qf_session_id");
+    expect(startCookies).toContain("qf_attempt_token");
     expect(startCookies).toContain("qf_utm=");
     expect(startCookies).toContain("Max-Age=");
 
-    const followupBody = { ...baseBody, session_id: sessionId };
+    const followupBody = {
+      ...baseBody,
+      session_id: sessionId,
+      attempt_token: attemptToken
+    };
     const pageViewResponse = await pageView(
       buildRequest(
         "https://tenant.example.com/api/page/view",
@@ -169,5 +180,49 @@ describe("analytics flow", () => {
       expect(event.properties.utm_medium).toBe("cpc");
       expect(event.properties.locale).toBe("en");
     }
+  });
+
+  it("dedupes page_view events by event_id", async () => {
+    const jar = new CookieJar();
+    const baseBody = {
+      test_id: "test-personality",
+      distinct_id: "22222222-2222-2222-2222-222222222222",
+      locale: "en"
+    };
+
+    const startRequest = buildRequest(
+      "https://tenant.example.com/api/test/start?utm_source=google&utm_medium=cpc",
+      baseBody
+    );
+    const startResponse = await testStart(startRequest);
+    jar.addFromResponse(startResponse);
+    const startPayload = await startResponse.json();
+    const sessionId = startPayload.session_id as string;
+    const attemptToken = startPayload.attempt_token as string;
+
+    const eventId = "event-123";
+    const pageViewBody = {
+      ...baseBody,
+      session_id: sessionId,
+      attempt_token: attemptToken,
+      page_type: "attempt",
+      event_id: eventId
+    };
+
+    const firstResponse = await pageView(
+      buildRequest("https://tenant.example.com/api/page/view", pageViewBody, jar.header())
+    );
+    expect(firstResponse.status).toBe(200);
+    await firstResponse.json();
+
+    const secondResponse = await pageView(
+      buildRequest("https://tenant.example.com/api/page/view", pageViewBody, jar.header())
+    );
+    expect(secondResponse.status).toBe(200);
+    await secondResponse.json();
+
+    const pageViewEvents = capturedEvents.filter((event) => event.event === "page_view");
+    expect(pageViewEvents).toHaveLength(1);
+    expect(pageViewEvents[0]?.properties.event_id).toBe(eventId);
   });
 });

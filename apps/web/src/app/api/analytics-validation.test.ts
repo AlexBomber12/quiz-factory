@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { POST as pageView } from "./page/view/route";
 import { POST as shareClick } from "./share/click/route";
+import { issueAttemptToken } from "../../lib/security/attempt_token";
 
 type CapturedEvent = {
   event: string;
@@ -21,11 +22,13 @@ const buildRequest = (url: string, body: Record<string, unknown>) => {
 
 describe("analytics validation routes", () => {
   const capturedEvents: CapturedEvent[] = [];
+  const tenantId = "tenant-tenant-example-com";
 
   beforeEach(() => {
     capturedEvents.length = 0;
     process.env.POSTHOG_SERVER_KEY = "test-server-key";
     process.env.POSTHOG_HOST = "https://posthog.test";
+    process.env.ATTEMPT_TOKEN_SECRET = "test-attempt-secret";
 
     const fetchSpy = vi.fn(async (_url: string, options?: { body?: unknown }) => {
       const payload = options?.body ? JSON.parse(options.body as string) : null;
@@ -42,13 +45,23 @@ describe("analytics validation routes", () => {
     vi.unstubAllGlobals();
     delete process.env.POSTHOG_SERVER_KEY;
     delete process.env.POSTHOG_HOST;
+    delete process.env.ATTEMPT_TOKEN_SECRET;
   });
 
   it("rejects forbidden keys for page_view", async () => {
+    const attemptToken = issueAttemptToken(
+      {
+        tenant_id: tenantId,
+        session_id: "session-123",
+        distinct_id: "distinct-123"
+      },
+      60
+    );
     const response = await pageView(
       buildRequest("https://tenant.example.com/api/page/view", {
         session_id: "session-123",
         distinct_id: "distinct-123",
+        attempt_token: attemptToken,
         email: "hidden@example.com"
       })
     );
@@ -60,11 +73,20 @@ describe("analytics validation routes", () => {
   });
 
   it("rejects missing share_target for share_click", async () => {
+    const attemptToken = issueAttemptToken(
+      {
+        tenant_id: tenantId,
+        session_id: "session-123",
+        distinct_id: "distinct-123"
+      },
+      60
+    );
     const response = await shareClick(
       buildRequest("https://tenant.example.com/api/share/click", {
         test_id: "test-demo",
         session_id: "session-123",
-        distinct_id: "distinct-123"
+        distinct_id: "distinct-123",
+        attempt_token: attemptToken
       })
     );
 
@@ -76,11 +98,20 @@ describe("analytics validation routes", () => {
   });
 
   it("accepts share_click payloads", async () => {
+    const attemptToken = issueAttemptToken(
+      {
+        tenant_id: tenantId,
+        session_id: "session-123",
+        distinct_id: "distinct-123"
+      },
+      60
+    );
     const response = await shareClick(
       buildRequest("https://tenant.example.com/api/share/click", {
         test_id: "test-demo",
         session_id: "session-123",
         distinct_id: "distinct-123",
+        attempt_token: attemptToken,
         share_target: "whatsapp"
       })
     );
