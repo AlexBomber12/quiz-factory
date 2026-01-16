@@ -6,6 +6,7 @@ import { POST as paywallView } from "./paywall/view/route";
 import { POST as testComplete } from "./test/complete/route";
 import { POST as testStart } from "./test/start/route";
 import { resetEventDedupCache } from "../../lib/analytics/event_dedup";
+import { resetPageViewDedupCache } from "../../lib/analytics/page_view";
 
 type CapturedEvent = {
   event: string;
@@ -79,6 +80,7 @@ describe("analytics flow", () => {
     process.env.POSTHOG_HOST = "https://posthog.test";
     process.env.ATTEMPT_TOKEN_SECRET = "test-attempt-secret";
     resetEventDedupCache();
+    resetPageViewDedupCache();
 
     const fetchSpy = vi.fn(async (_url: string, options?: { body?: unknown }) => {
       const payload = options?.body ? JSON.parse(options.body as string) : null;

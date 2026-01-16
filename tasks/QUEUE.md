@@ -176,7 +176,7 @@ Queue (in order)
   - budget guardrails and query hygiene are documented
 
 27) PR-ANALYTICS-21: Event Volume Control and High-Cardinality Policy
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-ANALYTICS-21.md
 - Depends on: PR-ANALYTICS-20
 - Outcome:

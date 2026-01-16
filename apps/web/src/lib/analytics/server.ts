@@ -6,6 +6,12 @@ import {
   type AnalyticsEventProperties
 } from "./events";
 import { shouldEmitEvent } from "./event_dedup";
+import {
+  DEFAULT_PAGE_VIEW_TYPE,
+  resolvePageType,
+  sanitizePageUrl,
+  shouldEmitPageView
+} from "./page_view";
 import { capturePosthogEvent } from "./posthog";
 import {
   coerceAnalyticsPayload,
@@ -212,9 +218,11 @@ export const handleAnalyticsEvent = async (
     properties.purchase_id = purchaseId;
   }
 
+  const pageViewType =
+    options.event === "page_view" ? resolvePageType(body.page_type) : null;
   if (options.event === "page_view") {
-    properties.page_url = normalizeString(body.page_url);
-    properties.page_type = normalizeString(body.page_type);
+    properties.page_url = sanitizePageUrl(body.page_url);
+    properties.page_type = pageViewType;
   }
 
   if (options.event === "share_click") {
@@ -248,7 +256,18 @@ export const handleAnalyticsEvent = async (
     return respondBadRequest(validation.error);
   }
 
-  if (shouldEmitEvent(eventId)) {
+  if (options.event === "page_view") {
+    const resolvedPageViewType = pageViewType ?? DEFAULT_PAGE_VIEW_TYPE;
+    if (
+      shouldEmitPageView({
+        sessionId,
+        pageType: resolvedPageViewType
+      }) &&
+      shouldEmitEvent(eventId)
+    ) {
+      void capturePosthogEvent(options.event, properties).catch(() => null);
+    }
+  } else if (shouldEmitEvent(eventId)) {
     void capturePosthogEvent(options.event, properties).catch(() => null);
   }
 
