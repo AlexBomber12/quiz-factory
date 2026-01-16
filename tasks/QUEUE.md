@@ -168,7 +168,7 @@ Queue (in order)
   - replay attempts do not duplicate events
 
 26) PR-ANALYTICS-20: BigQuery Cost Observability and Budget Guardrails
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-ANALYTICS-20.md
 - Depends on: PR-OPS-POSTHOG-02
 - Outcome:
