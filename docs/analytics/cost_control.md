@@ -43,7 +43,7 @@ Interpretation
 - Select only the columns needed for the analysis.
 
 ## Scheduled queries
-Create BigQuery scheduled queries in the EU region. Use a service account with BigQuery Job User and dataset editor access on `marts`.
+Create BigQuery scheduled queries in the EU region. Use a service account with BigQuery Job User and dataset editor access on `marts`, plus `bigquery.jobs.listAll` so `region-eu.INFORMATION_SCHEMA.JOBS_BY_PROJECT` includes all project jobs.
 
 Daily mart_bq_cost_daily refresh
 - Query: `analytics/bigquery/cost_observability/populate_cost_daily.sql`.
