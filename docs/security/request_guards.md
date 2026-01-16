@@ -49,3 +49,5 @@ is used for local development and tests.
 - Forward `Host`, `Origin`, `X-Forwarded-Host`, and `X-Forwarded-For`.
 - Ensure `X-Forwarded-For` is set by a trusted proxy and not by the client.
 - Preserve the original host so tenant allowlists resolve correctly.
+- Set `TRUST_X_FORWARDED_HOST=true` only when a trusted proxy overwrites
+  `X-Forwarded-Host` and strips client supplied values.

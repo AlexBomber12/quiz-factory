@@ -11,7 +11,8 @@ const ENV_KEYS = [
   "RATE_LIMIT_ENABLED",
   "RATE_LIMIT_MAX_REQUESTS",
   "RATE_LIMIT_WINDOW_SECONDS",
-  "RATE_LIMIT_SALT"
+  "RATE_LIMIT_SALT",
+  "TRUST_X_FORWARDED_HOST"
 ] as const;
 
 const buildRequest = (headers?: Record<string, string>): Request => {
@@ -53,6 +54,30 @@ describe("request guards", () => {
   it("blocks unknown hosts", () => {
     const response = assertAllowedHost(buildRequest({ host: "blocked.example.com" }));
     expect(response?.status).toBe(403);
+  });
+
+  it("ignores x-forwarded-host by default", () => {
+    const response = assertAllowedHost(
+      buildRequest({
+        host: "blocked.example.com",
+        "x-forwarded-host": "tenant.example.com"
+      })
+    );
+
+    expect(response?.status).toBe(403);
+  });
+
+  it("allows trusted x-forwarded-host", () => {
+    process.env.TRUST_X_FORWARDED_HOST = "true";
+
+    const response = assertAllowedHost(
+      buildRequest({
+        host: "blocked.example.com",
+        "x-forwarded-host": "tenant.example.com"
+      })
+    );
+
+    expect(response).toBeNull();
   });
 
   it("allows known origins", () => {

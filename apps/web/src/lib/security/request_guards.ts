@@ -171,9 +171,19 @@ export const resetRateLimitState = (): void => {
   rateLimitState.clear();
 };
 
+const shouldTrustForwardedHost = (): boolean => {
+  return parseBoolean(process.env.TRUST_X_FORWARDED_HOST) ?? false;
+};
+
 export const resolveRequestHost = (request: Request): string => {
-  const forwardedHost = normalizeHost(request.headers.get("x-forwarded-host"));
-  const host = forwardedHost ?? normalizeHost(request.headers.get("host"));
+  if (shouldTrustForwardedHost()) {
+    const forwardedHost = normalizeHost(request.headers.get("x-forwarded-host"));
+    if (forwardedHost) {
+      return forwardedHost;
+    }
+  }
+
+  const host = normalizeHost(request.headers.get("host"));
   if (host) {
     return host;
   }
