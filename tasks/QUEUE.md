@@ -192,7 +192,7 @@ Queue (in order)
   - backup and restore scripts exist
 
 29) PR-OPS-BQ-02: Scheduled Anomaly Checks and Alerts
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-OPS-BQ-02.md
 - Depends on: PR-ANALYTICS-20
 - Outcome:
