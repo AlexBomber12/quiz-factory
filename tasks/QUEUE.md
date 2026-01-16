@@ -151,7 +151,7 @@ Queue (in order)
   - CSV fallback remains supported
 
 24) PR-SECURITY-01: Edge Rate Limiting and Domain Allowlist
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-SECURITY-01.md
 - Depends on: PR-OPS-POSTHOG-02
 - Outcome:

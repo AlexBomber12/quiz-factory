@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { capturePosthogEvent } from "../../../../lib/analytics/posthog";
+import { assertAllowedMethod } from "../../../../lib/security/request_guards";
 import { createStripeBigQueryStore } from "../../../../lib/stripe/bigquery";
 import { createStripeClient } from "../../../../lib/stripe/client";
 import {
@@ -8,7 +9,26 @@ import {
   verifyStripeSignature
 } from "../../../../lib/stripe/webhook";
 
+const isJsonLikeContentType = (value: string | null): boolean => {
+  if (!value) {
+    return false;
+  }
+
+  const normalized = value.toLowerCase();
+  return normalized.includes("application/json") || normalized.includes("+json");
+};
+
 export const POST = async (request: Request): Promise<Response> => {
+  const methodResponse = assertAllowedMethod(request, ["POST"]);
+  if (methodResponse) {
+    return methodResponse;
+  }
+
+  const contentType = request.headers.get("content-type");
+  if (!isJsonLikeContentType(contentType)) {
+    return NextResponse.json({ error: "Unsupported content type." }, { status: 415 });
+  }
+
   const signature = request.headers.get("stripe-signature");
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
   if (!webhookSecret) {
