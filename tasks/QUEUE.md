@@ -1,7 +1,7 @@
 QUEUE
 
 Purpose
-- Execute analytics PRs in order, without skipping.
+- Execute planned PRs in order, without skipping.
 - Each PR should be implemented exactly as described in its corresponding tasks file.
 
 Status legend
@@ -199,13 +199,64 @@ Queue (in order)
   - anomaly checks are codified as scheduled query templates
   - alert runbook exists and alerts are stored in marts.alert_events
 
+
+30) PR-PRODUCT-01: Test Content Format, Registry, and Validation (1 Golden Test EN-ES-PT-BR)
+- Status: TODO
+- Tasks file: tasks/PR-PRODUCT-01.md
+- Depends on: PR-TENANTS-02 and PR-SECURITY-02
+
+31) PR-PRODUCT-02: Tenant Homepage, Test Listing, and Test Landing Pages
+- Status: TODO
+- Tasks file: tasks/PR-PRODUCT-02.md
+- Depends on: PR-PRODUCT-01
+
+32) PR-PRODUCT-03: Test Runner UI and Attempt Entry page_view
+- Status: TODO
+- Tasks file: tasks/PR-PRODUCT-03.md
+- Depends on: PR-PRODUCT-02
+
+33) PR-PRODUCT-04: Server-side Scoring, Result Preview, and Result Cookie
+- Status: TODO
+- Tasks file: tasks/PR-PRODUCT-04.md
+- Depends on: PR-PRODUCT-03
+
+34) PR-PRODUCT-05: Paywall UI and Stripe Checkout Session Creation
+- Status: TODO
+- Tasks file: tasks/PR-PRODUCT-05.md
+- Depends on: PR-PRODUCT-04
+
+35) PR-ANALYTICS-22: Unit Economics Enhancements (Pricing Variants, Packs, Offer Breakdown)
+- Status: TODO
+- Tasks file: tasks/PR-ANALYTICS-22.md
+- Depends on: PR-PRODUCT-05
+
+36) PR-PRODUCT-06: Checkout Success, Entitlement Token, and Paid Report (HTML)
+- Status: TODO
+- Tasks file: tasks/PR-PRODUCT-06.md
+- Depends on: PR-PRODUCT-05
+
+37) PR-PRODUCT-07: Print-Friendly Report and PDF Download Tracking
+- Status: TODO
+- Tasks file: tasks/PR-PRODUCT-07.md
+- Depends on: PR-PRODUCT-06
+
+38) PR-SEO-01: Sitemap, robots.txt, Canonicals, and Basic OG Metadata
+- Status: TODO
+- Tasks file: tasks/PR-SEO-01.md
+- Depends on: PR-PRODUCT-02
+
+39) PR-CONTENT-02: Content Factory Tooling (New Test Generator and CSV Import)
+- Status: TODO
+- Tasks file: tasks/PR-CONTENT-02.md
+- Depends on: PR-PRODUCT-01
+
 Execution rules (apply to every PR)
 - Work on exactly 1 PR at a time.
-- Create a new branch from main named pr-analytics-0X-<short-slug> (or pr-ops-<name> for ops PRs).
+- Create a new branch from main named as specified in the selected tasks file (single source of truth).
 - Implement only what the tasks file requests.
 - Run the project test gate locally before committing.
 - Do not commit secrets. Do not add or modify .env except .env.example if the task explicitly says so.
-- When green, commit with message "PR-ANALYTICS-0X: <short summary>" (or "PR-OPS-...: <summary>") and push the branch.
+- When green, commit with message "<PR_ID>: <short summary>" and push the branch.
 
 Definition of Done (global)
 - A single query of marts.mart_pnl_daily clearly shows:
