@@ -1,0 +1,7 @@
+{
+  "tenants": {
+    "tenant-tenant-example-com": [
+      "test-focus-rhythm"
+    ]
+  }
+}
