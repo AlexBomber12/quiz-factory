@@ -260,7 +260,7 @@ Queue (in order)
 
 
 41) PR-OPS-AUTOMATION-01: Codex Review Auto-Fix + Auto-Merge + Local main Sync
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-OPS-AUTOMATION-01.md
 - Depends on: none
 - Outcome:
