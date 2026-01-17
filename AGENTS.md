@@ -12,9 +12,10 @@ These rules apply to any PR task in this repo:
 - Provide a short report (what changed, how verified, manual test steps if applicable).
 
 ## Work Modes
-- Trigger phrases (exact): `Run PLANNED PR` and `Run MICRO PR: <one sentence description>`.
+- Trigger phrases (exact): `Run PLANNED PR`, `Run MICRO PR: <one sentence description>`, and `Fix code review comment`.
 - `Run PLANNED PR`: use the PLANNED PR Runbook (queue-driven tasks).
 - `Run MICRO PR: <one sentence description>`: use the MICRO PR Runbook (small fixes only, no tasks/QUEUE edits).
+- `Fix code review comment`: use the REVIEW FIX Runbook (Existing PR Branch).
 
 ## PLANNED PR Runbook (Default Workflow)
 
@@ -66,6 +67,18 @@ These rules apply to any PR task in this repo:
 - [ ] Commit with "MICRO: <short summary>".
 - [ ] Push branch; open PR if possible.
 - [ ] PR description includes: `Type: MICRO`, What changed, Why, How verified (exact CI command), Artifacts paths.
+
+## REVIEW FIX Runbook (Existing PR Branch)
+
+### Rules
+- Do not pick a new task from `tasks/QUEUE.md`.
+- Do not create a new branch.
+- Stay on the current branch (the PR head).
+- Do not edit `tasks/QUEUE.md` and do not edit `tasks/PR-*.md`.
+- Apply only changes required to address review feedback.
+- Run `scripts/ci.sh` until exit code 0.
+- Generate artifacts via `scripts/make-review-artifacts.sh`.
+- Commit and push to the same branch.
 
 ## Tasks Stability and Queue Updates (PLANNED PR only)
 - tasks/ is the source of truth. During implementation of a PR task, treat `tasks/PR-*.md` files as immutable unless explicitly instructed to change them.
