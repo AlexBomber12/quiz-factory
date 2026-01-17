@@ -1,0 +1,52 @@
+.reportPrint {
+  gap: 24px;
+}
+
+.printControls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+@media print {
+  :global(body) {
+    background: #ffffff;
+  }
+
+  :global(main) {
+    max-width: none;
+    padding: 24px;
+  }
+
+  .reportPrint {
+    font-size: 12pt;
+  }
+
+  .reportPrint :global(h1) {
+    font-size: 20pt;
+  }
+
+  .reportPrint :global(h2) {
+    font-size: 14pt;
+  }
+
+  .reportPrint :global(p),
+  .reportPrint :global(li) {
+    font-size: 12pt;
+    line-height: 1.5;
+  }
+
+  .printControls,
+  .reportPrint :global(.primary-button),
+  .reportPrint :global(.secondary-button),
+  .reportPrint :global(.text-link) {
+    display: none;
+  }
+
+  .reportPrint :global(.runner-card),
+  .reportPrint :global(ul),
+  .reportPrint :global(li) {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}

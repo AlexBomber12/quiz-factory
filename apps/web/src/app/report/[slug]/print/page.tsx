@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
 
-import { getTenantTestIds, resolveTestIdBySlug } from "../../../lib/content/catalog";
-import { loadLocalizedTest } from "../../../lib/content/load";
-import { REPORT_TOKEN, verifyReportToken } from "../../../lib/product/report_token";
-import { RESULT_COOKIE, verifyResultCookie } from "../../../lib/product/result_cookie";
-import { resolveTenantContext } from "../../../lib/tenants/request";
-import ReportAnalytics from "./report-analytics";
-import ReportPdfButton from "./report-pdf-button";
+import { getTenantTestIds, resolveTestIdBySlug } from "../../../../lib/content/catalog";
+import { loadLocalizedTest } from "../../../../lib/content/load";
+import { REPORT_TOKEN, verifyReportToken } from "../../../../lib/product/report_token";
+import { RESULT_COOKIE, verifyResultCookie } from "../../../../lib/product/result_cookie";
+import { resolveTenantContext } from "../../../../lib/tenants/request";
+import PrintTrigger from "./print-trigger";
+import styles from "./print.module.css";
 
 type PageProps = {
   params: {
@@ -31,7 +31,7 @@ const resolveReportTestId = (slug: string, tenantId: string): string | null => {
 
 const renderBlocked = (slug: string) => {
   return (
-    <section className="page">
+    <section className={`page ${styles.reportPrint}`}>
       <header className="hero">
         <p className="eyebrow">Quiz Factory</p>
         <h1>Report locked</h1>
@@ -44,13 +44,13 @@ const renderBlocked = (slug: string) => {
   );
 };
 
-export default async function ReportPage({ params }: PageProps) {
+export default async function ReportPrintPage({ params }: PageProps) {
   const context = await resolveTenantContext();
   const testId = resolveReportTestId(params.slug, context.tenantId);
 
   if (!testId) {
     return (
-      <section className="page">
+      <section className={`page ${styles.reportPrint}`}>
         <header className="hero">
           <p className="eyebrow">Quiz Factory</p>
           <h1>Test not available</h1>
@@ -98,17 +98,19 @@ export default async function ReportPage({ params }: PageProps) {
   const totalScore = scaleEntries.reduce((sum, [, value]) => sum + value, 0);
 
   return (
-    <section className="page">
-      <ReportAnalytics
-        testId={test.test_id}
-        purchaseId={reportPayload.purchase_id}
-        sessionId={reportPayload.session_id}
-      />
+    <section className={`page ${styles.reportPrint}`}>
       <header className="hero">
         <p className="eyebrow">Quiz Factory</p>
         <h1>{test.report_title}</h1>
-        <p>Your paid report is ready.</p>
+        <p>Print-friendly report.</p>
       </header>
+
+      <div className={styles.printControls}>
+        <PrintTrigger />
+        <Link className="text-link" href={`/report/${test.slug}`}>
+          Back to report
+        </Link>
+      </div>
 
       <div className="runner-card">
         <h2 className="runner-question">{bandCopy.headline}</h2>
@@ -135,17 +137,6 @@ export default async function ReportPage({ params }: PageProps) {
           </div>
         </div>
       ) : null}
-
-      <div className="cta-row">
-        <ReportPdfButton
-          testId={test.test_id}
-          purchaseId={reportPayload.purchase_id}
-          slug={test.slug}
-        />
-        <Link className="text-link" href={`/t/${test.slug}`}>
-          Back to the test
-        </Link>
-      </div>
     </section>
   );
 }

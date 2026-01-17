@@ -236,7 +236,7 @@ Queue (in order)
 - Depends on: PR-PRODUCT-05
 
 37) PR-PRODUCT-07: Print-Friendly Report and PDF Download Tracking
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-PRODUCT-07.md
 - Depends on: PR-PRODUCT-06
 
