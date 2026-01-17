@@ -117,11 +117,16 @@ while true; do
     approval_phrase="false"
     if [[ -n "$review_body" ]]; then
       review_body_lower="$(printf '%s' "$review_body" | tr '[:upper:]' '[:lower:]')"
-      positive_regex='(^|[^[:alnum:]_])(approved|lgtm|looks good|good to go|ship it|no issues found)([^[:alnum:]_]|$)'
-      negative_regex='(^|[^[:alnum:]_])not[-[:space:]]+(approved|lgtm|looks good|good to go|ship it)([^[:alnum:]_]|$)|(^|[^[:alnum:]_])not[-[:space:]]+yet[-[:space:]]+(approved|lgtm|looks good|good to go|ship it)([^[:alnum:]_]|$)'
-      if echo "$review_body_lower" | grep -Eq "$positive_regex"; then
-        if ! echo "$review_body_lower" | grep -Eq "$negative_regex"; then
-          approval_phrase="true"
+      review_body_compact="$(printf '%s' "$review_body_lower" | tr -cd 'a-z')"
+      if [[ "$review_body_compact" == "noissuesfound" ]]; then
+        approval_phrase="true"
+      else
+        positive_regex='(^|[^[:alnum:]_])(approved|lgtm|looks good|good to go|ship it)([^[:alnum:]_]|$)'
+        negative_regex='(^|[^[:alnum:]_])not[-[:space:]]+(approved|lgtm|looks good|good to go|ship it)([^[:alnum:]_]|$)|(^|[^[:alnum:]_])not[-[:space:]]+yet[-[:space:]]+(approved|lgtm|looks good|good to go|ship it)([^[:alnum:]_]|$)'
+        if echo "$review_body_lower" | grep -Eq "$positive_regex"; then
+          if ! echo "$review_body_lower" | grep -Eq "$negative_regex"; then
+            approval_phrase="true"
+          fi
         fi
       fi
     fi
