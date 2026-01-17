@@ -246,7 +246,7 @@ Queue (in order)
 - Depends on: PR-PRODUCT-02
 
 39) PR-UI-GOLDEN-01: Golden Template Studio (Golden Landing + Blocks Catalog + Theme Tokens)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-UI-GOLDEN-01.md
 - Depends on: PR-PRODUCT-05
 - Outcome:

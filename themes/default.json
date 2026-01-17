@@ -1,0 +1,8 @@
+{
+  "id": "golden-default",
+  "font_sans": "\"Avenir Next\", \"Avenir\", \"Futura\", \"Gill Sans\", \"Trebuchet MS\", sans-serif",
+  "radius": "16px",
+  "colors": {
+    "primary_hsl": "24 92% 52%"
+  }
+}
