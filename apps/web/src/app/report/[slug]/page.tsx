@@ -76,7 +76,9 @@ export default async function ReportPage({ params }: PageProps) {
     reportPayload.tenant_id !== context.tenantId ||
     reportPayload.test_id !== testId ||
     resultPayload.tenant_id !== reportPayload.tenant_id ||
-    resultPayload.test_id !== reportPayload.test_id
+    resultPayload.test_id !== reportPayload.test_id ||
+    resultPayload.session_id !== reportPayload.session_id ||
+    resultPayload.distinct_id !== reportPayload.distinct_id
   ) {
     return renderBlocked(params.slug);
   }
