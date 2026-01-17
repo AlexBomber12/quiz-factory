@@ -18,6 +18,7 @@ export type StripePurchaseRow = {
   currency: string | null;
   status: string | null;
   product_type: string | null;
+  pricing_variant: string | null;
   is_upsell: boolean | null;
   tenant_id: string | null;
   test_id: string | null;

@@ -108,6 +108,12 @@ Required dimensions for every fact row:
 - profit_per_purchase_eur = contribution_margin_eur / purchase_success_count.
 - profit_per_visit_eur = contribution_margin_eur / visits.
 - CAC_eur (channel) = ad_spend_eur / first_time_purchasers_count.
+- offer_type = normalized offer bucket from product_type: single, pack_5, pack_10, unknown.
+- pack_size = report credits per purchase: 1, 5, 10, or null when unknown.
+- credits_sold = purchases * pack_size, with null pack_size treated as 0.
+- effective_price_per_credit_eur = gross_revenue_eur / credits_sold.
+- pack_purchase_share = (purchases_pack_5 + purchases_pack_10) / total purchases (counted by purchase_id).
+- intro_purchase_share = purchases_intro / total purchases (counted by purchase_id).
 - Payback days: defined for future subscriptions as the days to recover CAC from contribution margin, future metric.
 - Cohort LTV windows:
   - LTV_7, LTV_30, LTV_90 based on contribution margin per user cohort (distinct_id).

@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS raw_stripe.purchases (
   currency STRING,
   status STRING,
   product_type STRING,
+  pricing_variant STRING,
   is_upsell BOOL,
   tenant_id STRING,
   test_id STRING,

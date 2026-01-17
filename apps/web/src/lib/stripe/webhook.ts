@@ -262,6 +262,7 @@ export const buildPurchaseRowFromCheckoutSession = (
     currency,
     status,
     product_type: metadata.product_type,
+    pricing_variant: metadata.pricing_variant,
     is_upsell: metadata.is_upsell,
     tenant_id: metadata.tenant_id,
     test_id: metadata.test_id,

@@ -28,3 +28,54 @@ models:
         tests:
           - not_null:
               where: "net_revenue_eur is not null"
+
+  - name: mart_offer_daily
+    columns:
+      - name: date
+        tests:
+          - not_null
+      - name: tenant_id
+        tests:
+          - not_null
+      - name: locale
+        tests:
+          - not_null
+      - name: offer_type
+        tests:
+          - not_null
+          - accepted_values:
+              values:
+                - single
+                - pack_5
+                - pack_10
+                - unknown
+      - name: pricing_variant
+        tests:
+          - not_null
+
+  - name: mart_unit_econ_daily
+    columns:
+      - name: date
+        tests:
+          - not_null
+      - name: tenant_id
+        tests:
+          - not_null
+      - name: locale
+        tests:
+          - not_null
+      - name: purchases_single
+        tests:
+          - not_null
+      - name: purchases_pack_5
+        tests:
+          - not_null
+      - name: purchases_pack_10
+        tests:
+          - not_null
+      - name: credits_sold_total
+        tests:
+          - not_null
+      - name: purchases_intro
+        tests:
+          - not_null
