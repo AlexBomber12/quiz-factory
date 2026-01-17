@@ -245,10 +245,28 @@ Queue (in order)
 - Tasks file: tasks/PR-SEO-01.md
 - Depends on: PR-PRODUCT-02
 
-39) PR-CONTENT-02: Content Factory Tooling (New Test Generator and CSV Import)
+39) PR-UI-GOLDEN-01: Golden Template Studio (Golden Landing + Blocks Catalog + Theme Tokens)
+- Status: TODO
+- Tasks file: tasks/PR-UI-GOLDEN-01.md
+- Depends on: PR-PRODUCT-05
+- Outcome:
+  - internal Template Studio exists (/studio/golden, /studio/blocks)
+  - UI blocks and theme tokens are codified for repeatable UI evolution
+
+40) PR-CONTENT-02: Content Factory Tooling (New Test Generator and CSV Import)
 - Status: TODO
 - Tasks file: tasks/PR-CONTENT-02.md
 - Depends on: PR-PRODUCT-01
+
+
+41) PR-OPS-AUTOMATION-01: Codex Review Auto-Fix + Auto-Merge + Local main Sync
+- Status: TODO
+- Tasks file: tasks/PR-OPS-AUTOMATION-01.md
+- Depends on: none
+- Outcome:
+  - remove manual waiting/copy-paste for Codex Review feedback
+  - enable hands-free merges via auto-merge
+  - update local main without Cursor Sync
 
 Execution rules (apply to every PR)
 - Work on exactly 1 PR at a time.
