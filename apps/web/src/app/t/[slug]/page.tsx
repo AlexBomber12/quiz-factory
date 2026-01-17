@@ -1,0 +1,99 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+
+import { getTenantTestIds, resolveTestIdBySlug } from "../../../lib/content/catalog";
+import { loadLocalizedTest } from "../../../lib/content/load";
+import { buildCanonicalUrl, resolveTenantContext } from "../../../lib/tenants/request";
+
+type PageProps = {
+  params: {
+    slug: string;
+  };
+};
+
+const resolveLandingTestId = (slug: string, tenantId: string): string | null => {
+  const testId = resolveTestIdBySlug(slug);
+  if (!testId) {
+    return null;
+  }
+
+  const allowedTests = getTenantTestIds(tenantId);
+  if (!allowedTests.includes(testId)) {
+    return null;
+  }
+
+  return testId;
+};
+
+export const generateMetadata = async ({ params }: PageProps): Promise<Metadata> => {
+  const context = await resolveTenantContext();
+  const testId = resolveLandingTestId(params.slug, context.tenantId);
+
+  if (!testId) {
+    const canonical = buildCanonicalUrl(context, `/t/${params.slug}`);
+    const metadata: Metadata = {
+      title: "Quiz Factory",
+      description: "This test is not available for this tenant."
+    };
+    if (canonical) {
+      metadata.alternates = { canonical };
+    }
+    return metadata;
+  }
+
+  const test = loadLocalizedTest(testId, context.locale);
+  const canonical = buildCanonicalUrl(context, `/t/${test.slug}`);
+  const metadata: Metadata = {
+    title: test.title,
+    description: test.description
+  };
+  if (canonical) {
+    metadata.alternates = { canonical };
+  }
+  return metadata;
+};
+
+export default async function TestLandingPage({ params }: PageProps) {
+  const context = await resolveTenantContext();
+  const testId = resolveLandingTestId(params.slug, context.tenantId);
+
+  if (!testId) {
+    return (
+      <section className="page">
+        <header className="hero">
+          <p className="eyebrow">Quiz Factory</p>
+          <h1>Test not available</h1>
+          <p>Choose a test from the tenant catalog to continue.</p>
+        </header>
+        <Link className="text-link" href="/">
+          Back to tests
+        </Link>
+      </section>
+    );
+  }
+
+  const test = loadLocalizedTest(testId, context.locale);
+
+  return (
+    <section className="page">
+      <header className="hero">
+        <p className="eyebrow">Quiz Factory</p>
+        <h1>{test.title}</h1>
+        <p>{test.intro}</p>
+      </header>
+
+      <div className="test-meta">
+        <span>Estimated time: 6 minutes</span>
+      </div>
+
+      <div className="cta-row">
+        <Link className="primary-button" href={`/t/${test.slug}/run`}>
+          Start test
+        </Link>
+        <Link className="text-link" href="/">
+          Back to tests
+        </Link>
+      </div>
+    </section>
+  );
+}

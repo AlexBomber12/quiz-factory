@@ -34,3 +34,103 @@ code {
   padding: 2px 6px;
   border-radius: 4px;
 }
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.hero {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.eyebrow {
+  margin: 0;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: #6b645c;
+}
+
+.test-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 16px;
+}
+
+.test-card {
+  background: #ffffff;
+  border: 1px solid #e5ded4;
+  border-radius: 16px;
+  padding: 18px 20px;
+}
+
+.test-link {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.test-title {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.test-description {
+  margin: 0;
+  color: #3a3733;
+}
+
+.test-cta {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #1f1b16;
+}
+
+.empty-state {
+  background: #fffaf0;
+  border: 1px dashed #e3d7c5;
+  border-radius: 16px;
+  padding: 20px;
+}
+
+.test-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.95rem;
+  color: #3a3733;
+}
+
+.primary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 20px;
+  border-radius: 999px;
+  background: #141413;
+  color: #f6f5f3;
+  text-decoration: none;
+  font-weight: 600;
+  width: fit-content;
+}
+
+.cta-row {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.text-link {
+  color: #141413;
+  text-decoration: none;
+  font-weight: 600;
+}

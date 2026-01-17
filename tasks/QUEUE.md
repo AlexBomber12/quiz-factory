@@ -206,7 +206,7 @@ Queue (in order)
 - Depends on: PR-TENANTS-02 and PR-SECURITY-02
 
 31) PR-PRODUCT-02: Tenant Homepage, Test Listing, and Test Landing Pages
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-PRODUCT-02.md
 - Depends on: PR-PRODUCT-01
 
