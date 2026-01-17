@@ -254,7 +254,7 @@ Queue (in order)
   - UI blocks and theme tokens are codified for repeatable UI evolution
 
 40) PR-CONTENT-02: Content Factory Tooling (New Test Generator and CSV Import)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-CONTENT-02.md
 - Depends on: PR-PRODUCT-01
 
