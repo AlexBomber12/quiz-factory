@@ -221,7 +221,7 @@ Queue (in order)
 - Depends on: PR-PRODUCT-03
 
 34) PR-PRODUCT-05: Paywall UI and Stripe Checkout Session Creation
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-PRODUCT-05.md
 - Depends on: PR-PRODUCT-04
 
