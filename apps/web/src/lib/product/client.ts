@@ -14,6 +14,11 @@ type AttemptEntryPageViewParams = AttemptContextParams & {
   page_url: string;
 };
 
+type ReportPdfParams = {
+  test_id: string;
+  purchase_id: string;
+};
+
 const postJson = async (url: string, body: Record<string, unknown>): Promise<Response> => {
   return fetch(url, {
     method: "POST",
@@ -63,6 +68,13 @@ export const emitAttemptEntryPageView = async (
   const response = await postJson("/api/page/view", params);
   if (!response.ok) {
     throw new Error("Failed to emit attempt entry page view.");
+  }
+};
+
+export const emitReportPdfDownload = async (params: ReportPdfParams): Promise<void> => {
+  const response = await postJson("/api/report/pdf", params);
+  if (!response.ok) {
+    throw new Error("Failed to emit report pdf download.");
   }
 };
 
