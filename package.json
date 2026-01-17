@@ -13,6 +13,6 @@
     "build": "turbo build"
   },
   "devDependencies": {
-    "turbo": "^2.0.0"
+    "turbo": "^2.7.5"
   }
 }
