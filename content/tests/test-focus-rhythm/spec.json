@@ -1,0 +1,582 @@
+{
+  "test_id": "test-focus-rhythm",
+  "slug": "focus-rhythm",
+  "version": 1,
+  "category": "daily-habits",
+  "locales": {
+    "en": {
+      "title": "Focus Rhythm",
+      "short_description": "Discover how you pace attention through a typical day.",
+      "intro": "Answer the questions based on how you prefer to plan, focus, and switch tasks.",
+      "paywall_headline": "Unlock your Focus Rhythm report",
+      "report_title": "Your Focus Rhythm Report"
+    },
+    "es": {
+      "title": "Focus Rhythm",
+      "short_description": "Discover how you pace attention through a typical day.",
+      "intro": "Answer the questions based on how you prefer to plan, focus, and switch tasks.",
+      "paywall_headline": "Unlock your Focus Rhythm report",
+      "report_title": "Your Focus Rhythm Report"
+    },
+    "pt-BR": {
+      "title": "Focus Rhythm",
+      "short_description": "Discover how you pace attention through a typical day.",
+      "intro": "Answer the questions based on how you prefer to plan, focus, and switch tasks.",
+      "paywall_headline": "Unlock your Focus Rhythm report",
+      "report_title": "Your Focus Rhythm Report"
+    }
+  },
+  "questions": [
+    {
+      "id": "q1",
+      "type": "single_choice",
+      "prompt": {
+        "en": "When you start a new task, you prefer to...",
+        "es": "When you start a new task, you prefer to...",
+        "pt-BR": "When you start a new task, you prefer to..."
+      },
+      "options": [
+        {
+          "id": "q1-a",
+          "label": {
+            "en": "Jump in immediately",
+            "es": "Jump in immediately",
+            "pt-BR": "Jump in immediately"
+          }
+        },
+        {
+          "id": "q1-b",
+          "label": {
+            "en": "Scan the outline first",
+            "es": "Scan the outline first",
+            "pt-BR": "Scan the outline first"
+          }
+        },
+        {
+          "id": "q1-c",
+          "label": {
+            "en": "Set a clear goal and timeline",
+            "es": "Set a clear goal and timeline",
+            "pt-BR": "Set a clear goal and timeline"
+          }
+        }
+      ]
+    },
+    {
+      "id": "q2",
+      "type": "single_choice",
+      "prompt": {
+        "en": "Your ideal work block is...",
+        "es": "Your ideal work block is...",
+        "pt-BR": "Your ideal work block is..."
+      },
+      "options": [
+        {
+          "id": "q2-a",
+          "label": {
+            "en": "Short bursts with quick breaks",
+            "es": "Short bursts with quick breaks",
+            "pt-BR": "Short bursts with quick breaks"
+          }
+        },
+        {
+          "id": "q2-b",
+          "label": {
+            "en": "A steady pace with one planned break",
+            "es": "A steady pace with one planned break",
+            "pt-BR": "A steady pace with one planned break"
+          }
+        },
+        {
+          "id": "q2-c",
+          "label": {
+            "en": "A long stretch with minimal interruption",
+            "es": "A long stretch with minimal interruption",
+            "pt-BR": "A long stretch with minimal interruption"
+          }
+        }
+      ]
+    },
+    {
+      "id": "q3",
+      "type": "single_choice",
+      "prompt": {
+        "en": "When priorities shift, you usually...",
+        "es": "When priorities shift, you usually...",
+        "pt-BR": "When priorities shift, you usually..."
+      },
+      "options": [
+        {
+          "id": "q3-a",
+          "label": {
+            "en": "Switch fast and keep moving",
+            "es": "Switch fast and keep moving",
+            "pt-BR": "Switch fast and keep moving"
+          }
+        },
+        {
+          "id": "q3-b",
+          "label": {
+            "en": "Pause to regroup and then shift",
+            "es": "Pause to regroup and then shift",
+            "pt-BR": "Pause to regroup and then shift"
+          }
+        },
+        {
+          "id": "q3-c",
+          "label": {
+            "en": "Finish the current block before changing",
+            "es": "Finish the current block before changing",
+            "pt-BR": "Finish the current block before changing"
+          }
+        }
+      ]
+    },
+    {
+      "id": "q4",
+      "type": "single_choice",
+      "prompt": {
+        "en": "Your calendar feels best when it is...",
+        "es": "Your calendar feels best when it is...",
+        "pt-BR": "Your calendar feels best when it is..."
+      },
+      "options": [
+        {
+          "id": "q4-a",
+          "label": {
+            "en": "Light and flexible",
+            "es": "Light and flexible",
+            "pt-BR": "Light and flexible"
+          }
+        },
+        {
+          "id": "q4-b",
+          "label": {
+            "en": "Guided with a few anchors",
+            "es": "Guided with a few anchors",
+            "pt-BR": "Guided with a few anchors"
+          }
+        },
+        {
+          "id": "q4-c",
+          "label": {
+            "en": "Structured with clear blocks",
+            "es": "Structured with clear blocks",
+            "pt-BR": "Structured with clear blocks"
+          }
+        }
+      ]
+    },
+    {
+      "id": "q5",
+      "type": "single_choice",
+      "prompt": {
+        "en": "When you hit a complex problem, you prefer to...",
+        "es": "When you hit a complex problem, you prefer to...",
+        "pt-BR": "When you hit a complex problem, you prefer to..."
+      },
+      "options": [
+        {
+          "id": "q5-a",
+          "label": {
+            "en": "Try a quick experiment",
+            "es": "Try a quick experiment",
+            "pt-BR": "Try a quick experiment"
+          }
+        },
+        {
+          "id": "q5-b",
+          "label": {
+            "en": "Map out a few steps",
+            "es": "Map out a few steps",
+            "pt-BR": "Map out a few steps"
+          }
+        },
+        {
+          "id": "q5-c",
+          "label": {
+            "en": "Work through a full plan",
+            "es": "Work through a full plan",
+            "pt-BR": "Work through a full plan"
+          }
+        }
+      ]
+    },
+    {
+      "id": "q6",
+      "type": "single_choice",
+      "prompt": {
+        "en": "Your best progress happens when you...",
+        "es": "Your best progress happens when you...",
+        "pt-BR": "Your best progress happens when you..."
+      },
+      "options": [
+        {
+          "id": "q6-a",
+          "label": {
+            "en": "Stack quick wins",
+            "es": "Stack quick wins",
+            "pt-BR": "Stack quick wins"
+          }
+        },
+        {
+          "id": "q6-b",
+          "label": {
+            "en": "Mix short and deep sessions",
+            "es": "Mix short and deep sessions",
+            "pt-BR": "Mix short and deep sessions"
+          }
+        },
+        {
+          "id": "q6-c",
+          "label": {
+            "en": "Stay with a long stretch",
+            "es": "Stay with a long stretch",
+            "pt-BR": "Stay with a long stretch"
+          }
+        }
+      ]
+    },
+    {
+      "id": "q7",
+      "type": "single_choice",
+      "prompt": {
+        "en": "When collaborating, you prefer updates to be...",
+        "es": "When collaborating, you prefer updates to be...",
+        "pt-BR": "When collaborating, you prefer updates to be..."
+      },
+      "options": [
+        {
+          "id": "q7-a",
+          "label": {
+            "en": "Frequent and quick",
+            "es": "Frequent and quick",
+            "pt-BR": "Frequent and quick"
+          }
+        },
+        {
+          "id": "q7-b",
+          "label": {
+            "en": "Regular checkpoints",
+            "es": "Regular checkpoints",
+            "pt-BR": "Regular checkpoints"
+          }
+        },
+        {
+          "id": "q7-c",
+          "label": {
+            "en": "Less often but more detailed",
+            "es": "Less often but more detailed",
+            "pt-BR": "Less often but more detailed"
+          }
+        }
+      ]
+    },
+    {
+      "id": "q8",
+      "type": "single_choice",
+      "prompt": {
+        "en": "Your task list feels right when it is...",
+        "es": "Your task list feels right when it is...",
+        "pt-BR": "Your task list feels right when it is..."
+      },
+      "options": [
+        {
+          "id": "q8-a",
+          "label": {
+            "en": "Short and flexible",
+            "es": "Short and flexible",
+            "pt-BR": "Short and flexible"
+          }
+        },
+        {
+          "id": "q8-b",
+          "label": {
+            "en": "Balanced with clear priorities",
+            "es": "Balanced with clear priorities",
+            "pt-BR": "Balanced with clear priorities"
+          }
+        },
+        {
+          "id": "q8-c",
+          "label": {
+            "en": "Detailed with planned steps",
+            "es": "Detailed with planned steps",
+            "pt-BR": "Detailed with planned steps"
+          }
+        }
+      ]
+    },
+    {
+      "id": "q9",
+      "type": "single_choice",
+      "prompt": {
+        "en": "When you have free time, you usually...",
+        "es": "When you have free time, you usually...",
+        "pt-BR": "When you have free time, you usually..."
+      },
+      "options": [
+        {
+          "id": "q9-a",
+          "label": {
+            "en": "Explore something new",
+            "es": "Explore something new",
+            "pt-BR": "Explore something new"
+          }
+        },
+        {
+          "id": "q9-b",
+          "label": {
+            "en": "Catch up on a mix of tasks",
+            "es": "Catch up on a mix of tasks",
+            "pt-BR": "Catch up on a mix of tasks"
+          }
+        },
+        {
+          "id": "q9-c",
+          "label": {
+            "en": "Stick with a focused project",
+            "es": "Stick with a focused project",
+            "pt-BR": "Stick with a focused project"
+          }
+        }
+      ]
+    },
+    {
+      "id": "q10",
+      "type": "single_choice",
+      "prompt": {
+        "en": "At the end of the day, you feel best when you...",
+        "es": "At the end of the day, you feel best when you...",
+        "pt-BR": "At the end of the day, you feel best when you..."
+      },
+      "options": [
+        {
+          "id": "q10-a",
+          "label": {
+            "en": "Moved through many small wins",
+            "es": "Moved through many small wins",
+            "pt-BR": "Moved through many small wins"
+          }
+        },
+        {
+          "id": "q10-b",
+          "label": {
+            "en": "Balanced progress and reflection",
+            "es": "Balanced progress and reflection",
+            "pt-BR": "Balanced progress and reflection"
+          }
+        },
+        {
+          "id": "q10-c",
+          "label": {
+            "en": "Completed a deep focus block",
+            "es": "Completed a deep focus block",
+            "pt-BR": "Completed a deep focus block"
+          }
+        }
+      ]
+    }
+  ],
+  "scoring": {
+    "scales": [
+      "tempo"
+    ],
+    "option_weights": {
+      "q1-a": {
+        "tempo": 2
+      },
+      "q1-b": {
+        "tempo": 1
+      },
+      "q1-c": {
+        "tempo": 0
+      },
+      "q2-a": {
+        "tempo": 2
+      },
+      "q2-b": {
+        "tempo": 1
+      },
+      "q2-c": {
+        "tempo": 0
+      },
+      "q3-a": {
+        "tempo": 2
+      },
+      "q3-b": {
+        "tempo": 1
+      },
+      "q3-c": {
+        "tempo": 0
+      },
+      "q4-a": {
+        "tempo": 2
+      },
+      "q4-b": {
+        "tempo": 1
+      },
+      "q4-c": {
+        "tempo": 0
+      },
+      "q5-a": {
+        "tempo": 2
+      },
+      "q5-b": {
+        "tempo": 1
+      },
+      "q5-c": {
+        "tempo": 0
+      },
+      "q6-a": {
+        "tempo": 2
+      },
+      "q6-b": {
+        "tempo": 1
+      },
+      "q6-c": {
+        "tempo": 0
+      },
+      "q7-a": {
+        "tempo": 2
+      },
+      "q7-b": {
+        "tempo": 1
+      },
+      "q7-c": {
+        "tempo": 0
+      },
+      "q8-a": {
+        "tempo": 2
+      },
+      "q8-b": {
+        "tempo": 1
+      },
+      "q8-c": {
+        "tempo": 0
+      },
+      "q9-a": {
+        "tempo": 2
+      },
+      "q9-b": {
+        "tempo": 1
+      },
+      "q9-c": {
+        "tempo": 0
+      },
+      "q10-a": {
+        "tempo": 2
+      },
+      "q10-b": {
+        "tempo": 1
+      },
+      "q10-c": {
+        "tempo": 0
+      }
+    }
+  },
+  "result_bands": [
+    {
+      "band_id": "steady",
+      "min_score_inclusive": 0,
+      "max_score_inclusive": 7,
+      "copy": {
+        "en": {
+          "headline": "Steady Planner",
+          "summary": "You prefer a calm, consistent pace and like to think before you act.",
+          "bullets": [
+            "You value clear structure.",
+            "You minimize unnecessary switches.",
+            "You build momentum with routines."
+          ]
+        },
+        "es": {
+          "headline": "Steady Planner",
+          "summary": "You prefer a calm, consistent pace and like to think before you act.",
+          "bullets": [
+            "You value clear structure.",
+            "You minimize unnecessary switches.",
+            "You build momentum with routines."
+          ]
+        },
+        "pt-BR": {
+          "headline": "Steady Planner",
+          "summary": "You prefer a calm, consistent pace and like to think before you act.",
+          "bullets": [
+            "You value clear structure.",
+            "You minimize unnecessary switches.",
+            "You build momentum with routines."
+          ]
+        }
+      }
+    },
+    {
+      "band_id": "balanced",
+      "min_score_inclusive": 8,
+      "max_score_inclusive": 14,
+      "copy": {
+        "en": {
+          "headline": "Balanced Mixer",
+          "summary": "You blend planning with action and adjust your pace as needed.",
+          "bullets": [
+            "You alternate focus and flexibility.",
+            "You keep goals visible.",
+            "You adapt without losing direction."
+          ]
+        },
+        "es": {
+          "headline": "Balanced Mixer",
+          "summary": "You blend planning with action and adjust your pace as needed.",
+          "bullets": [
+            "You alternate focus and flexibility.",
+            "You keep goals visible.",
+            "You adapt without losing direction."
+          ]
+        },
+        "pt-BR": {
+          "headline": "Balanced Mixer",
+          "summary": "You blend planning with action and adjust your pace as needed.",
+          "bullets": [
+            "You alternate focus and flexibility.",
+            "You keep goals visible.",
+            "You adapt without losing direction."
+          ]
+        }
+      }
+    },
+    {
+      "band_id": "fast",
+      "min_score_inclusive": 15,
+      "max_score_inclusive": 20,
+      "copy": {
+        "en": {
+          "headline": "Rapid Starter",
+          "summary": "You move quickly and gain clarity through action.",
+          "bullets": [
+            "You like short cycles and quick feedback.",
+            "You pivot fast when priorities shift.",
+            "You keep energy high with variety."
+          ]
+        },
+        "es": {
+          "headline": "Rapid Starter",
+          "summary": "You move quickly and gain clarity through action.",
+          "bullets": [
+            "You like short cycles and quick feedback.",
+            "You pivot fast when priorities shift.",
+            "You keep energy high with variety."
+          ]
+        },
+        "pt-BR": {
+          "headline": "Rapid Starter",
+          "summary": "You move quickly and gain clarity through action.",
+          "bullets": [
+            "You like short cycles and quick feedback.",
+            "You pivot fast when priorities shift.",
+            "You keep energy high with variety."
+          ]
+        }
+      }
+    }
+  ]
+}

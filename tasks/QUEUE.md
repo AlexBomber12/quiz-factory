@@ -201,7 +201,7 @@ Queue (in order)
 
 
 30) PR-PRODUCT-01: Test Content Format, Registry, and Validation (1 Golden Test EN-ES-PT-BR)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-PRODUCT-01.md
 - Depends on: PR-TENANTS-02 and PR-SECURITY-02
 
