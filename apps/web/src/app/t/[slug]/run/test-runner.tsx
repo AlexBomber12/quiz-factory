@@ -110,6 +110,21 @@ export default function TestRunnerClient({ test }: RunnerProps) {
         session_id: attempt.sessionId,
         attempt_token: attempt.attemptToken
       });
+      const previewResponse = await fetch("/api/test/score-preview", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json"
+        },
+        body: JSON.stringify({
+          test_id: test.testId,
+          session_id: attempt.sessionId,
+          attempt_token: attempt.attemptToken,
+          answers
+        })
+      });
+      if (!previewResponse.ok) {
+        throw new Error("Score preview failed.");
+      }
       router.push(`/t/${test.slug}/preview`);
     } catch {
       setError("Unable to finish the test. Please try again.");
