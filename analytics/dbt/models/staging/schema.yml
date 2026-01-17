@@ -64,6 +64,7 @@ models:
       - name: purchase_id
         tests:
           - not_null
+      - name: pricing_variant
 
   - name: stg_stripe_refunds
     columns:

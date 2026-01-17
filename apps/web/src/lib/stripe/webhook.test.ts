@@ -43,6 +43,7 @@ const buildCheckoutCompletedEvent = () => ({
         utm_campaign: "spring",
         fbclid: "fb-1",
         product_type: "single",
+        pricing_variant: "intro",
         is_upsell: "false"
       }
     }
@@ -101,6 +102,7 @@ describe("stripe webhook processing", () => {
     expect(purchaseRow.fbclid).toBe("fb-1");
     expect(purchaseRow.is_upsell).toBe(false);
     expect(purchaseRow.product_type).toBe("single");
+    expect(purchaseRow.pricing_variant).toBe("intro");
   });
 
   it("dedupes repeated Stripe events", async () => {

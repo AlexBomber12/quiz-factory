@@ -226,7 +226,7 @@ Queue (in order)
 - Depends on: PR-PRODUCT-04
 
 35) PR-ANALYTICS-22: Unit Economics Enhancements (Pricing Variants, Packs, Offer Breakdown)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-ANALYTICS-22.md
 - Depends on: PR-PRODUCT-05
 

@@ -3,7 +3,8 @@
     materialized='incremental',
     unique_key='purchase_id',
     partition_by={'field': 'created_utc', 'data_type': 'timestamp'},
-    cluster_by=['purchase_id', 'tenant_id']
+    cluster_by=['purchase_id', 'tenant_id'],
+    on_schema_change='append_new_columns'
   )
 }}
 
@@ -16,6 +17,7 @@ with source as (
     lower(currency) as currency,
     status,
     product_type,
+    pricing_variant,
     is_upsell,
     tenant_id,
     test_id,

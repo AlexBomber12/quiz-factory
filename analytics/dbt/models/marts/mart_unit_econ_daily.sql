@@ -3,7 +3,8 @@
     materialized='incremental',
     unique_key=['date', 'tenant_id', 'test_id', 'locale', 'channel_key'],
     partition_by={'field': 'date', 'data_type': 'date'},
-    cluster_by=['tenant_id', 'test_id', 'locale', 'channel_key']
+    cluster_by=['tenant_id', 'test_id', 'locale', 'channel_key'],
+    on_schema_change='append_new_columns'
   )
 }}
 
@@ -47,6 +48,27 @@ funnel as (
   {% if is_incremental() %}
     where date >= {{ incremental_date }}
   {% endif %}
+),
+
+offer_rollup as (
+  select
+    date,
+    tenant_id,
+    test_id,
+    locale,
+    channel_key,
+    sum(case when offer_type = 'single' then purchases else 0 end) as purchases_single,
+    sum(case when offer_type = 'pack_5' then purchases else 0 end) as purchases_pack_5,
+    sum(case when offer_type = 'pack_10' then purchases else 0 end) as purchases_pack_10,
+    sum(case when pricing_variant = 'intro' then purchases else 0 end) as purchases_intro,
+    sum(credits_sold) as credits_sold_total,
+    safe_divide(sum(gross_revenue_eur), nullif(sum(credits_sold), 0))
+      as effective_price_per_credit_eur
+  from {{ ref('mart_offer_daily') }}
+  {% if is_incremental() %}
+    where date >= {{ incremental_date }}
+  {% endif %}
+  group by date, tenant_id, test_id, locale, channel_key
 ),
 
 purchase_events as (
@@ -200,6 +222,16 @@ all_keys as (
     locale,
     channel_key
   from first_time_purchases
+
+  union distinct
+
+  select
+    date,
+    tenant_id,
+    test_id,
+    locale,
+    channel_key
+  from offer_rollup
 ),
 
 joined as (
@@ -215,7 +247,13 @@ joined as (
     p.ad_spend_eur,
     f.purchases,
     f.visits,
-    ftp.first_time_purchasers_count
+    ftp.first_time_purchasers_count,
+    o.purchases_single,
+    o.purchases_pack_5,
+    o.purchases_pack_10,
+    o.purchases_intro,
+    o.credits_sold_total,
+    o.effective_price_per_credit_eur
   from all_keys k
   left join pnl p
     on k.date = p.date
@@ -235,6 +273,12 @@ joined as (
     and k.test_id = ftp.test_id
     and k.locale = ftp.locale
     and k.channel_key = ftp.channel_key
+  left join offer_rollup o
+    on k.date = o.date
+    and k.tenant_id = o.tenant_id
+    and k.test_id = o.test_id
+    and k.locale = o.locale
+    and k.channel_key = o.channel_key
 )
 
 select
@@ -246,5 +290,16 @@ select
   safe_divide(gross_revenue_eur, purchases) as aov_eur,
   safe_divide(contribution_margin_eur, purchases) as profit_per_purchase_eur,
   safe_divide(contribution_margin_eur, visits) as profit_per_visit_eur,
-  safe_divide(ad_spend_eur, first_time_purchasers_count) as cac_eur
+  safe_divide(ad_spend_eur, first_time_purchasers_count) as cac_eur,
+  coalesce(purchases_single, 0) as purchases_single,
+  coalesce(purchases_pack_5, 0) as purchases_pack_5,
+  coalesce(purchases_pack_10, 0) as purchases_pack_10,
+  safe_divide(
+    coalesce(purchases_pack_5, 0) + coalesce(purchases_pack_10, 0),
+    purchases
+  ) as pack_purchase_share,
+  coalesce(credits_sold_total, 0) as credits_sold_total,
+  effective_price_per_credit_eur,
+  coalesce(purchases_intro, 0) as purchases_intro,
+  safe_divide(coalesce(purchases_intro, 0), purchases) as intro_purchase_share
 from joined
