@@ -231,7 +231,7 @@ Queue (in order)
 - Depends on: PR-PRODUCT-05
 
 36) PR-PRODUCT-06: Checkout Success, Entitlement Token, and Paid Report (HTML)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-PRODUCT-06.md
 - Depends on: PR-PRODUCT-05
 
