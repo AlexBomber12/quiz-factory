@@ -80,6 +80,66 @@ class ContentFactoryTest(unittest.TestCase):
             validate_catalog.validate_spec(spec_path, data, validation_errors)
             self.assertEqual(validation_errors, [])
 
+    def test_import_questions_csv_rejects_duplicate_question_ids(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            tests_root = Path(temp_dir) / "content" / "tests"
+            tests_root.mkdir(parents=True)
+            spec_path, errors = new_test.create_test_spec(
+                test_id="test-duplicate",
+                slug="duplicate",
+                locales=["en", "es", "pt-BR"],
+                category="daily-habits",
+                tests_root=tests_root
+            )
+
+            self.assertEqual(errors, [])
+            self.assertIsNotNone(spec_path)
+            self.assertTrue(spec_path.exists())
+
+            data = json.loads(spec_path.read_text(encoding="utf-8"))
+            data["questions"] = [
+                {
+                    "id": "q1",
+                    "type": "single_choice",
+                    "prompt": {
+                        "en": "Existing question",
+                        "es": "Existing question",
+                        "pt-BR": "Existing question"
+                    },
+                    "options": [
+                        {
+                            "id": "q1-a",
+                            "label": {
+                                "en": "Existing option",
+                                "es": "Existing option",
+                                "pt-BR": "Existing option"
+                            }
+                        }
+                    ]
+                }
+            ]
+            data["scoring"]["option_weights"]["q1-a"] = {"score": 1}
+            spec_path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+
+            csv_path = Path(temp_dir) / "dup_questions.csv"
+            csv_path.write_text(
+                "question_id,option_id,prompt_en,prompt_es,prompt_pt_br,"
+                "option_label_en,option_label_es,option_label_pt_br,weight\n"
+                "q1,q1-b,Existing question,Existing question,Existing question,"
+                "Option B,Option B,Option B,0\n",
+                encoding="utf-8"
+            )
+
+            import_errors = import_questions_csv.import_questions_from_csv(
+                test_id="test-duplicate",
+                csv_path=csv_path,
+                replace=False,
+                tests_root=tests_root
+            )
+
+            self.assertEqual(len(import_errors), 1)
+            self.assertIn("question_id q1 already exists", import_errors[0])
+
 
 if __name__ == "__main__":
     unittest.main()

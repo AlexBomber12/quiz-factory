@@ -177,9 +177,24 @@ def import_questions_from_csv(
     if not isinstance(existing_questions, list):
         return ["spec.json questions must be an array"]
 
+    existing_question_ids: set[str] = set()
+    for index, question in enumerate(existing_questions):
+        if not isinstance(question, dict):
+            return [f"spec.json questions[{index}] must be an object"]
+        question_id = question.get("id")
+        if not isinstance(question_id, str) or not question_id.strip():
+            return [f"spec.json questions[{index}].id must be a non-empty string"]
+        if question_id in existing_question_ids:
+            return [f"spec.json questions[{index}].id {question_id} is duplicated"]
+        existing_question_ids.add(question_id)
+
     if replace:
         spec_data["questions"] = questions
     else:
+        for question in questions:
+            question_id = question.get("id")
+            if isinstance(question_id, str) and question_id in existing_question_ids:
+                return [f"question_id {question_id} already exists in spec.json"]
         spec_data["questions"] = existing_questions + questions
 
     scoring = spec_data.get("scoring")
