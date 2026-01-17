@@ -216,7 +216,7 @@ Queue (in order)
 - Depends on: PR-PRODUCT-02
 
 33) PR-PRODUCT-04: Server-side Scoring, Result Preview, and Result Cookie
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-PRODUCT-04.md
 - Depends on: PR-PRODUCT-03
 
