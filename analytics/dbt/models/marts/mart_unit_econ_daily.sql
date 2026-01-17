@@ -57,6 +57,7 @@ offer_rollup as (
     test_id,
     locale,
     channel_key,
+    sum(purchases) as purchases_offer_total,
     sum(case when offer_type = 'single' then purchases else 0 end) as purchases_single,
     sum(case when offer_type = 'pack_5' then purchases else 0 end) as purchases_pack_5,
     sum(case when offer_type = 'pack_10' then purchases else 0 end) as purchases_pack_10,
@@ -248,6 +249,7 @@ joined as (
     f.purchases,
     f.visits,
     ftp.first_time_purchasers_count,
+    o.purchases_offer_total,
     o.purchases_single,
     o.purchases_pack_5,
     o.purchases_pack_10,
@@ -296,10 +298,10 @@ select
   coalesce(purchases_pack_10, 0) as purchases_pack_10,
   safe_divide(
     coalesce(purchases_pack_5, 0) + coalesce(purchases_pack_10, 0),
-    purchases
+    purchases_offer_total
   ) as pack_purchase_share,
   coalesce(credits_sold_total, 0) as credits_sold_total,
   effective_price_per_credit_eur,
   coalesce(purchases_intro, 0) as purchases_intro,
-  safe_divide(coalesce(purchases_intro, 0), purchases) as intro_purchase_share
+  safe_divide(coalesce(purchases_intro, 0), purchases_offer_total) as intro_purchase_share
 from joined
