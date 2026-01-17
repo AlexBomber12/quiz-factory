@@ -211,7 +211,7 @@ Queue (in order)
 - Depends on: PR-PRODUCT-01
 
 32) PR-PRODUCT-03: Test Runner UI and Attempt Entry page_view
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-PRODUCT-03.md
 - Depends on: PR-PRODUCT-02
 
