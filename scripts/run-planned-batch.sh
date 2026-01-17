@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+repo_root="$(git rev-parse --show-toplevel 2>/dev/null)" || {
+  echo "ERROR: scripts/run-planned-batch.sh must be run inside a git repository." >&2
+  exit 1
+}
+cd "$repo_root"
+
 usage() {
   cat <<'USAGE'
 Usage: scripts/run-planned-batch.sh <COUNT>
