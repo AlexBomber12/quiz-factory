@@ -58,7 +58,7 @@ if [[ -z "$repo" ]]; then
   die "Unable to resolve repository."
 fi
 
-bot_login="${CODEX_REVIEW_BOT_LOGIN:-chatgpt-codex-connector}"
+bot_login="${CODEX_REVIEW_BOT_LOGIN:-chatgpt-codex-connector[bot]}"
 bot_login_suffix="$bot_login"
 if [[ "$bot_login" != *"[bot]" ]]; then
   bot_login_suffix="${bot_login}[bot]"
