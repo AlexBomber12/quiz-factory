@@ -9,26 +9,33 @@ export const generateMetadata = async (): Promise<Metadata> => {
   const tests = loadTenantCatalog(context.tenantId, context.locale);
   const primaryTest = tests[0];
   const canonical = buildCanonicalUrl(context, "/");
+  const ogImage = buildCanonicalUrl(context, "/og.png");
 
-  if (!primaryTest) {
+  const buildMetadata = (title: string, description: string): Metadata => {
     const metadata: Metadata = {
-      title: "Quiz Factory",
-      description: "Browse the available tests and start when ready."
+      title,
+      description,
+      openGraph: {
+        title,
+        description,
+        url: canonical ?? undefined,
+        images: ogImage ? [{ url: ogImage }] : undefined
+      }
     };
     if (canonical) {
       metadata.alternates = { canonical };
     }
     return metadata;
+  };
+
+  if (!primaryTest) {
+    return buildMetadata(
+      "Quiz Factory",
+      "Browse the available tests and start when ready."
+    );
   }
 
-  const metadata: Metadata = {
-    title: primaryTest.title,
-    description: primaryTest.short_description
-  };
-  if (canonical) {
-    metadata.alternates = { canonical };
-  }
-  return metadata;
+  return buildMetadata(primaryTest.title, primaryTest.short_description);
 };
 
 export default async function HomePage() {

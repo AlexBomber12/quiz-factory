@@ -241,7 +241,7 @@ Queue (in order)
 - Depends on: PR-PRODUCT-06
 
 38) PR-SEO-01: Sitemap, robots.txt, Canonicals, and Basic OG Metadata
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-SEO-01.md
 - Depends on: PR-PRODUCT-02
 
