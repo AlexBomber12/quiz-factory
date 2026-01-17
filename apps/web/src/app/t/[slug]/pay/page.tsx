@@ -7,9 +7,8 @@ import {
   RESULT_COOKIE,
   verifyResultCookie
 } from "../../../../lib/product/result_cookie";
-import { ATTEMPT_TOKEN_COOKIE_NAME } from "../../../../lib/security/attempt_token";
 import { resolveTenantContext } from "../../../../lib/tenants/request";
-import PreviewAnalytics from "./preview-analytics";
+import PaywallClient from "./paywall-client";
 
 type PageProps = {
   params: {
@@ -17,7 +16,7 @@ type PageProps = {
   };
 };
 
-const resolvePreviewTestId = (slug: string, tenantId: string): string | null => {
+const resolvePaywallTestId = (slug: string, tenantId: string): string | null => {
   const testId = resolveTestIdBySlug(slug);
   if (!testId) {
     return null;
@@ -31,9 +30,9 @@ const resolvePreviewTestId = (slug: string, tenantId: string): string | null => 
   return testId;
 };
 
-export default async function TestPreviewPage({ params }: PageProps) {
+export default async function PaywallPage({ params }: PageProps) {
   const context = await resolveTenantContext();
-  const testId = resolvePreviewTestId(params.slug, context.tenantId);
+  const testId = resolvePaywallTestId(params.slug, context.tenantId);
 
   if (!testId) {
     return (
@@ -59,8 +58,8 @@ export default async function TestPreviewPage({ params }: PageProps) {
       <section className="page">
         <header className="hero">
           <p className="eyebrow">Quiz Factory</p>
-          <h1>Preview unavailable</h1>
-          <p>We could not load your preview. Please retake the test.</p>
+          <h1>Paywall unavailable</h1>
+          <p>We could not confirm your result. Please retake the test.</p>
         </header>
         <Link className="primary-button" href={`/t/${params.slug}/run`}>
           Back to the test
@@ -70,51 +69,47 @@ export default async function TestPreviewPage({ params }: PageProps) {
   }
 
   const test = loadLocalizedTest(testId, context.locale);
-  const band = test.result_bands.find((candidate) => candidate.band_id === resultPayload.band_id);
-  const bandCopy = band?.copy[test.locale];
-
-  if (!band || !bandCopy) {
-    return (
-      <section className="page">
-        <header className="hero">
-          <p className="eyebrow">Quiz Factory</p>
-          <h1>Preview unavailable</h1>
-          <p>We could not load your preview. Please retake the test.</p>
-        </header>
-        <Link className="primary-button" href={`/t/${params.slug}/run`}>
-          Back to the test
-        </Link>
-      </section>
-    );
-  }
-
-  const attemptToken = cookieStore.get(ATTEMPT_TOKEN_COOKIE_NAME)?.value ?? null;
+  const options = [
+    {
+      id: "single",
+      label: "Single report",
+      priceLabel: "EUR 1.49",
+      productType: "single",
+      pricingVariant: "intro"
+    },
+    {
+      id: "pack-5",
+      label: "Pack 5 reports",
+      priceLabel: "EUR 4.99",
+      productType: "pack_5",
+      pricingVariant: "base"
+    },
+    {
+      id: "pack-10",
+      label: "Pack 10 reports",
+      priceLabel: "EUR 7.99",
+      productType: "pack_10",
+      pricingVariant: "base"
+    }
+  ] as const;
 
   return (
     <section className="page">
-      <PreviewAnalytics
-        testId={test.test_id}
-        sessionId={resultPayload.session_id}
-        attemptToken={attemptToken}
-      />
       <header className="hero">
         <p className="eyebrow">Quiz Factory</p>
-        <h1>{bandCopy.headline}</h1>
-        <p>{bandCopy.summary}</p>
+        <h1>{test.paywall_headline}</h1>
+        <p>Select the report option that fits you best.</p>
       </header>
 
-      <div className="runner-card">
-        <h2 className="runner-question">{test.title}</h2>
-        <ul>
-          {bandCopy.bullets.map((bullet) => (
-            <li key={bullet}>{bullet}</li>
-          ))}
-        </ul>
-      </div>
+      <PaywallClient
+        testId={test.test_id}
+        sessionId={resultPayload.session_id}
+        options={options}
+      />
 
       <div className="cta-row">
-        <Link className="primary-button" href={`/t/${test.slug}/pay`}>
-          Unlock full report
+        <Link className="text-link" href={`/t/${test.slug}/preview`}>
+          Back to preview
         </Link>
         <Link className="text-link" href={`/t/${test.slug}/run`}>
           Retake the test
