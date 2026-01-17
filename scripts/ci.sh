@@ -53,6 +53,8 @@ run_app() {
   python3 "$ROOT_DIR/scripts/tenants/validate_tenants.py"
   echo "==> Content catalog validation"
   python3 "$ROOT_DIR/scripts/content/validate_catalog.py"
+  echo "==> Content tooling tests"
+  python3 "$ROOT_DIR/scripts/content/content_factory_test.py"
 }
 
 ensure_uv() {
