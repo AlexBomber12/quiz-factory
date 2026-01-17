@@ -3,7 +3,6 @@ import Link from "next/link";
 import { getTenantTestIds, resolveTestIdBySlug } from "../../../../lib/content/catalog";
 import { loadLocalizedTest } from "../../../../lib/content/load";
 import { resolveTenantContext } from "../../../../lib/tenants/request";
-import TestRunnerClient from "./test-runner";
 
 type PageProps = {
   params: {
@@ -11,7 +10,7 @@ type PageProps = {
   };
 };
 
-const resolveRunTestId = (slug: string, tenantId: string): string | null => {
+const resolvePreviewTestId = (slug: string, tenantId: string): string | null => {
   const testId = resolveTestIdBySlug(slug);
   if (!testId) {
     return null;
@@ -25,9 +24,9 @@ const resolveRunTestId = (slug: string, tenantId: string): string | null => {
   return testId;
 };
 
-export default async function TestRunPage({ params }: PageProps) {
+export default async function TestPreviewPage({ params }: PageProps) {
   const context = await resolveTenantContext();
-  const testId = resolveRunTestId(params.slug, context.tenantId);
+  const testId = resolvePreviewTestId(params.slug, context.tenantId);
 
   if (!testId) {
     return (
@@ -47,14 +46,18 @@ export default async function TestRunPage({ params }: PageProps) {
   const test = loadLocalizedTest(testId, context.locale);
 
   return (
-    <TestRunnerClient
-      test={{
-        testId: test.test_id,
-        slug: test.slug,
-        title: test.title,
-        intro: test.intro,
-        questions: test.questions
-      }}
-    />
+    <section className="page">
+      <header className="hero">
+        <p className="eyebrow">Quiz Factory</p>
+        <h1>{test.title}</h1>
+        <p>Scoring and report preview will be implemented in PR-PRODUCT-04.</p>
+      </header>
+
+      <div className="cta-row">
+        <Link className="primary-button" href={`/t/${test.slug}`}>
+          Back to details
+        </Link>
+      </div>
+    </section>
   );
 }
