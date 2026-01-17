@@ -28,29 +28,41 @@ const resolveLandingTestId = (slug: string, tenantId: string): string | null => 
 export const generateMetadata = async ({ params }: PageProps): Promise<Metadata> => {
   const context = await resolveTenantContext();
   const testId = resolveLandingTestId(params.slug, context.tenantId);
+  const ogImage = buildCanonicalUrl(context, "/og.png");
 
-  if (!testId) {
-    const canonical = buildCanonicalUrl(context, `/t/${params.slug}`);
+  const buildMetadata = (
+    title: string,
+    description: string,
+    canonical: string | null
+  ): Metadata => {
     const metadata: Metadata = {
-      title: "Quiz Factory",
-      description: "This test is not available for this tenant."
+      title,
+      description,
+      openGraph: {
+        title,
+        description,
+        url: canonical ?? undefined,
+        images: ogImage ? [{ url: ogImage }] : undefined
+      }
     };
     if (canonical) {
       metadata.alternates = { canonical };
     }
     return metadata;
+  };
+
+  if (!testId) {
+    const canonical = buildCanonicalUrl(context, `/t/${params.slug}`);
+    return buildMetadata(
+      "Quiz Factory",
+      "This test is not available for this tenant.",
+      canonical
+    );
   }
 
   const test = loadLocalizedTest(testId, context.locale);
   const canonical = buildCanonicalUrl(context, `/t/${test.slug}`);
-  const metadata: Metadata = {
-    title: test.title,
-    description: test.description
-  };
-  if (canonical) {
-    metadata.alternates = { canonical };
-  }
-  return metadata;
+  return buildMetadata(test.title, test.description, canonical);
 };
 
 export default async function TestLandingPage({ params }: PageProps) {
