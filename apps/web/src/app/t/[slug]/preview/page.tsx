@@ -113,8 +113,8 @@ export default async function TestPreviewPage({ params }: PageProps) {
       </div>
 
       <div className="cta-row">
-        <Link className="primary-button" href={`/t/${test.slug}/pay`}>
-          Continue to paywall
+        <Link className="primary-button" href={`/t/${test.slug}`}>
+          Back to details
         </Link>
         <Link className="text-link" href={`/t/${test.slug}/run`}>
           Retake the test
