@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { loadTenantCatalog } from "./catalog";
+import { loadTenantCatalog, resolveTenantTestBySlug } from "./catalog";
 
 const TENANT_ID = "tenant-tenant-example-com";
 
@@ -27,5 +27,13 @@ describe("catalog loader", () => {
         }
       })
     ).toThrow(/Catalog metadata missing for test test-missing-metadata/);
+  });
+
+  it("resolves a test by slug with a non-empty title", () => {
+    const test = resolveTenantTestBySlug(TENANT_ID, "en", "focus-rhythm");
+
+    expect(test).not.toBeNull();
+    expect(test?.title).toBeTypeOf("string");
+    expect(test?.title.trim().length).toBeGreaterThan(0);
   });
 });

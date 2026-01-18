@@ -280,7 +280,7 @@ Queue (in order)
 - Depends on: PR-UI-01 and PR-ANALYTICS-09
 
 44) PR-UI-03: Test Landing Page (/t/[slug]) with Tailwind + shadcn/ui
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-UI-03.md
 - Depends on: PR-UI-02
 
