@@ -87,6 +87,7 @@ run_app() {
   python3 "$ROOT_DIR/scripts/content/validate_catalog.py"
   echo "==> Content tooling tests"
   python3 "$ROOT_DIR/scripts/content/content_factory_test.py"
+  python3 "$ROOT_DIR/scripts/content/test_values_compass_md_to_spec.py"
 }
 
 ensure_uv() {
