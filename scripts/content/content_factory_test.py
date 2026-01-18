@@ -140,6 +140,21 @@ class ContentFactoryTest(unittest.TestCase):
             self.assertEqual(len(import_errors), 1)
             self.assertIn("question_id q1 already exists", import_errors[0])
 
+    def test_universal_spec_is_valid(self) -> None:
+        spec_path = ROOT_DIR / "content" / "tests" / "test-universal-mini" / "spec.json"
+        data = json.loads(spec_path.read_text(encoding="utf-8"))
+        validation_errors: list[str] = []
+        validate_catalog.validate_spec(spec_path, data, validation_errors)
+        self.assertEqual(validation_errors, [])
+
+    def test_universal_spec_rejects_unknown_scale(self) -> None:
+        spec_path = ROOT_DIR / "content" / "tests" / "test-universal-mini" / "spec.json"
+        data = json.loads(spec_path.read_text(encoding="utf-8"))
+        data["questions"][0]["scale_id"] = "unknown"
+        validation_errors: list[str] = []
+        validate_catalog.validate_spec(spec_path, data, validation_errors)
+        self.assertTrue(any("scale_id must be listed in scales" in error for error in validation_errors))
+
 
 if __name__ == "__main__":
     unittest.main()

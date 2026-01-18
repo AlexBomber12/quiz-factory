@@ -13,12 +13,13 @@ ROOT_DIR = Path(__file__).resolve().parents[2]
 CATALOG_PATH = ROOT_DIR / "config" / "catalog.json"
 TESTS_ROOT = ROOT_DIR / "content" / "tests"
 SOURCES_ROOT = ROOT_DIR / "content" / "sources"
-CONVERTER_PATH = ROOT_DIR / "scripts" / "content" / "values_compass_md_to_spec.py"
+VALUES_CONVERTER_PATH = ROOT_DIR / "scripts" / "content" / "values_compass_md_to_spec.py"
+UNIVERSAL_CONVERTER_PATH = ROOT_DIR / "scripts" / "content" / "universal_human_md_to_spec.py"
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Add content sources and update the catalog")
-    parser.add_argument("--format", required=True, help="values_compass_v1")
+    parser.add_argument("--format", required=True, help="values_compass_v1 or universal_human_v1")
     parser.add_argument("--test-id", required=True)
     parser.add_argument("--tenant-id", required=True)
     parser.add_argument("--slug")
@@ -28,8 +29,8 @@ def parse_args() -> argparse.Namespace:
 
 
 def validate_format(format_id: str, errors: list[str]) -> None:
-    if format_id != "values_compass_v1":
-        errors.append("format must be values_compass_v1")
+    if format_id not in {"values_compass_v1", "universal_human_v1"}:
+        errors.append("format must be values_compass_v1 or universal_human_v1")
 
 
 def resolve_slug(test_id: str, slug: str | None, errors: list[str]) -> str:
@@ -62,7 +63,7 @@ def ensure_sources(test_id: str, errors: list[str]) -> dict[str, Path]:
     return sources
 
 
-def run_converter(
+def run_values_converter(
     test_id: str,
     slug: str,
     category: str,
@@ -74,7 +75,7 @@ def run_converter(
     output_path.parent.mkdir(parents=True, exist_ok=True)
     cmd = [
         sys.executable,
-        str(CONVERTER_PATH),
+        str(VALUES_CONVERTER_PATH),
         "--test-id",
         test_id,
         "--slug",
@@ -99,6 +100,36 @@ def run_converter(
             print(result.stdout)
         if result.stderr:
             print(result.stderr, file=sys.stderr)
+
+
+def run_universal_converter(
+    test_id: str,
+    output_path: Path,
+    errors: list[str]
+) -> None:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    source_dir = SOURCES_ROOT / test_id
+    cmd = [
+        sys.executable,
+        str(UNIVERSAL_CONVERTER_PATH),
+        "--source-dir",
+        str(source_dir),
+        "--out",
+        str(output_path)
+    ]
+    result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+    if result.returncode != 0:
+        errors.append("universal_human_md_to_spec.py failed")
+        if result.stdout:
+            print(result.stdout)
+        if result.stderr:
+            print(result.stderr, file=sys.stderr)
+
+
+def run_validate_catalog(errors: list[str]) -> None:
+    result = validate_catalog.main()
+    if result != 0:
+        errors.append("validate_catalog.py failed")
 
 
 def update_catalog(test_id: str, tenant_id: str, errors: list[str]) -> bool:
@@ -174,7 +205,10 @@ def main() -> int:
         return 1
 
     output_path = TESTS_ROOT / test_id / "spec.json"
-    run_converter(test_id, slug, category, version, sources, output_path, errors)
+    if args.format == "values_compass_v1":
+        run_values_converter(test_id, slug, category, version, sources, output_path, errors)
+    else:
+        run_universal_converter(test_id, output_path, errors)
 
     if errors:
         for message in errors:
@@ -182,6 +216,14 @@ def main() -> int:
         return 1
 
     catalog_updated = update_catalog(test_id, tenant_id, errors)
+
+    if errors:
+        for message in errors:
+            print(f"ERROR: {message}", file=sys.stderr)
+        return 1
+
+    if args.format == "universal_human_v1":
+        run_validate_catalog(errors)
 
     if errors:
         for message in errors:
