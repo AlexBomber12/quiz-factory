@@ -19,6 +19,19 @@ die() {
   exit 1
 }
 
+ensure_clean_tree() {
+  [[ -z "$(git status --porcelain)" ]] && return 0
+  echo "Dirty working tree detected; creating WIP checkpoint."
+  git add -A
+  set +e
+  git commit -m "WIP: autopilot checkpoint"; local commit_status=$?
+  set -e
+  if [[ $commit_status -eq 0 || -z "$(git status --porcelain)" ]]; then
+    return 0
+  fi
+  echo "ERROR: Unable to create WIP checkpoint." >&2
+  return $commit_status
+}
 count_arg="${1:-}"
 if [[ -z "$count_arg" ]]; then
   usage
@@ -56,27 +69,42 @@ fi
 
 run_planned_pr() {
   local label="$1"
-  echo "Starting planned PR ${label}..."
-  codex exec --full-auto "Run PLANNED PR"
-
-  current_branch="$(git rev-parse --abbrev-ref HEAD)"
-  pr_number=""
-
-  if ! pr_number="$(gh pr view --json number -q .number 2>/dev/null)"; then
-    pr_number=""
+  local retries="${RUN_PLANNED_CI_RETRY:-2}" max_attempts attempt current_branch pr_number need_retry
+  if ! [[ "$retries" =~ ^[0-9]+$ ]]; then
+    die "RUN_PLANNED_CI_RETRY must be a non-negative integer."
   fi
+  max_attempts=$(( retries + 1 )); attempt=0
 
-  if [[ -z "$pr_number" || "$pr_number" == "null" ]]; then
-    if ! pr_number="$(gh pr list --head "$current_branch" --json number -q '.[0].number' 2>/dev/null)"; then
-      pr_number=""
+  while (( attempt < max_attempts )); do
+    attempt=$(( attempt + 1 ))
+    echo "Starting planned PR ${label} (attempt ${attempt}/${max_attempts})..."
+    ensure_clean_tree; need_retry=0
+    if ! codex exec --full-auto "Run PLANNED PR"; then
+      echo "Codex run failed for ${label}."
+      ensure_clean_tree
+      need_retry=1
+    else
+      ensure_clean_tree
+      current_branch="$(git rev-parse --abbrev-ref HEAD)"
+      pr_number="$(gh pr view --json number -q .number 2>/dev/null || true)"
+      if [[ -z "$pr_number" || "$pr_number" == "null" ]]; then
+        pr_number="$(gh pr list --head "$current_branch" --json number -q '.[0].number' 2>/dev/null || true)"
+      fi
+      if [[ -z "$pr_number" || "$pr_number" == "null" ]]; then
+        echo "Unable to determine PR number for branch ${current_branch}."
+        need_retry=1
+      elif ! "${script_dir}/pr-autopilot.sh" "$pr_number"; then
+        echo "PR autopilot failed for ${pr_number}."
+        ensure_clean_tree
+        need_retry=1
+      else
+        return 0
+      fi
     fi
-  fi
-
-  if [[ -z "$pr_number" || "$pr_number" == "null" ]]; then
-    die "Unable to determine PR number for branch ${current_branch}."
-  fi
-
-  "${script_dir}/pr-autopilot.sh" "$pr_number"
+    if (( need_retry && attempt >= max_attempts )); then
+      die "RUN_PLANNED_CI_RETRY (${retries}) exceeded; stopping."
+    fi
+  done
 }
 
 queue_has_work() {
