@@ -199,7 +199,6 @@ Queue (in order)
   - anomaly checks are codified as scheduled query templates
   - alert runbook exists and alerts are stored in marts.alert_events
 
-
 30) PR-PRODUCT-01: Test Content Format, Registry, and Validation (1 Golden Test EN-ES-PT-BR)
 - Status: DONE
 - Tasks file: tasks/PR-PRODUCT-01.md
@@ -258,7 +257,6 @@ Queue (in order)
 - Tasks file: tasks/PR-CONTENT-02.md
 - Depends on: PR-PRODUCT-01
 
-
 41) PR-OPS-AUTOMATION-01: Codex Review Auto-Fix + Auto-Merge + Local main Sync
 - Status: DONE
 - Tasks file: tasks/PR-OPS-AUTOMATION-01.md
@@ -267,7 +265,6 @@ Queue (in order)
   - remove manual waiting/copy-paste for Codex Review feedback
   - enable hands-free merges via auto-merge
   - update local main without Cursor Sync
-
 
 42) PR-UI-01: Tailwind + shadcn/ui Foundation (Design Tokens, Layout, Primitives)
 - Status: DONE
@@ -284,11 +281,15 @@ Queue (in order)
 - Tasks file: tasks/PR-UI-03.md
 - Depends on: PR-UI-02
 
-
 45) PR-CONTENT-03: Content Add Pipeline (No Attachments) + Values Compass Converter + Universal Template
 - Status: DONE
 - Tasks file: tasks/PR-CONTENT-03.md
 - Depends on: PR-CONTENT-02
+
+46) PR-CONTENT-04: universal_human_v1 Converter + content_add Support (No Attachments)
+- Status: TODO
+- Tasks file: tasks/PR-CONTENT-04.md
+- Depends on: PR-CONTENT-03
 
 Execution rules (apply to every PR)
 - Work on exactly 1 PR at a time.
