@@ -268,6 +268,28 @@ Queue (in order)
   - enable hands-free merges via auto-merge
   - update local main without Cursor Sync
 
+
+42) PR-UI-01: Tailwind + shadcn/ui Foundation (Design Tokens, Layout, Primitives)
+- Status: TODO
+- Tasks file: tasks/PR-UI-01.md
+- Depends on: none
+
+43) PR-UI-02: Tenant Homepage (Test List) with Tailwind + shadcn/ui
+- Status: TODO
+- Tasks file: tasks/PR-UI-02.md
+- Depends on: PR-UI-01 and PR-ANALYTICS-09
+
+44) PR-UI-03: Test Landing Page (/t/[slug]) with Tailwind + shadcn/ui
+- Status: TODO
+- Tasks file: tasks/PR-UI-03.md
+- Depends on: PR-UI-02
+
+
+45) PR-CONTENT-03: Content Add Pipeline (No Attachments) + Values Compass Converter + Universal Template
+- Status: TODO
+- Tasks file: tasks/PR-CONTENT-03.md
+- Depends on: PR-CONTENT-02
+
 Execution rules (apply to every PR)
 - Work on exactly 1 PR at a time.
 - Create a new branch from main named as specified in the selected tasks file (single source of truth).
