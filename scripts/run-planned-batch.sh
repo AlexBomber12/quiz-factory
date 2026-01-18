@@ -9,7 +9,7 @@ cd "$repo_root"
 
 usage() {
   cat <<'USAGE'
-Usage: scripts/run-planned-batch.sh <COUNT>
+Usage: scripts/run-planned-batch.sh <COUNT|ALL>
 USAGE
 }
 
@@ -18,18 +18,23 @@ die() {
   exit 1
 }
 
-count="${1:-}"
-if [[ -z "$count" ]]; then
+count_arg="${1:-}"
+if [[ -z "$count_arg" ]]; then
   usage
   exit 2
 fi
 
-if ! [[ "$count" =~ ^[0-9]+$ ]]; then
-  die "COUNT must be a positive integer."
-fi
-
-if (( count < 1 )); then
-  die "COUNT must be at least 1."
+mode="count"
+if [[ "${count_arg^^}" == "ALL" ]]; then
+  mode="all"
+else
+  if ! [[ "$count_arg" =~ ^[0-9]+$ ]]; then
+    die "COUNT must be a positive integer."
+  fi
+  if (( count_arg < 1 )); then
+    die "COUNT must be at least 1."
+  fi
+  count="$count_arg"
 fi
 
 if ! command -v codex >/dev/null 2>&1; then
@@ -42,8 +47,16 @@ fi
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-for (( i=1; i<=count; i++ )); do
-  echo "Starting planned PR ${i}/${count}..."
+queue_file="tasks/QUEUE.md"
+if [[ "$mode" == "all" ]]; then
+  if [[ ! -f "$queue_file" ]]; then
+    die "tasks/QUEUE.md not found."
+  fi
+fi
+
+run_planned_pr() {
+  local label="$1"
+  echo "Starting planned PR ${label}..."
   codex exec --full-auto "Run PLANNED PR"
 
   current_branch="$(git rev-parse --abbrev-ref HEAD)"
@@ -64,4 +77,31 @@ for (( i=1; i<=count; i++ )); do
   fi
 
   "${script_dir}/pr-autopilot.sh" "$pr_number"
-done
+}
+
+queue_has_work() {
+  grep -Eq '^[[:space:]]*- Status: (TODO|DOING)' "$queue_file"
+}
+
+if [[ "$mode" == "all" ]]; then
+  max_pr="${RUN_PLANNED_MAX_PR:-50}"
+  if ! [[ "$max_pr" =~ ^[0-9]+$ ]]; then
+    die "RUN_PLANNED_MAX_PR must be a positive integer."
+  fi
+  if (( max_pr < 1 )); then
+    die "RUN_PLANNED_MAX_PR must be at least 1."
+  fi
+
+  iteration=0
+  while queue_has_work; do
+    ((iteration++))
+    if (( iteration > max_pr )); then
+      die "RUN_PLANNED_MAX_PR (${max_pr}) exceeded while processing ALL mode."
+    fi
+    run_planned_pr "${iteration} (ALL mode)"
+  done
+else
+  for (( i=1; i<=count; i++ )); do
+    run_planned_pr "${i}/${count}"
+  done
+fi
