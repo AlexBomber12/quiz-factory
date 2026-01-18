@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 
+import { Card, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { loadTenantCatalog } from "../lib/content/catalog";
 import { buildCanonicalUrl, resolveTenantContext } from "../lib/tenants/request";
 
@@ -38,39 +38,17 @@ export const generateMetadata = async (): Promise<Metadata> => {
   return buildMetadata(primaryTest.title, primaryTest.short_description);
 };
 
-export default async function HomePage() {
-  const context = await resolveTenantContext();
-  const tests = loadTenantCatalog(context.tenantId, context.locale);
-
+export default function HomePage() {
   return (
-    <section className="page">
-      <header className="hero">
-        <p className="eyebrow">Quiz Factory</p>
-        <h1>Pick a test to get started</h1>
-        <p>Each test is short, focused, and built for mobile.</p>
-      </header>
-
-      {tests.length === 0 ? (
-        <div className="empty-state">
-          <h2>No tests available yet</h2>
-          <p>
-            Check that this domain is registered to a tenant and has tests listed in
-            the catalog.
-          </p>
-        </div>
-      ) : (
-        <ul className="test-list">
-          {tests.map((test) => (
-            <li key={test.test_id} className="test-card">
-              <Link className="test-link" href={`/t/${test.slug}`}>
-                <h2 className="test-title">{test.title}</h2>
-                <p className="test-description">{test.short_description}</p>
-                <span className="test-cta">View details</span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
+    <section className="flex flex-col gap-6">
+      <Card>
+        <CardHeader className="space-y-2">
+          <CardTitle className="text-3xl">Quiz Factory</CardTitle>
+          <CardDescription className="text-base text-muted-foreground">
+            A calm placeholder while the UI foundation settles in.
+          </CardDescription>
+        </CardHeader>
+      </Card>
     </section>
   );
 }
