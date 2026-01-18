@@ -5,6 +5,7 @@ repo_root="$(git rev-parse --show-toplevel 2>/dev/null)" || {
   echo "ERROR: scripts/run-planned-batch.sh must be run inside a git repository." >&2
   exit 1
 }
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$repo_root"
 
 usage() {
@@ -45,12 +46,11 @@ if ! command -v gh >/dev/null 2>&1; then
   die "gh is required. Install GitHub CLI from https://cli.github.com/"
 fi
 
-script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-queue_file="tasks/QUEUE.md"
+queue_file="$repo_root/tasks/QUEUE.md"
 if [[ "$mode" == "all" ]]; then
   if [[ ! -f "$queue_file" ]]; then
-    die "tasks/QUEUE.md not found."
+    echo "ERROR: queue file not found at ${queue_file}." >&2
+    exit 2
   fi
 fi
 
@@ -80,7 +80,7 @@ run_planned_pr() {
 }
 
 queue_has_work() {
-  grep -Eq '^[[:space:]]*- Status: (TODO|DOING)' "$queue_file"
+  grep -Eq 'Status:[[:space:]]*(TODO|DOING)\b' "$queue_file"
 }
 
 if [[ "$mode" == "all" ]]; then
@@ -92,14 +92,19 @@ if [[ "$mode" == "all" ]]; then
     die "RUN_PLANNED_MAX_PR must be at least 1."
   fi
 
+  echo "ALL mode: starting"
   iteration=0
   while queue_has_work; do
-    ((iteration++))
+    ((++iteration))
+    echo "ALL mode: iteration ${iteration}"
     if (( iteration > max_pr )); then
-      die "RUN_PLANNED_MAX_PR (${max_pr}) exceeded while processing ALL mode."
+      echo "ERROR: RUN_PLANNED_MAX_PR (${max_pr}) exceeded while processing ALL mode." >&2
+      exit 2
     fi
     run_planned_pr "${iteration} (ALL mode)"
   done
+  echo "ALL mode: queue empty, done"
+  exit 0
 else
   for (( i=1; i<=count; i++ )); do
     run_planned_pr "${i}/${count}"
