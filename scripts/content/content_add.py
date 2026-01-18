@@ -176,6 +176,11 @@ def main() -> int:
     output_path = TESTS_ROOT / test_id / "spec.json"
     run_converter(test_id, slug, category, version, sources, output_path, errors)
 
+    if errors:
+        for message in errors:
+            print(f"ERROR: {message}", file=sys.stderr)
+        return 1
+
     catalog_updated = update_catalog(test_id, tenant_id, errors)
 
     if errors:
