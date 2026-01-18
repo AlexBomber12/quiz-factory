@@ -40,22 +40,25 @@ done
 
 transient_install_error() { grep -E -q 'EAI_AGAIN|ETIMEDOUT|ECONNRESET|ENOTFOUND|429|Temporary failure in name resolution'; }
 retry_install() {
-  local label="$1" retries="${CI_INSTALL_RETRIES:-5}" base="${CI_INSTALL_BACKOFF_BASE_SEC:-10}" attempt=1 output status sleep_sec
+  local label="$1" retries="${CI_INSTALL_RETRIES:-5}" base="${CI_INSTALL_BACKOFF_BASE_SEC:-10}" attempt=1 status sleep_sec log_file
   shift
   while true; do
     echo "==> ${label} (attempt ${attempt}/${retries})"
+    log_file="$(mktemp)"
     set +e
-    output="$("$@" 2>&1)"
-    status=$?
+    "$@" 2>&1 | tee "$log_file"
+    status=${PIPESTATUS[0]}
     set -e
-    [[ -n "$output" ]] && printf '%s\n' "$output"
     if [[ $status -eq 0 ]]; then
+      rm -f "$log_file"
       return 0
     fi
-    if ! echo "$output" | transient_install_error; then
+    if ! transient_install_error < "$log_file"; then
+      rm -f "$log_file"
       echo "Install failed with non-transient error; aborting."
       return $status
     fi
+    rm -f "$log_file"
     if [[ $attempt -ge $retries ]]; then
       echo "Install failed with transient error; exceeded retries (${retries})."
       return $status
