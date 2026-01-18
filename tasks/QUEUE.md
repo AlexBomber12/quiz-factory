@@ -275,7 +275,7 @@ Queue (in order)
 - Depends on: none
 
 43) PR-UI-02: Tenant Homepage (Test List) with Tailwind + shadcn/ui
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-UI-02.md
 - Depends on: PR-UI-01 and PR-ANALYTICS-09
 

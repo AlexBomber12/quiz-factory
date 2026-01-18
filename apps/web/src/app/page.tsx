@@ -1,54 +1,142 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
-import { Card, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
-import { loadTenantCatalog } from "../lib/content/catalog";
-import { buildCanonicalUrl, resolveTenantContext } from "../lib/tenants/request";
+import { Badge } from "../components/ui/badge";
+import { Button } from "../components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle
+} from "../components/ui/card";
+import { Separator } from "../components/ui/separator";
+import { loadTenantCatalog } from "../lib/catalog/catalog";
+import { resolveTenantContext, type TenantRequestContext } from "../lib/tenants/request";
+
+const buildRequestCanonical = (
+  context: TenantRequestContext,
+  path: string
+): string | null => {
+  const host = context.requestHost ?? context.host;
+  if (!host) {
+    return null;
+  }
+
+  const protocol =
+    process.env.NODE_ENV === "production" ? "https" : context.protocol;
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  return `${protocol}://${host}${normalizedPath}`;
+};
 
 export const generateMetadata = async (): Promise<Metadata> => {
   const context = await resolveTenantContext();
-  const tests = loadTenantCatalog(context.tenantId, context.locale);
-  const primaryTest = tests[0];
-  const canonical = buildCanonicalUrl(context, "/");
-  const ogImage = buildCanonicalUrl(context, "/og.png");
+  const tenantLabel = context.requestHost ?? context.host ?? context.tenantId;
+  const title = `Quiz Factory - ${tenantLabel}`;
+  const description = "Browse the available tests and start when ready.";
+  const canonical = buildRequestCanonical(context, "/");
+  const ogImage = buildRequestCanonical(context, "/og.png");
 
-  const buildMetadata = (title: string, description: string): Metadata => {
-    const metadata: Metadata = {
+  const metadata: Metadata = {
+    title,
+    description,
+    openGraph: {
       title,
       description,
-      openGraph: {
-        title,
-        description,
-        url: canonical ?? undefined,
-        images: ogImage ? [{ url: ogImage }] : undefined
-      }
-    };
-    if (canonical) {
-      metadata.alternates = { canonical };
+      url: canonical ?? undefined,
+      images: ogImage ? [{ url: ogImage }] : undefined
     }
-    return metadata;
   };
-
-  if (!primaryTest) {
-    return buildMetadata(
-      "Quiz Factory",
-      "Browse the available tests and start when ready."
-    );
+  if (canonical) {
+    metadata.alternates = { canonical };
   }
 
-  return buildMetadata(primaryTest.title, primaryTest.short_description);
+  return metadata;
 };
 
-export default function HomePage() {
+export default async function HomePage() {
+  const context = await resolveTenantContext();
+  const tests = loadTenantCatalog(context.tenantId, context.locale);
+  const tenantLabel = context.requestHost ?? context.host ?? context.tenantId;
+
   return (
-    <section className="flex flex-col gap-6">
+    <section className="flex flex-col gap-8">
       <Card>
-        <CardHeader className="space-y-2">
-          <CardTitle className="text-3xl">Quiz Factory</CardTitle>
+        <CardHeader className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                Tenant homepage
+              </p>
+              <h1 className="mt-2 text-3xl font-semibold tracking-tight">
+                {tenantLabel}
+              </h1>
+            </div>
+            <Badge variant="secondary" className="uppercase">
+              {context.locale}
+            </Badge>
+          </div>
           <CardDescription className="text-base text-muted-foreground">
-            A calm placeholder while the UI foundation settles in.
+            Browse the available tests and start when ready.
           </CardDescription>
         </CardHeader>
       </Card>
+
+      <Separator />
+
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-semibold tracking-tight">Available tests</h2>
+          <p className="text-sm text-muted-foreground">
+            {tests.length} {tests.length === 1 ? "test" : "tests"} ready to run.
+          </p>
+        </div>
+      </div>
+
+      {tests.length === 0 ? (
+        <Card className="border-dashed">
+          <CardHeader className="space-y-2">
+            <CardTitle>No tests yet</CardTitle>
+            <CardDescription className="text-base text-muted-foreground">
+              This tenant does not have any published tests. Add a test to the catalog
+              to get started.
+            </CardDescription>
+          </CardHeader>
+          <CardFooter>
+            <Button asChild variant="outline">
+              <Link href="/docs/content/tests.md">Review test catalog docs</Link>
+            </Button>
+          </CardFooter>
+        </Card>
+      ) : (
+        <div className="grid gap-6 md:grid-cols-2">
+          {tests.map((test) => {
+            const minutesLabel =
+              test.estimated_minutes === 1 ? "minute" : "minutes";
+            return (
+              <Card key={test.test_id} className="flex h-full flex-col">
+                <CardHeader className="space-y-2">
+                  <CardTitle>{test.title}</CardTitle>
+                  <CardDescription className="text-base text-muted-foreground">
+                    {test.short_description}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Badge variant="outline">
+                    {test.estimated_minutes} {minutesLabel}
+                  </Badge>
+                </CardContent>
+                <CardFooter className="mt-auto">
+                  <Button asChild>
+                    <Link href={`/t/${test.slug}`}>Start test</Link>
+                  </Button>
+                </CardFooter>
+              </Card>
+            );
+          })}
+        </div>
+      )}
     </section>
   );
 }
