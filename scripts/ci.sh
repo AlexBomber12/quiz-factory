@@ -38,12 +38,41 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+transient_install_error() { grep -E -q 'EAI_AGAIN|ETIMEDOUT|ECONNRESET|ENOTFOUND|429|Temporary failure in name resolution'; }
+retry_install() {
+  local label="$1" retries="${CI_INSTALL_RETRIES:-5}" base="${CI_INSTALL_BACKOFF_BASE_SEC:-10}" attempt=1 output status sleep_sec
+  shift
+  while true; do
+    echo "==> ${label} (attempt ${attempt}/${retries})"
+    set +e
+    output="$("$@" 2>&1)"
+    status=$?
+    set -e
+    [[ -n "$output" ]] && printf '%s\n' "$output"
+    if [[ $status -eq 0 ]]; then
+      return 0
+    fi
+    if ! echo "$output" | transient_install_error; then
+      echo "Install failed with non-transient error; aborting."
+      return $status
+    fi
+    if [[ $attempt -ge $retries ]]; then
+      echo "Install failed with transient error; exceeded retries (${retries})."
+      return $status
+    fi
+    sleep_sec=$(( base * (2 ** (attempt - 1)) ))
+    (( sleep_sec > 120 )) && sleep_sec=120
+    echo "Transient install error detected; retrying in ${sleep_sec}s..."
+    sleep "$sleep_sec"
+    attempt=$(( attempt + 1 ))
+  done
+}
 run_app() {
   echo "==> Node checks"
   cd "$ROOT_DIR"
   corepack enable
   if [[ "$SKIP_PNPM_INSTALL" -eq 0 ]]; then
-    pnpm install --frozen-lockfile
+    retry_install "pnpm install" pnpm install --frozen-lockfile
   fi
   pnpm lint
   pnpm typecheck
@@ -73,7 +102,7 @@ run_analytics() {
   ensure_uv
   pushd "$ROOT_DIR/analytics/dbt" >/dev/null
   if [[ "$SKIP_UV_SYNC" -eq 0 ]]; then
-    uv sync --frozen
+    retry_install "uv sync" uv sync --frozen
   fi
   echo "==> Importer unit tests"
   uv run python "$ROOT_DIR/scripts/importers/meta_ads_to_bq_test.py"
