@@ -101,3 +101,17 @@ export const loadTenantCatalog = (
     };
   });
 };
+
+export const resolveTenantTestBySlug = (
+  tenantId: string,
+  locale: string,
+  slug: string
+): CatalogTest | null => {
+  const normalizedSlug = slug.trim().toLowerCase();
+  if (!normalizedSlug) {
+    return null;
+  }
+
+  const tests = loadTenantCatalog(tenantId, locale);
+  return tests.find((test) => test.slug === normalizedSlug) ?? null;
+};
