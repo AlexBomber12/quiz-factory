@@ -270,7 +270,7 @@ Queue (in order)
 
 
 42) PR-UI-01: Tailwind + shadcn/ui Foundation (Design Tokens, Layout, Primitives)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-UI-01.md
 - Depends on: none
 

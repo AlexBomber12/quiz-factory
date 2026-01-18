@@ -1,38 +1,59 @@
-:root {
-  color-scheme: light;
-}
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-* {
-  box-sizing: border-box;
-}
+@layer base {
+  :root {
+    color-scheme: light;
+    --font-sans: "Avenir Next", "Avenir", "Futura", "Gill Sans", "Trebuchet MS",
+      sans-serif;
+    --background: 30 20% 98%;
+    --foreground: 24 15% 12%;
+    --card: 30 25% 99%;
+    --card-foreground: 24 15% 12%;
+    --popover: 30 25% 99%;
+    --popover-foreground: 24 15% 12%;
+    --primary: 24 15% 12%;
+    --primary-foreground: 30 20% 98%;
+    --secondary: 26 14% 90%;
+    --secondary-foreground: 24 15% 12%;
+    --muted: 26 12% 92%;
+    --muted-foreground: 24 8% 40%;
+    --accent: 28 18% 88%;
+    --accent-foreground: 24 15% 12%;
+    --destructive: 0 70% 55%;
+    --destructive-foreground: 30 20% 98%;
+    --border: 26 10% 85%;
+    --input: 26 10% 85%;
+    --ring: 24 15% 12%;
+    --radius: 0.9rem;
+  }
 
-body {
-  margin: 0;
-  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-  background: #f6f5f3;
-  color: #141413;
-}
+  * {
+    @apply border-border;
+  }
 
-main {
-  max-width: 720px;
-  margin: 0 auto;
-  padding: 64px 24px;
-}
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    margin: 0;
+    line-height: 1.6;
+  }
 
-h1 {
-  font-size: 2.5rem;
-  letter-spacing: -0.02em;
-  margin-bottom: 16px;
-}
+  h1 {
+    @apply text-3xl font-semibold tracking-tight;
+  }
 
-p {
-  line-height: 1.6;
-}
+  h2 {
+    @apply text-2xl font-semibold tracking-tight;
+  }
 
-code {
-  background: #fff4d6;
-  padding: 2px 6px;
-  border-radius: 4px;
+  h3 {
+    @apply text-xl font-semibold tracking-tight;
+  }
+
+  a {
+    @apply text-foreground underline-offset-4;
+  }
 }
 
 .page {
