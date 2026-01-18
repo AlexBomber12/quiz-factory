@@ -12,9 +12,10 @@ These rules apply to any PR task in this repo:
 - Provide a short report (what changed, how verified, manual test steps if applicable).
 
 ## Work Modes
-- Trigger phrases (exact): `Run PLANNED PR`, `Run MICRO PR: <one sentence description>`, and `Fix code review comment`.
+- Trigger phrases (exact): `Run PLANNED PR`, `Run MICRO PR: <one sentence description>`, `Run CONTENT ADD: <test_id>`, and `Fix code review comment`.
 - `Run PLANNED PR`: use the PLANNED PR Runbook (queue-driven tasks).
 - `Run MICRO PR: <one sentence description>`: use the MICRO PR Runbook (small fixes only, no tasks/QUEUE edits).
+- `Run CONTENT ADD: <test_id>`: use the CONTENT ADD Runbook (no attachments).
 - `Fix code review comment`: use the REVIEW FIX Runbook (Existing PR Branch).
 
 ## PLANNED PR Runbook (Default Workflow)
@@ -67,6 +68,24 @@ These rules apply to any PR task in this repo:
 - [ ] Commit with "MICRO: <short summary>".
 - [ ] Push branch; open PR if possible.
 - [ ] PR description includes: `Type: MICRO`, What changed, Why, How verified (exact CI command), Artifacts paths.
+
+## CONTENT ADD Runbook
+
+### Rules
+- Preflight: `git status --porcelain` must be empty; if not, stop and list dirty files.
+- Branch name: `content-add-YYYYMMDD-<short-slug>`.
+- Inputs: Markdown sources must exist in `content/sources/<test_id>/` as defined in the content sources README. Do not request attachments.
+- Do not edit `tasks/QUEUE.md`.
+- Do not create `tasks/PR-*.md`.
+- Only modify content, catalog, and derived spec files.
+
+### Steps
+1) Validate sources exist for the test_id.
+2) Run `python3 scripts/content/content_add.py --format values_compass_v1 --test-id <test_id> --tenant-id <tenant_id>` plus any required metadata flags.
+3) Run `python3 scripts/content/validate_catalog.py`.
+4) Run `scripts/ci.sh` until exit 0.
+5) Generate artifacts via `scripts/make-review-artifacts.sh`.
+6) Commit and push, open PR if possible.
 
 ## REVIEW FIX Runbook (Existing PR Branch)
 
