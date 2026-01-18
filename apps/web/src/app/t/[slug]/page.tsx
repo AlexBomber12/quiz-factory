@@ -1,8 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import fs from "node:fs";
-import path from "node:path";
-
 import { Badge } from "../../../components/ui/badge";
 import { Button } from "../../../components/ui/button";
 import {
@@ -60,16 +57,7 @@ const resolveIntroCopy = (
   };
 };
 
-const resolveRunRouteAvailability = (): boolean => {
-  const candidates = [
-    path.join(process.cwd(), "src", "app", "t", "[slug]", "run", "page.tsx"),
-    path.join(process.cwd(), "apps", "web", "src", "app", "t", "[slug]", "run", "page.tsx")
-  ];
-
-  return candidates.some((candidate) => fs.existsSync(candidate));
-};
-
-const HAS_RUN_ROUTE = resolveRunRouteAvailability();
+const HAS_RUN_ROUTE = true;
 
 export const generateMetadata = async ({ params }: PageProps): Promise<Metadata> => {
   const context = await resolveTenantContext();
