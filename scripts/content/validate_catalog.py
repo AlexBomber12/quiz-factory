@@ -17,6 +17,7 @@ ALLOWED_LOCALES = {
     "es": "es",
     "pt-br": "pt-BR"
 }
+UNIVERSAL_REQUIRED_LOCALES = ["en", "es", "pt-BR"]
 
 TEST_ID_PATTERN = re.compile(r"^test-[a-z0-9]+(?:-[a-z0-9]+)*$")
 SLUG_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
@@ -130,6 +131,20 @@ def validate_spec(path: Path, data: object, errors: list[str]) -> SpecInfo:
         errors.append(f"{prefix} must be a JSON object")
         return SpecInfo(None, None, [])
 
+    format_id = data.get("format_id")
+    if format_id is None:
+        format_id = "values_compass_v1"
+    if not isinstance(format_id, str) or not format_id.strip():
+        errors.append(f"{prefix}.format_id must be a non-empty string")
+        return SpecInfo(None, None, [])
+    format_id = format_id.strip()
+
+    if format_id == "universal_human_v1":
+        return validate_universal_spec(path, data, errors)
+    if format_id != "values_compass_v1":
+        errors.append(f"{prefix}.format_id must be values_compass_v1 or universal_human_v1")
+        return SpecInfo(None, None, [])
+
     test_id = validate_string(data.get("test_id"), f"{prefix}.test_id", errors)
     if test_id and not TEST_ID_PATTERN.match(test_id):
         errors.append(f"{prefix}.test_id must match test-<slug>")
@@ -237,6 +252,107 @@ def validate_spec(path: Path, data: object, errors: list[str]) -> SpecInfo:
             validate_integer(band.get("min_score_inclusive"), f"{band_path}.min_score_inclusive", errors)
             validate_integer(band.get("max_score_inclusive"), f"{band_path}.max_score_inclusive", errors)
             validate_result_copy(band.get("copy"), locale_keys, f"{band_path}.copy", errors)
+
+    return SpecInfo(test_id, slug, locale_keys)
+
+
+def validate_universal_spec(path: Path, data: dict[str, Any], errors: list[str]) -> SpecInfo:
+    prefix = str(path)
+
+    test_id = validate_string(data.get("test_id"), f"{prefix}.test_id", errors)
+    if test_id and not TEST_ID_PATTERN.match(test_id):
+        errors.append(f"{prefix}.test_id must match test-<slug>")
+
+    slug = validate_string(data.get("slug"), f"{prefix}.slug", errors)
+    if slug and not SLUG_PATTERN.match(slug):
+        errors.append(f"{prefix}.slug must be url-safe")
+    if test_id and slug and test_id != f"test-{slug}":
+        errors.append(f"{prefix}.test_id must align with slug")
+
+    version = validate_integer(data.get("version"), f"{prefix}.version", errors)
+    if version is not None and version < 1:
+        errors.append(f"{prefix}.version must be >= 1")
+    validate_string(data.get("category"), f"{prefix}.category", errors)
+
+    locales_value = data.get("locales")
+    locale_keys: list[str] = []
+    if not isinstance(locales_value, dict):
+        errors.append(f"{prefix}.locales must be an object")
+    else:
+        for key in locales_value.keys():
+            canonical = normalize_locale_tag(key)
+            if not canonical:
+                errors.append(f"{prefix}.locales.{key} is not an allowed locale tag")
+                continue
+            if canonical != key:
+                errors.append(f"{prefix}.locales.{key} must be {canonical}")
+                continue
+            locale_keys.append(key)
+
+        for required_locale in UNIVERSAL_REQUIRED_LOCALES:
+            if required_locale not in locale_keys:
+                errors.append(f"{prefix}.locales must include {required_locale}")
+
+        for locale in locale_keys:
+            if not isinstance(locales_value.get(locale), dict):
+                errors.append(f"{prefix}.locales.{locale} must be an object")
+
+    question_count = validate_integer(
+        data.get("question_count"),
+        f"{prefix}.question_count",
+        errors
+    )
+    if question_count is not None and question_count < 1:
+        errors.append(f"{prefix}.question_count must be >= 1")
+
+    scales = data.get("scales")
+    scale_ids: list[str] = []
+    if not isinstance(scales, list):
+        errors.append(f"{prefix}.scales must be an array")
+    else:
+        for index, scale in enumerate(scales):
+            scale_id = validate_string(scale, f"{prefix}.scales[{index}]", errors)
+            if scale_id:
+                scale_ids.append(scale_id)
+
+    questions = data.get("questions")
+    if not isinstance(questions, list):
+        errors.append(f"{prefix}.questions must be an array")
+    else:
+        if question_count is not None and len(questions) != question_count:
+            errors.append(
+                f"{prefix}.question_count must match number of questions"
+            )
+
+        expected_count = question_count if question_count is not None else len(questions)
+        width = max(2, len(str(expected_count))) if expected_count else 2
+        expected_ids = [f"q{index:0{width}d}" for index in range(1, expected_count + 1)]
+        seen: set[str] = set()
+
+        for index, question in enumerate(questions):
+            question_path = f"{prefix}.questions[{index}]"
+            if not isinstance(question, dict):
+                errors.append(f"{question_path} must be an object")
+                continue
+
+            question_id = validate_string(question.get("question_id"), f"{question_path}.question_id", errors)
+            if question_id:
+                if question_id in seen:
+                    errors.append(f"{question_path}.question_id {question_id} is duplicated")
+                seen.add(question_id)
+                if question_id not in expected_ids:
+                    errors.append(f"{question_path}.question_id must match q01..qNN")
+
+            scale_id = validate_string(question.get("scale_id"), f"{question_path}.scale_id", errors)
+            if scale_id and scale_id not in scale_ids:
+                errors.append(f"{question_path}.scale_id must be listed in scales")
+
+            validate_localized_map(question.get("prompt"), locale_keys, f"{question_path}.prompt", errors)
+
+        if expected_ids and set(expected_ids) != seen:
+            missing = [qid for qid in expected_ids if qid not in seen]
+            if missing:
+                errors.append(f"{prefix}.questions missing ids: {', '.join(missing)}")
 
     return SpecInfo(test_id, slug, locale_keys)
 

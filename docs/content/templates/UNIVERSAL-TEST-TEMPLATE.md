@@ -1,6 +1,30 @@
 Universal Test Template (Human-readable, Multi-language)
 ======================================================
 
+Note
+----
+The universal_human_v1 converter requires a Questions section with blocks:
+QID: q01
+Scale: <scale_id>
+Prompt: <localized prompt text>
+
+YAML front matter (required)
+----------------------------
+---
+format_id: universal_human_v1
+test_id: {{TEST_ID}}
+slug: {{SLUG}}
+version: {{VERSION}}
+category: {{CATEGORY}}
+primary_locale: {{PRIMARY_LOCALE}}
+locales: [en, es, pt-BR]
+question_type: likert_5
+scoring_model: multi_scale
+scales: [{{SCALE_1_ID}}, {{SCALE_2_ID}}]
+missing_policy: required_all
+question_count: {{QUESTION_COUNT}}
+---
+
 Purpose
 -------
 A universal, human-readable template for creating new tests for Quiz Factory.

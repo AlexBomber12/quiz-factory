@@ -37,6 +37,45 @@ const resolveTestsRoot = (): string => {
   throw new Error(`Content tests directory not found from ${start}`);
 };
 
+const readFormatId = (specPath: string): string | null => {
+  if (!fs.existsSync(specPath)) {
+    throw new Error(`Test spec not found at ${specPath}`);
+  }
+
+  const raw = fs.readFileSync(specPath, "utf-8");
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Invalid JSON for test spec at ${specPath}: ${message}`);
+  }
+
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    return null;
+  }
+
+  const formatId = (parsed as Record<string, unknown>).format_id;
+  if (typeof formatId !== "string") {
+    return null;
+  }
+
+  const trimmed = formatId.trim();
+  return trimmed ? trimmed : null;
+};
+
+const isValuesCompassSpec = (specPath: string): boolean => {
+  const formatId = readFormatId(specPath);
+  return !formatId || formatId === "values_compass_v1";
+};
+
+const assertValuesCompassSpec = (specPath: string, testId: string): void => {
+  const formatId = readFormatId(specPath);
+  if (formatId && formatId !== "values_compass_v1") {
+    throw new Error(`Unsupported test format for ${testId}: ${formatId}`);
+  }
+};
+
 const readSpecFile = (testId: string, testsRoot: string): TestSpec => {
   const specPath = path.join(testsRoot, testId, "spec.json");
   if (!fs.existsSync(specPath)) {
@@ -60,7 +99,14 @@ export const listAllTests = (): TestSummary[] => {
   const entries = fs.readdirSync(testsRoot, { withFileTypes: true });
   const summaries = entries
     .filter((entry) => entry.isDirectory())
-    .map((entry) => readSpecFile(entry.name, testsRoot))
+    .map((entry) => {
+      const specPath = path.join(testsRoot, entry.name, "spec.json");
+      if (!isValuesCompassSpec(specPath)) {
+        return null;
+      }
+      return readSpecFile(entry.name, testsRoot);
+    })
+    .filter((spec): spec is TestSpec => spec !== null)
     .map((spec) => {
       const locales = Object.keys(spec.locales).sort() as LocaleTag[];
       return {
@@ -77,6 +123,17 @@ export const listAllTests = (): TestSummary[] => {
 
 export const loadTestSpecById = (testId: string): TestSpec => {
   const testsRoot = resolveTestsRoot();
+  const specPath = path.join(testsRoot, testId, "spec.json");
+  assertValuesCompassSpec(specPath, testId);
+  return readSpecFile(testId, testsRoot);
+};
+
+export const loadValuesCompassSpecById = (testId: string): TestSpec | null => {
+  const testsRoot = resolveTestsRoot();
+  const specPath = path.join(testsRoot, testId, "spec.json");
+  if (!isValuesCompassSpec(specPath)) {
+    return null;
+  }
   return readSpecFile(testId, testsRoot);
 };
 

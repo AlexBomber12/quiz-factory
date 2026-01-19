@@ -1,0 +1,82 @@
+{
+  "format_id": "universal_human_v1",
+  "test_id": "test-universal-mini",
+  "slug": "universal-mini",
+  "version": 1,
+  "category": "universal",
+  "question_count": 4,
+  "locales": {
+    "en": {
+      "title": "Focus and Flex Mini",
+      "short_description": "A quick check on how you balance focus and flexibility.",
+      "intro": "Answer these statements based on how you work most days.",
+      "instructions": "Choose the option that feels most true for you.",
+      "paywall_hook": "Unlock your full focus and flexibility report.",
+      "paid_report_structure": "- Summary of your focus style\n- Summary of your flexibility style\n- Tips for balance"
+    },
+    "es": {
+      "title": "Focus and Flex Mini",
+      "short_description": "A quick check on how you balance focus and flexibility.",
+      "intro": "Answer these statements based on how you work most days.",
+      "instructions": "Choose the option that feels most true for you.",
+      "paywall_hook": "Unlock your full focus and flexibility report.",
+      "paid_report_structure": "- Summary of your focus style\n- Summary of your flexibility style\n- Tips for balance"
+    },
+    "pt-BR": {
+      "title": "Focus and Flex Mini",
+      "short_description": "A quick check on how you balance focus and flexibility.",
+      "intro": "Answer these statements based on how you work most days.",
+      "instructions": "Choose the option that feels most true for you.",
+      "paywall_hook": "Unlock your full focus and flexibility report.",
+      "paid_report_structure": "- Summary of your focus style\n- Summary of your flexibility style\n- Tips for balance"
+    }
+  },
+  "scales": [
+    "focus",
+    "flexibility"
+  ],
+  "questions": [
+    {
+      "question_id": "q01",
+      "scale_id": "focus",
+      "prompt": {
+        "en": "I like to stay with one task until it is done.",
+        "es": "I like to stay with one task until it is done.",
+        "pt-BR": "I like to stay with one task until it is done."
+      }
+    },
+    {
+      "question_id": "q02",
+      "scale_id": "focus",
+      "prompt": {
+        "en": "I prefer a clear plan before I start.",
+        "es": "I prefer a clear plan before I start.",
+        "pt-BR": "I prefer a clear plan before I start."
+      }
+    },
+    {
+      "question_id": "q03",
+      "scale_id": "flexibility",
+      "prompt": {
+        "en": "I am comfortable changing course quickly.",
+        "es": "I am comfortable changing course quickly.",
+        "pt-BR": "I am comfortable changing course quickly."
+      }
+    },
+    {
+      "question_id": "q04",
+      "scale_id": "flexibility",
+      "prompt": {
+        "en": "I adapt when priorities shift.",
+        "es": "I adapt when priorities shift.",
+        "pt-BR": "I adapt when priorities shift."
+      }
+    }
+  ],
+  "scoring": {
+    "model": "multi_scale",
+    "missing_policy": "required_all"
+  },
+  "price_eur_single": 0,
+  "pack_options": []
+}

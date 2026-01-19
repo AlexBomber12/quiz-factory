@@ -1,5 +1,49 @@
 # Content Factory
 
+## Source layout
+- Place sources in `content/sources/<test_id>/` using:
+  - `source.en.md`
+  - `source.es.md`
+  - `source.pt-BR.md`
+
+## Add tests from sources (content_add)
+Values Compass format:
+```
+python3 content_add.py \
+  --format values_compass_v1 \
+  --test-id test-mindset-check \
+  --tenant-id tenant-tenant-example-com \
+  --slug mindset-check \
+  --category daily-habits \
+  --version 1
+```
+
+Universal format:
+```
+python3 content_add.py \
+  --format universal_human_v1 \
+  --test-id test-universal-mini \
+  --tenant-id tenant-tenant-example-com
+```
+
+Universal sources require YAML front matter in each locale file:
+```
+---
+format_id: universal_human_v1
+test_id: test-universal-mini
+slug: universal-mini
+version: 1
+category: universal
+primary_locale: en
+locales: [en, es, pt-BR]
+question_type: likert_5
+scoring_model: multi_scale
+scales: [focus, flexibility]
+missing_policy: required_all
+question_count: 4
+---
+```
+
 ## Create a new test
 1) Run the generator with a test id, slug, locales, and category.
 2) Fill in the placeholder copy in `spec.json`.
