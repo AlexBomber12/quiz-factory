@@ -1,7 +1,7 @@
 import catalogConfig from "../../../../../config/catalog.json";
 import testIndexData from "../../../../../content/test_index.json";
 
-import { loadTestSpecById } from "../content/load";
+import { loadValuesCompassSpecById } from "../content/load";
 import { LocaleStrings, TestSpec, normalizeLocaleTag } from "../content/types";
 
 type CatalogConfig = {
@@ -89,7 +89,10 @@ export const loadTenantCatalog = (
 
   return testIds.map((testId) => {
     const metadata = loadTestMetadata(testId, entries, tenantId);
-    const spec = loadTestSpecById(testId);
+    const spec = loadValuesCompassSpecById(testId);
+    if (!spec) {
+      return null;
+    }
     const strings = resolveLocaleStrings(spec, locale);
 
     return {
@@ -99,7 +102,7 @@ export const loadTenantCatalog = (
       short_description: strings.short_description,
       estimated_minutes: metadata.estimated_minutes
     };
-  });
+  }).filter((entry): entry is CatalogTest => entry !== null);
 };
 
 export const resolveTenantTestBySlug = (

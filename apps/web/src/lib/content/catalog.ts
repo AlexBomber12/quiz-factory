@@ -1,6 +1,6 @@
 import catalogConfig from "../../../../../config/catalog.json";
 
-import { loadTestSpecById, listAllTests } from "./load";
+import { loadValuesCompassSpecById, listAllTests } from "./load";
 import { LocaleStrings, TestSpec, normalizeLocaleTag } from "./types";
 
 type CatalogConfig = {
@@ -32,7 +32,10 @@ const resolveLocaleStrings = (spec: TestSpec, locale: string): LocaleStrings | n
 };
 
 const buildCatalogTest = (testId: string, locale: string): CatalogTest | null => {
-  const spec = loadTestSpecById(testId);
+  const spec = loadValuesCompassSpecById(testId);
+  if (!spec) {
+    return null;
+  }
   const strings = resolveLocaleStrings(spec, locale);
   if (!strings) {
     return null;
