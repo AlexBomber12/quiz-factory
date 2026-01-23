@@ -1,7 +1,7 @@
 QUEUE
 
 Purpose
-- Execute planned PRs in order, without skipping.
+- Execute analytics PRs in order, without skipping.
 - Each PR should be implemented exactly as described in its corresponding tasks file.
 
 Status legend
@@ -199,105 +199,64 @@ Queue (in order)
   - anomaly checks are codified as scheduled query templates
   - alert runbook exists and alerts are stored in marts.alert_events
 
-30) PR-PRODUCT-01: Test Content Format, Registry, and Validation (1 Golden Test EN-ES-PT-BR)
-- Status: DONE
-- Tasks file: tasks/PR-PRODUCT-01.md
-- Depends on: PR-TENANTS-02 and PR-SECURITY-02
 
-31) PR-PRODUCT-02: Tenant Homepage, Test Listing, and Test Landing Pages
-- Status: DONE
-- Tasks file: tasks/PR-PRODUCT-02.md
-- Depends on: PR-PRODUCT-01
+30) PR-PROD-01: Dev and Prod Host Allowlist Strategy (Local Dev Without 403)
+- Status: TODO
+- Tasks file: tasks/PR-PROD-01.md
+- Depends on: PR-OPS-BQ-02
 
-32) PR-PRODUCT-03: Test Runner UI and Attempt Entry page_view
-- Status: DONE
-- Tasks file: tasks/PR-PRODUCT-03.md
-- Depends on: PR-PRODUCT-02
+31) PR-PROD-02: Stripe Pricing Module and Intro Offer (Consistent Offers and Tracking)
+- Status: TODO
+- Tasks file: tasks/PR-PROD-02.md
+- Depends on: PR-PROD-01
 
-33) PR-PRODUCT-04: Server-side Scoring, Result Preview, and Result Cookie
-- Status: DONE
-- Tasks file: tasks/PR-PRODUCT-04.md
-- Depends on: PR-PRODUCT-03
+32) PR-PROD-03: Credit Packs Without Accounts (Signed Cookie Ledger)
+- Status: TODO
+- Tasks file: tasks/PR-PROD-03.md
+- Depends on: PR-PROD-02
 
-34) PR-PRODUCT-05: Paywall UI and Stripe Checkout Session Creation
-- Status: DONE
-- Tasks file: tasks/PR-PRODUCT-05.md
-- Depends on: PR-PRODUCT-04
+33) PR-ANALYTICS-23: Unit Economics Truth (Credits, Offers, Effective ARP Report)
+- Status: TODO
+- Tasks file: tasks/PR-ANALYTICS-23.md
+- Depends on: PR-PROD-03
 
-35) PR-ANALYTICS-22: Unit Economics Enhancements (Pricing Variants, Packs, Offer Breakdown)
-- Status: DONE
-- Tasks file: tasks/PR-ANALYTICS-22.md
-- Depends on: PR-PRODUCT-05
+34) PR-CONTENT-05: Localization Quality Lint (EN vs ES vs PT-BR) + Golden Test Fix
+- Status: TODO
+- Tasks file: tasks/PR-CONTENT-05.md
+- Depends on: PR-PROD-01
 
-36) PR-PRODUCT-06: Checkout Success, Entitlement Token, and Paid Report (HTML)
-- Status: DONE
-- Tasks file: tasks/PR-PRODUCT-06.md
-- Depends on: PR-PRODUCT-05
+35) PR-REPORT-01: Paid Report UX Upgrade (Mobile First, Trust, Upsell)
+- Status: TODO
+- Tasks file: tasks/PR-REPORT-01.md
+- Depends on: PR-PROD-03
 
-37) PR-PRODUCT-07: Print-Friendly Report and PDF Download Tracking
-- Status: DONE
-- Tasks file: tasks/PR-PRODUCT-07.md
-- Depends on: PR-PRODUCT-06
+36) PR-OPS-DEPLOY-01: Minimal Production Deploy Runbook and Smoke Gates
+- Status: TODO
+- Tasks file: tasks/PR-OPS-DEPLOY-01.md
+- Depends on: PR-PROD-01
 
-38) PR-SEO-01: Sitemap, robots.txt, Canonicals, and Basic OG Metadata
-- Status: DONE
-- Tasks file: tasks/PR-SEO-01.md
-- Depends on: PR-PRODUCT-02
+37) PR-SEO-02: SEO Scaling Enhancements (Lastmod, OG Images, Metadata Hygiene)
+- Status: TODO
+- Tasks file: tasks/PR-SEO-02.md
+- Depends on: PR-PROD-01
 
-39) PR-UI-GOLDEN-01: Golden Template Studio (Golden Landing + Blocks Catalog + Theme Tokens)
-- Status: DONE
-- Tasks file: tasks/PR-UI-GOLDEN-01.md
-- Depends on: PR-PRODUCT-05
-- Outcome:
-  - internal Template Studio exists (/studio/golden, /studio/blocks)
-  - UI blocks and theme tokens are codified for repeatable UI evolution
+38) PR-REPORT-02: Server-side PDF Generation and Caching (Feature-flagged)
+- Status: TODO
+- Tasks file: tasks/PR-REPORT-02.md
+- Depends on: PR-REPORT-01
 
-40) PR-CONTENT-02: Content Factory Tooling (New Test Generator and CSV Import)
-- Status: DONE
-- Tasks file: tasks/PR-CONTENT-02.md
-- Depends on: PR-PRODUCT-01
-
-41) PR-OPS-AUTOMATION-01: Codex Review Auto-Fix + Auto-Merge + Local main Sync
-- Status: DONE
-- Tasks file: tasks/PR-OPS-AUTOMATION-01.md
-- Depends on: none
-- Outcome:
-  - remove manual waiting/copy-paste for Codex Review feedback
-  - enable hands-free merges via auto-merge
-  - update local main without Cursor Sync
-
-42) PR-UI-01: Tailwind + shadcn/ui Foundation (Design Tokens, Layout, Primitives)
-- Status: DONE
-- Tasks file: tasks/PR-UI-01.md
-- Depends on: none
-
-43) PR-UI-02: Tenant Homepage (Test List) with Tailwind + shadcn/ui
-- Status: DONE
-- Tasks file: tasks/PR-UI-02.md
-- Depends on: PR-UI-01 and PR-ANALYTICS-09
-
-44) PR-UI-03: Test Landing Page (/t/[slug]) with Tailwind + shadcn/ui
-- Status: DONE
-- Tasks file: tasks/PR-UI-03.md
-- Depends on: PR-UI-02
-
-45) PR-CONTENT-03: Content Add Pipeline (No Attachments) + Values Compass Converter + Universal Template
-- Status: DONE
-- Tasks file: tasks/PR-CONTENT-03.md
-- Depends on: PR-CONTENT-02
-
-46) PR-CONTENT-04: universal_human_v1 Converter + content_add Support (No Attachments)
-- Status: DONE
-- Tasks file: tasks/PR-CONTENT-04.md
-- Depends on: PR-CONTENT-03
+39) PR-PROD-04: Shareable Report Links (Signed Access Token, No Accounts)
+- Status: TODO
+- Tasks file: tasks/PR-PROD-04.md
+- Depends on: PR-PROD-03 and PR-REPORT-01
 
 Execution rules (apply to every PR)
 - Work on exactly 1 PR at a time.
-- Create a new branch from main named as specified in the selected tasks file (single source of truth).
+- Create a new branch from main named pr-analytics-0X-<short-slug> (or pr-ops-<name> for ops PRs).
 - Implement only what the tasks file requests.
 - Run the project test gate locally before committing.
 - Do not commit secrets. Do not add or modify .env except .env.example if the task explicitly says so.
-- When green, commit with message "<PR_ID>: <short summary>" and push the branch.
+- When green, commit with message "PR-ANALYTICS-0X: <short summary>" (or "PR-OPS-...: <summary>") and push the branch.
 
 Definition of Done (global)
 - A single query of marts.mart_pnl_daily clearly shows:
