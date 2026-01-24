@@ -201,7 +201,7 @@ Queue (in order)
 
 
 30) PR-PROD-01: Dev and Prod Host Allowlist Strategy (Local Dev Without 403)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-PROD-01.md
 - Depends on: PR-OPS-BQ-02
 
