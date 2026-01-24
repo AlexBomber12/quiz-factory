@@ -27,9 +27,12 @@ type RateLimitEntry = {
   resetAt: number;
 };
 
+type AllowlistMode = "prod" | "dev";
+
 const HOST_PORT_PATTERN = /:\d+$/;
 const ALLOWED_METHOD_FALLBACK = "OPTIONS";
 const DEV_RATE_LIMIT_SALT = "dev-rate-limit-salt";
+const DEV_LOCALHOST_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
 
 export const DEFAULT_EVENT_BODY_BYTES = 32 * 1024;
 export const DEFAULT_EVENT_RATE_LIMIT: RateLimitOptions = {
@@ -58,7 +61,53 @@ const normalizeHost = (value: string | null | undefined): string | null => {
     return null;
   }
 
+  if (host.startsWith("[")) {
+    const closingBracket = host.indexOf("]");
+    if (closingBracket > 0) {
+      const ipv6 = host.slice(1, closingBracket).trim();
+      return ipv6.length > 0 ? ipv6.toLowerCase() : null;
+    }
+  }
+
+  const colonMatches = host.match(/:/g);
+  if (colonMatches && colonMatches.length > 1) {
+    return host.toLowerCase();
+  }
+
   return host.replace(HOST_PORT_PATTERN, "").toLowerCase();
+};
+
+const normalizeHostHeader = (hostHeader: string | null | undefined): string | null => {
+  return normalizeHost(hostHeader);
+};
+
+const normalizeOrigin = (originHeader: string | null | undefined): string | null => {
+  const trimmed = normalizeString(originHeader);
+  if (!trimmed) {
+    return null;
+  }
+
+  let originUrl: URL | null = null;
+  try {
+    originUrl = new URL(trimmed);
+  } catch {
+    originUrl = null;
+  }
+
+  if (!originUrl) {
+    return null;
+  }
+
+  const protocol = originUrl.protocol.toLowerCase();
+  if (protocol !== "http:" && protocol !== "https:") {
+    return null;
+  }
+
+  return normalizeHost(originUrl.hostname);
+};
+
+export const getAllowlistMode = (): AllowlistMode => {
+  return process.env.NODE_ENV === "production" ? "prod" : "dev";
 };
 
 const tenantRegistry = (tenantsConfig as TenantRegistry).tenants ?? [];
@@ -72,6 +121,52 @@ for (const tenant of tenantRegistry) {
     }
   }
 }
+
+const getExtraAllowedHosts = (): Set<string> => {
+  const extraHosts = new Set<string>();
+  const raw = process.env.EXTRA_ALLOWED_HOSTS;
+  if (!raw) {
+    return extraHosts;
+  }
+
+  for (const entry of raw.split(",")) {
+    const normalized = normalizeHost(entry);
+    if (normalized) {
+      extraHosts.add(normalized);
+    }
+  }
+
+  return extraHosts;
+};
+
+const isAllowedHost = (host: string | null): boolean => {
+  if (!host) {
+    return false;
+  }
+
+  if (allowedHosts.has(host)) {
+    return true;
+  }
+
+  if (getAllowlistMode() !== "dev") {
+    return false;
+  }
+
+  if (DEV_LOCALHOST_HOSTS.has(host)) {
+    return true;
+  }
+
+  return getExtraAllowedHosts().has(host);
+};
+
+const isAllowedOrigin = (originHeader: string | null | undefined): boolean => {
+  const originHost = normalizeOrigin(originHeader);
+  if (!originHost) {
+    return false;
+  }
+
+  return isAllowedHost(originHost);
+};
 
 const parseBoolean = (value: string | undefined): boolean | undefined => {
   if (!value) {
@@ -192,13 +287,13 @@ const shouldTrustForwardedHost = (): boolean => {
 
 export const resolveRequestHost = (request: Request): string => {
   if (shouldTrustForwardedHost()) {
-    const forwardedHost = normalizeHost(request.headers.get("x-forwarded-host"));
+    const forwardedHost = normalizeHostHeader(request.headers.get("x-forwarded-host"));
     if (forwardedHost) {
       return forwardedHost;
     }
   }
 
-  const host = normalizeHost(request.headers.get("host"));
+  const host = normalizeHostHeader(request.headers.get("host"));
   if (host) {
     return host;
   }
@@ -212,7 +307,7 @@ export const resolveRequestHost = (request: Request): string => {
 
 export const assertAllowedHost = (request: Request): Response | null => {
   const host = resolveRequestHost(request);
-  if (!host || !allowedHosts.has(host)) {
+  if (!isAllowedHost(host)) {
     return buildForbiddenResponse("Host is not allowed.");
   }
 
@@ -222,27 +317,13 @@ export const assertAllowedHost = (request: Request): Response | null => {
 export const assertAllowedOrigin = (request: Request): Response | null => {
   const originHeader = request.headers.get("origin");
   if (!originHeader) {
-    return null;
-  }
-
-  let originUrl: URL | null = null;
-  try {
-    originUrl = new URL(originHeader);
-  } catch {
-    originUrl = null;
-  }
-
-  if (!originUrl) {
+    if (getAllowlistMode() === "dev") {
+      return null;
+    }
     return buildForbiddenResponse("Origin is not allowed.");
   }
 
-  const protocol = originUrl.protocol.toLowerCase();
-  if (protocol !== "http:" && protocol !== "https:") {
-    return buildForbiddenResponse("Origin is not allowed.");
-  }
-
-  const originHost = normalizeHost(originUrl.host);
-  if (!originHost || !allowedHosts.has(originHost)) {
+  if (!isAllowedOrigin(originHeader)) {
     return buildForbiddenResponse("Origin is not allowed.");
   }
 

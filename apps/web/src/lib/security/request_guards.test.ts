@@ -12,8 +12,19 @@ const ENV_KEYS = [
   "RATE_LIMIT_MAX_REQUESTS",
   "RATE_LIMIT_WINDOW_SECONDS",
   "RATE_LIMIT_SALT",
-  "TRUST_X_FORWARDED_HOST"
+  "TRUST_X_FORWARDED_HOST",
+  "NODE_ENV",
+  "EXTRA_ALLOWED_HOSTS"
 ] as const;
+
+const setEnv = (key: (typeof ENV_KEYS)[number], value: string | undefined): void => {
+  const env = process.env as Record<string, string | undefined>;
+  if (value === undefined) {
+    delete env[key];
+  } else {
+    env[key] = value;
+  }
+};
 
 const buildRequest = (headers?: Record<string, string>): Request => {
   return new Request("https://tenant.example.com/api/page/view", {
@@ -29,7 +40,7 @@ describe("request guards", () => {
     envSnapshot = {};
     for (const key of ENV_KEYS) {
       envSnapshot[key] = process.env[key];
-      delete process.env[key];
+      setEnv(key, undefined);
     }
     resetRateLimitState();
   });
@@ -37,11 +48,7 @@ describe("request guards", () => {
   afterEach(() => {
     for (const key of ENV_KEYS) {
       const value = envSnapshot[key];
-      if (value === undefined) {
-        delete process.env[key];
-      } else {
-        process.env[key] = value;
-      }
+      setEnv(key, value);
     }
     resetRateLimitState();
   });
@@ -53,6 +60,39 @@ describe("request guards", () => {
 
   it("blocks unknown hosts", () => {
     const response = assertAllowedHost(buildRequest({ host: "blocked.example.com" }));
+    expect(response?.status).toBe(403);
+  });
+
+  it("allows localhost in dev mode", () => {
+    setEnv("NODE_ENV", "development");
+
+    const response = assertAllowedHost(buildRequest({ host: "localhost:3000" }));
+    expect(response).toBeNull();
+  });
+
+  it("allows localhost origins in dev mode", () => {
+    setEnv("NODE_ENV", "development");
+
+    const response = assertAllowedOrigin(
+      buildRequest({ origin: "http://localhost:3000" })
+    );
+    expect(response).toBeNull();
+  });
+
+  it("allows extra hosts in dev mode", () => {
+    setEnv("NODE_ENV", "development");
+    setEnv("EXTRA_ALLOWED_HOSTS", "extra.example.com,internal.example.com:8080");
+
+    const response = assertAllowedHost(
+      buildRequest({ host: "internal.example.com:8080" })
+    );
+    expect(response).toBeNull();
+  });
+
+  it("blocks missing origins in production mode", () => {
+    setEnv("NODE_ENV", "production");
+
+    const response = assertAllowedOrigin(buildRequest());
     expect(response?.status).toBe(403);
   });
 
