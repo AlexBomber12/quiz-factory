@@ -7,6 +7,7 @@ import {
   RESULT_COOKIE,
   verifyResultCookie
 } from "../../../../lib/product/result_cookie";
+import { createReportKey, parseCreditsCookie } from "../../../../lib/credits";
 import { listOffers } from "../../../../lib/pricing";
 import { resolveTenantContext } from "../../../../lib/tenants/request";
 import PaywallClient from "./paywall-client";
@@ -70,6 +71,14 @@ export default async function PaywallPage({ params }: PageProps) {
   }
 
   const test = loadLocalizedTest(testId, context.locale);
+  const creditsState = parseCreditsCookie(cookieStore, context.tenantId);
+  const reportKey = createReportKey(context.tenantId, testId, resultPayload.session_id);
+  const creditsRemaining = creditsState.credits_remaining;
+  const hasGrantReference =
+    creditsState.last_grant !== null || creditsState.grant_ids.length > 0;
+  const hasReportAccess =
+    hasGrantReference &&
+    (creditsRemaining > 0 || creditsState.consumed_report_keys.includes(reportKey));
   const priceFormatter = new Intl.NumberFormat(context.locale, {
     style: "currency",
     currency: "EUR"
@@ -93,7 +102,10 @@ export default async function PaywallPage({ params }: PageProps) {
       <PaywallClient
         testId={test.test_id}
         sessionId={resultPayload.session_id}
+        slug={test.slug}
         options={options}
+        creditsRemaining={creditsRemaining}
+        hasReportAccess={hasReportAccess}
       />
 
       <div className="cta-row">

@@ -15,7 +15,10 @@ type PaywallOption = {
 type PaywallClientProps = {
   testId: string;
   sessionId?: string | null;
+  slug: string;
   options: ReadonlyArray<PaywallOption>;
+  creditsRemaining: number;
+  hasReportAccess: boolean;
 };
 
 const createPurchaseId = (): string => {
@@ -30,9 +33,17 @@ const createPurchaseId = (): string => {
   });
 };
 
-export default function PaywallClient({ testId, sessionId, options }: PaywallClientProps) {
+export default function PaywallClient({
+  testId,
+  sessionId,
+  slug,
+  options,
+  creditsRemaining,
+  hasReportAccess
+}: PaywallClientProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeOfferKey, setActiveOfferKey] = useState<OfferKey | null>(null);
+  const [activeCredit, setActiveCredit] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -56,6 +67,7 @@ export default function PaywallClient({ testId, sessionId, options }: PaywallCli
     }
 
     setIsSubmitting(true);
+    setActiveCredit(false);
     setActiveOfferKey(option.offerKey);
     setError(null);
 
@@ -122,9 +134,74 @@ export default function PaywallClient({ testId, sessionId, options }: PaywallCli
     }
   };
 
+  const handleCreditAccess = async () => {
+    if (isSubmitting || !hasReportAccess) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    setActiveOfferKey(null);
+    setActiveCredit(true);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/report/issue", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json"
+        },
+        body: JSON.stringify({
+          slug,
+          test_id: testId,
+          session_id: sessionId
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error("Unable to unlock report.");
+      }
+
+      const payload = (await response.json()) as { ok?: boolean; test_id?: string };
+      if (!payload.ok || payload.test_id !== testId) {
+        throw new Error("Unable to unlock report.");
+      }
+
+      window.location.assign(`/report/${slug}`);
+    } catch {
+      setError("Unable to unlock your report. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+      setActiveCredit(false);
+    }
+  };
+
+  let creditButtonLabel = "Open your report";
+  if (activeCredit) {
+    creditButtonLabel = "Unlocking report...";
+  } else if (creditsRemaining > 0) {
+    creditButtonLabel = "Use 1 credit";
+  }
+
   return (
     <div className="runner-card">
       <h2 className="runner-question">Choose your report</h2>
+      {creditsRemaining > 0 ? (
+        <p className="status-message">
+          {creditsRemaining === 1
+            ? "You have 1 credit remaining."
+            : `You have ${creditsRemaining} credits remaining.`}
+        </p>
+      ) : null}
+      {hasReportAccess ? (
+        <button
+          className="primary-button"
+          type="button"
+          disabled={isSubmitting}
+          onClick={handleCreditAccess}
+        >
+          {creditButtonLabel}
+        </button>
+      ) : null}
       <ul className="option-list" aria-label="Paywall options">
         {options.map((option) => {
           const isActive = activeOfferKey === option.offerKey;

@@ -2,12 +2,10 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 
 import { getTenantTestIds, resolveTestIdBySlug } from "../../../lib/content/catalog";
-import { loadLocalizedTest } from "../../../lib/content/load";
 import { REPORT_TOKEN, verifyReportToken } from "../../../lib/product/report_token";
 import { RESULT_COOKIE, verifyResultCookie } from "../../../lib/product/result_cookie";
 import { resolveTenantContext } from "../../../lib/tenants/request";
-import ReportAnalytics from "./report-analytics";
-import ReportPdfButton from "./report-pdf-button";
+import ReportClient from "./report-client";
 
 type PageProps = {
   params: {
@@ -84,68 +82,5 @@ export default async function ReportPage({ params }: PageProps) {
     return renderBlocked(params.slug);
   }
 
-  const test = loadLocalizedTest(testId, context.locale);
-  const band = test.result_bands.find((candidate) => candidate.band_id === resultPayload.band_id);
-  const bandCopy = band?.copy[test.locale];
-
-  if (!band || !bandCopy) {
-    return renderBlocked(params.slug);
-  }
-
-  const scaleEntries = Object.entries(resultPayload.scale_scores).sort((left, right) =>
-    left[0].localeCompare(right[0])
-  );
-  const totalScore = scaleEntries.reduce((sum, [, value]) => sum + value, 0);
-
-  return (
-    <section className="page">
-      <ReportAnalytics
-        testId={test.test_id}
-        purchaseId={reportPayload.purchase_id}
-        sessionId={reportPayload.session_id}
-      />
-      <header className="hero">
-        <p className="eyebrow">Quiz Factory</p>
-        <h1>{test.report_title}</h1>
-        <p>Your paid report is ready.</p>
-      </header>
-
-      <div className="runner-card">
-        <h2 className="runner-question">{bandCopy.headline}</h2>
-        <p>{bandCopy.summary}</p>
-        <ul>
-          {bandCopy.bullets.map((bullet) => (
-            <li key={bullet}>{bullet}</li>
-          ))}
-        </ul>
-      </div>
-
-      {scaleEntries.length > 0 ? (
-        <div className="runner-card">
-          <h2 className="runner-question">Score breakdown</h2>
-          <div className="test-meta">
-            {scaleEntries.map(([scale, value]) => (
-              <div key={scale}>
-                <strong>{scale}:</strong> {value}
-              </div>
-            ))}
-            <div>
-              <strong>Total score:</strong> {totalScore}
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      <div className="cta-row">
-        <ReportPdfButton
-          testId={test.test_id}
-          purchaseId={reportPayload.purchase_id}
-          slug={test.slug}
-        />
-        <Link className="text-link" href={`/t/${test.slug}`}>
-          Back to the test
-        </Link>
-      </div>
-    </section>
-  );
+  return <ReportClient slug={params.slug} testId={testId} />;
 }

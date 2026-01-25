@@ -211,7 +211,7 @@ Queue (in order)
 - Depends on: PR-PROD-01
 
 32) PR-PROD-03: Credit Packs Without Accounts (Signed Cookie Ledger)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-PROD-03.md
 - Depends on: PR-PROD-02
 

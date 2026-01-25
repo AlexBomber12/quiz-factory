@@ -49,6 +49,8 @@ export type AnalyticsEventProperties = {
   offer_key?: string | null;
   product_type?: string | null;
   credits_granted?: number | null;
+  credits_balance_after?: number | null;
+  consumed_credit?: boolean | null;
   pricing_variant?: string | null;
   unit_price_eur?: number | null;
   payment_provider?: string | null;
