@@ -46,7 +46,11 @@ export type AnalyticsEventProperties = {
   failure_reason?: string | null;
   amount_eur?: number | null;
   currency?: string | null;
+  offer_key?: string | null;
   product_type?: string | null;
+  credits_granted?: number | null;
+  pricing_variant?: string | null;
+  unit_price_eur?: number | null;
   payment_provider?: string | null;
   is_upsell?: boolean | null;
   upsell_id?: string | null;

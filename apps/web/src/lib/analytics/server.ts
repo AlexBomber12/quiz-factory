@@ -62,9 +62,13 @@ type AnalyticsRequestBody = {
   purchase_id?: unknown;
   share_target?: unknown;
   upsell_id?: unknown;
+  offer_key?: unknown;
   product_type?: unknown;
+  credits_granted?: unknown;
   is_upsell?: unknown;
   pricing_variant?: unknown;
+  unit_price_eur?: unknown;
+  currency?: unknown;
   utm_source?: unknown;
   utm_medium?: unknown;
   utm_campaign?: unknown;
@@ -140,6 +144,7 @@ export const handleAnalyticsEvent = async (
     requirePurchaseId?: boolean;
     requireAttemptToken?: boolean;
     issueAttemptToken?: boolean;
+    extendProperties?: (context: ResponseExtensionContext) => Partial<AnalyticsEventProperties>;
     extendResponse?: (context: ResponseExtensionContext) => Record<string, unknown>;
   }
 ): Promise<Response> => {
@@ -241,6 +246,24 @@ export const handleAnalyticsEvent = async (
     properties.upsell_id = upsellId;
   } else if (options.event === "upsell_view" && upsellId) {
     properties.upsell_id = upsellId;
+  }
+
+  if (options.extendProperties) {
+    const extraProperties = options.extendProperties({
+      body,
+      properties,
+      sessionId,
+      tenantId,
+      distinctId,
+      utm,
+      clickIds
+    });
+
+    for (const [key, value] of Object.entries(extraProperties)) {
+      if (value !== undefined) {
+        (properties as Record<string, unknown>)[key] = value;
+      }
+    }
   }
 
   const providedEventId = requireString(body.event_id);

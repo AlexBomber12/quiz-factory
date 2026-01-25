@@ -7,6 +7,7 @@ import {
   RESULT_COOKIE,
   verifyResultCookie
 } from "../../../../lib/product/result_cookie";
+import { listOffers } from "../../../../lib/pricing";
 import { resolveTenantContext } from "../../../../lib/tenants/request";
 import PaywallClient from "./paywall-client";
 
@@ -69,29 +70,17 @@ export default async function PaywallPage({ params }: PageProps) {
   }
 
   const test = loadLocalizedTest(testId, context.locale);
-  const options = [
-    {
-      id: "single",
-      label: "Single report",
-      priceLabel: "EUR 1.49",
-      productType: "single",
-      pricingVariant: "intro"
-    },
-    {
-      id: "pack-5",
-      label: "Pack 5 reports",
-      priceLabel: "EUR 4.99",
-      productType: "pack_5",
-      pricingVariant: "base"
-    },
-    {
-      id: "pack-10",
-      label: "Pack 10 reports",
-      priceLabel: "EUR 7.99",
-      productType: "pack_10",
-      pricingVariant: "base"
-    }
-  ] as const;
+  const priceFormatter = new Intl.NumberFormat(context.locale, {
+    style: "currency",
+    currency: "EUR"
+  });
+  const options = listOffers().map((offer) => ({
+    offerKey: offer.offer_key,
+    label: offer.ui.label,
+    badge: offer.ui.badge,
+    description: offer.ui.description,
+    priceLabel: priceFormatter.format(offer.display_price_eur)
+  }));
 
   return (
     <section className="page">

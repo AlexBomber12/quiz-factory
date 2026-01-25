@@ -206,7 +206,7 @@ Queue (in order)
 - Depends on: PR-OPS-BQ-02
 
 31) PR-PROD-02: Stripe Pricing Module and Intro Offer (Consistent Offers and Tracking)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-PROD-02.md
 - Depends on: PR-PROD-01
 
