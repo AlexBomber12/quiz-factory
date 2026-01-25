@@ -13,30 +13,25 @@ import {
 } from "../components/ui/card";
 import { Separator } from "../components/ui/separator";
 import { loadTenantCatalog } from "../lib/catalog/catalog";
-import { resolveTenantContext, type TenantRequestContext } from "../lib/tenants/request";
-
-const buildRequestCanonical = (
-  context: TenantRequestContext,
-  path: string
-): string | null => {
-  const host = context.requestHost ?? context.host;
-  if (!host) {
-    return null;
-  }
-
-  const protocol =
-    process.env.NODE_ENV === "production" ? "https" : context.protocol;
-  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-  return `${protocol}://${host}${normalizedPath}`;
-};
+import {
+  buildCanonical,
+  buildLocaleAlternatesForPath,
+  buildOpenGraphLocales,
+  buildTenantLabel,
+  resolveTenantSeoContext
+} from "../lib/seo/metadata";
+import { resolveTenantContext } from "../lib/tenants/request";
 
 export const generateMetadata = async (): Promise<Metadata> => {
   const context = await resolveTenantContext();
-  const tenantLabel = context.requestHost ?? context.host ?? context.tenantId;
-  const title = `Quiz Factory - ${tenantLabel}`;
+  const tenantSeo = resolveTenantSeoContext({ tenantId: context.tenantId });
+  const tenantLabel = buildTenantLabel(context);
+  const title = `${tenantLabel} | Quiz Factory`;
   const description = "Browse the available tests and start when ready.";
-  const canonical = buildRequestCanonical(context, "/");
-  const ogImage = buildRequestCanonical(context, "/og.png");
+  const canonical = buildCanonical(context, "/");
+  const ogImage = buildCanonical(context, "/og.png");
+  const languages = buildLocaleAlternatesForPath(context, "/", tenantSeo.locales);
+  const { ogLocale, alternateLocale } = buildOpenGraphLocales(context.locale, tenantSeo.locales);
 
   const metadata: Metadata = {
     title,
@@ -44,12 +39,17 @@ export const generateMetadata = async (): Promise<Metadata> => {
     openGraph: {
       title,
       description,
+      locale: ogLocale,
+      alternateLocale,
       url: canonical ?? undefined,
       images: ogImage ? [{ url: ogImage }] : undefined
     }
   };
   if (canonical) {
-    metadata.alternates = { canonical };
+    metadata.alternates = {
+      canonical,
+      languages
+    };
   }
 
   return metadata;

@@ -1,9 +1,21 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
 
 import { getTenantTestIds, resolveTestIdBySlug } from "../../../lib/content/catalog";
+import { loadLocalizedTest } from "../../../lib/content/load";
 import { REPORT_TOKEN, verifyReportToken } from "../../../lib/product/report_token";
 import { RESULT_COOKIE, verifyResultCookie } from "../../../lib/product/result_cookie";
+import type { LocaleTag } from "../../../lib/content/types";
+import {
+  buildCanonical,
+  buildLocaleAlternatesForPath,
+  buildOgImagePath,
+  buildOpenGraphLocales,
+  buildTenantLabel,
+  resolveSeoTestContext,
+  resolveTenantSeoContext
+} from "../../../lib/seo/metadata";
 import { resolveTenantContext } from "../../../lib/tenants/request";
 import ReportClient from "./report-client";
 
@@ -40,6 +52,70 @@ const renderBlocked = (slug: string) => {
       </Link>
     </section>
   );
+};
+
+export const generateMetadata = async ({ params }: PageProps): Promise<Metadata> => {
+  const context = await resolveTenantContext();
+  const tenantSeo = resolveTenantSeoContext({ tenantId: context.tenantId });
+  const tenantLabel = buildTenantLabel(context);
+  const testId = resolveReportTestId(params.slug, context.tenantId);
+  const fallbackOgImage = buildCanonical(context, "/og.png");
+
+  const buildMetadata = (
+    title: string,
+    description: string,
+    path: string,
+    canonical: string | null,
+    ogImage: string | null,
+    locales: ReadonlyArray<LocaleTag>
+  ): Metadata => {
+    const languages = buildLocaleAlternatesForPath(context, path, locales);
+    const { ogLocale, alternateLocale } = buildOpenGraphLocales(context.locale, locales);
+    const metadata: Metadata = {
+      title,
+      description,
+      openGraph: {
+        title,
+        description,
+        locale: ogLocale,
+        alternateLocale,
+        url: canonical ?? undefined,
+        images: ogImage ? [{ url: ogImage }] : undefined
+      }
+    };
+
+    if (canonical) {
+      metadata.alternates = {
+        canonical,
+        languages
+      };
+    }
+
+    return metadata;
+  };
+
+  const path = `/report/${params.slug}`;
+  const canonical = buildCanonical(context, path);
+
+  if (!testId) {
+    return buildMetadata(
+      `${tenantLabel} | Quiz Factory`,
+      "This test is not available for this tenant.",
+      path,
+      canonical,
+      fallbackOgImage,
+      tenantSeo.locales
+    );
+  }
+
+  const test = loadLocalizedTest(testId, context.locale);
+  const seo = resolveSeoTestContext({ tenantId: context.tenantId, testId });
+  const description = `${test.report_title} is ready.`;
+  const ogPath = buildOgImagePath(`/report/${test.slug}/opengraph-image`, seo.token);
+  const ogImage = buildCanonical(context, ogPath) ?? fallbackOgImage;
+  const title = `${test.report_title} (${test.slug}) | ${tenantLabel} | Quiz Factory`;
+
+  return buildMetadata(title, description, path, canonical, ogImage, seo.locales);
 };
 
 export default async function ReportPage({ params }: PageProps) {
@@ -82,5 +158,17 @@ export default async function ReportPage({ params }: PageProps) {
     return renderBlocked(params.slug);
   }
 
-  return <ReportClient slug={params.slug} testId={testId} />;
+  const sharePath = `/t/${params.slug}`;
+  const shareUrl = buildCanonical(context, sharePath);
+  const shareTitle = loadLocalizedTest(testId, context.locale).title;
+
+  return (
+    <ReportClient
+      slug={params.slug}
+      testId={testId}
+      sharePath={sharePath}
+      shareUrl={shareUrl}
+      shareTitle={shareTitle}
+    />
+  );
 }

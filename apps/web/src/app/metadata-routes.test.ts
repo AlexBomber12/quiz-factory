@@ -29,6 +29,23 @@ describe("metadata routes", () => {
     expect(urls).toContain("https://tenant.example.com/t/focus-rhythm");
   });
 
+  it("includes deterministic lastmod values in sitemap", async () => {
+    const first = await sitemap();
+    const second = await sitemap();
+    const homeUrl = "https://tenant.example.com/";
+    const testUrl = "https://tenant.example.com/t/focus-rhythm";
+
+    const firstHome = first.find((entry) => entry.url === homeUrl);
+    const secondHome = second.find((entry) => entry.url === homeUrl);
+    const firstTest = first.find((entry) => entry.url === testUrl);
+    const secondTest = second.find((entry) => entry.url === testUrl);
+
+    expect(typeof firstHome?.lastModified).toBe("string");
+    expect(typeof firstTest?.lastModified).toBe("string");
+    expect(firstHome?.lastModified).toBe(secondHome?.lastModified);
+    expect(firstTest?.lastModified).toBe(secondTest?.lastModified);
+  });
+
   it("disallows non-index routes in robots", async () => {
     const result = await robots();
     const rules = Array.isArray(result.rules) ? result.rules[0] : result.rules;

@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 
 import ReportAnalytics from "./report-analytics";
 import ReportPdfButton from "./report-pdf-button";
+import ReportShare from "./report-share";
 import {
   DisclaimerSection,
   InterpretationSection,
@@ -43,6 +44,9 @@ type ReportAccessPayload = {
 type ReportClientProps = {
   slug: string;
   testId: string;
+  sharePath: string;
+  shareUrl: string | null;
+  shareTitle: string;
 };
 
 type LoadState =
@@ -54,7 +58,13 @@ type LoadState =
 const paywallHrefForSlug = (slug: string): string => `/t/${slug}/pay`;
 const testHrefForSlug = (slug: string): string => `/t/${slug}`;
 
-export default function ReportClient({ slug, testId }: ReportClientProps) {
+export default function ReportClient({
+  slug,
+  testId,
+  sharePath,
+  shareUrl,
+  shareTitle
+}: ReportClientProps) {
   const [state, setState] = useState<LoadState>({ status: "loading" });
 
   useEffect(() => {
@@ -198,6 +208,13 @@ export default function ReportClient({ slug, testId }: ReportClientProps) {
         <ScoreSection scaleEntries={report.scale_entries} totalScore={report.total_score} />
         <InterpretationSection band={report.band} />
         <NextStepsSection />
+        <ReportShare
+          testId={report.test_id}
+          sessionId={sessionId}
+          sharePath={sharePath}
+          shareUrl={shareUrl}
+          shareTitle={shareTitle}
+        />
         <DisclaimerSection />
         <UpsellSection
           testId={report.test_id}
