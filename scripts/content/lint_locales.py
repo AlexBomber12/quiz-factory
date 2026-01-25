@@ -119,17 +119,21 @@ def is_trivial_or_allowlisted(value: str, allowlist: Allowlist) -> bool:
     if normalized in allowlist.technical_terms:
         return True
 
-    if len(tokens) == 1 and len(tokens[0]) <= allowlist.short_token_length:
-        return True
-
     if all(token.isdigit() for token in tokens):
         return True
 
-    if all(
-        token.lower() in allowlist.technical_terms or len(token) <= allowlist.short_token_length or token.isdigit()
-        for token in tokens
-    ):
+    # Multi-word phrases should still be compared, even when made of short words.
+    if all(token.lower() in allowlist.technical_terms for token in tokens):
         return True
+
+    if len(tokens) == 1:
+        token = tokens[0]
+        if token.lower() in allowlist.technical_terms:
+            return True
+        if token.isdigit():
+            return True
+        if len(token) <= allowlist.short_token_length:
+            return True
 
     return False
 
