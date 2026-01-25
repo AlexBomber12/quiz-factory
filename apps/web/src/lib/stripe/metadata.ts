@@ -9,9 +9,13 @@ export type StripeMetadataInput = {
   locale?: string | null;
   utm?: UtmParams | null;
   clickIds?: ClickIdParams | null;
+  offerKey?: string | null;
   productType?: string | null;
+  creditsGranted?: number | null;
   isUpsell?: boolean | null;
   pricingVariant?: string | null;
+  unitPriceEur?: number | null;
+  currency?: string | null;
   deviceType?: string | null;
   purchaseId?: string | null;
 };
@@ -30,9 +34,13 @@ export type ParsedStripeMetadata = {
   fbclid: string | null;
   gclid: string | null;
   ttclid: string | null;
+  offer_key: string | null;
   product_type: string | null;
+  credits_granted: number | null;
   is_upsell: boolean | null;
   pricing_variant: string | null;
+  unit_price_eur: number | null;
+  currency: string | null;
   device_type: string | null;
   purchase_id: string | null;
 };
@@ -46,6 +54,18 @@ const addMetadataValue = (
   if (normalized) {
     metadata[key] = normalized;
   }
+};
+
+const addMetadataNumber = (
+  metadata: Record<string, string>,
+  key: string,
+  value: unknown
+): void => {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return;
+  }
+
+  metadata[key] = String(value);
 };
 
 const normalizeBoolean = (value: string | null | undefined): boolean | null => {
@@ -64,6 +84,15 @@ const normalizeBoolean = (value: string | null | undefined): boolean | null => {
   return null;
 };
 
+const normalizeNumber = (value: string | null | undefined): number | null => {
+  if (!value) {
+    return null;
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
 export const buildStripeMetadata = (input: StripeMetadataInput): Record<string, string> => {
   const metadata: Record<string, string> = {};
 
@@ -72,8 +101,12 @@ export const buildStripeMetadata = (input: StripeMetadataInput): Record<string, 
   addMetadataValue(metadata, "session_id", input.sessionId);
   addMetadataValue(metadata, "distinct_id", input.distinctId);
   addMetadataValue(metadata, "locale", input.locale);
+  addMetadataValue(metadata, "offer_key", input.offerKey);
   addMetadataValue(metadata, "product_type", input.productType);
+  addMetadataNumber(metadata, "credits_granted", input.creditsGranted);
   addMetadataValue(metadata, "pricing_variant", input.pricingVariant);
+  addMetadataNumber(metadata, "unit_price_eur", input.unitPriceEur);
+  addMetadataValue(metadata, "currency", input.currency);
   addMetadataValue(metadata, "device_type", input.deviceType);
   addMetadataValue(metadata, "purchase_id", input.purchaseId);
 
@@ -117,9 +150,13 @@ export const parseStripeMetadata = (
     fbclid: normalizeString(data.fbclid),
     gclid: normalizeString(data.gclid),
     ttclid: normalizeString(data.ttclid),
+    offer_key: normalizeString(data.offer_key),
     product_type: normalizeString(data.product_type),
+    credits_granted: normalizeNumber(normalizeString(data.credits_granted)),
     is_upsell: normalizeBoolean(normalizeString(data.is_upsell)),
     pricing_variant: normalizeString(data.pricing_variant),
+    unit_price_eur: normalizeNumber(normalizeString(data.unit_price_eur)),
+    currency: normalizeString(data.currency),
     device_type: normalizeString(data.device_type),
     purchase_id: normalizeString(data.purchase_id)
   };

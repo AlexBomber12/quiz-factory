@@ -13,6 +13,13 @@ import {
   rateLimit,
   resolveRequestHost
 } from "../../../../lib/security/request_guards";
+import {
+  DEFAULT_OFFER_KEY,
+  getOffer,
+  isOfferKey,
+  requireStripePriceId,
+  type OfferKey
+} from "../../../../lib/pricing";
 import { createStripeClient } from "../../../../lib/stripe/client";
 import { buildStripeMetadata } from "../../../../lib/stripe/metadata";
 import { resolveLocale, resolveTenant } from "../../../../lib/tenants/resolve";
@@ -22,26 +29,17 @@ type EventsContract = {
   forbidden_properties: string[];
 };
 
-const PRODUCT_PRICES_EUR_CENTS = {
-  single: 149,
-  pack_5: 499,
-  pack_10: 799
-} as const;
-
-const PRODUCT_LABELS: Record<keyof typeof PRODUCT_PRICES_EUR_CENTS, string> = {
-  single: "Single report",
-  pack_5: "Pack of 5 reports",
-  pack_10: "Pack of 10 reports"
-};
-
-const PRICING_VARIANTS = new Set(["intro", "base"]);
 const REQUIRED_METADATA_KEYS = [
   "tenant_id",
   "test_id",
   "session_id",
   "distinct_id",
+  "offer_key",
   "product_type",
+  "credits_granted",
   "pricing_variant",
+  "unit_price_eur",
+  "currency",
   "purchase_id",
   "is_upsell"
 ] as const;
@@ -158,15 +156,16 @@ export const POST = async (request: Request): Promise<Response> => {
     return NextResponse.json({ error: "purchase_id is required." }, { status: 400 });
   }
 
-  const productTypeRaw = requireString(body.product_type);
-  if (!productTypeRaw || !(productTypeRaw in PRODUCT_PRICES_EUR_CENTS)) {
-    return NextResponse.json({ error: "Invalid product_type." }, { status: 400 });
+  const offerKeyInput = requireString(body.offer_key);
+  let offerKey: OfferKey = DEFAULT_OFFER_KEY;
+  if (offerKeyInput) {
+    if (!isOfferKey(offerKeyInput)) {
+      return NextResponse.json({ error: "Invalid offer_key." }, { status: 400 });
+    }
+    offerKey = offerKeyInput;
   }
 
-  const pricingVariant = requireString(body.pricing_variant);
-  if (!pricingVariant || !PRICING_VARIANTS.has(pricingVariant)) {
-    return NextResponse.json({ error: "Invalid pricing_variant." }, { status: 400 });
-  }
+  const offer = getOffer(offerKey);
 
   const stripeMetadata = requireStringRecord(body.stripe_metadata);
   if (!stripeMetadata) {
@@ -225,9 +224,16 @@ export const POST = async (request: Request): Promise<Response> => {
     );
   }
 
-  const productType = productTypeRaw as keyof typeof PRODUCT_PRICES_EUR_CENTS;
-  const amount = PRODUCT_PRICES_EUR_CENTS[productType];
-  const productLabel = PRODUCT_LABELS[productType];
+  let stripePriceId: string;
+  try {
+    stripePriceId = requireStripePriceId(offer);
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Stripe price id is not configured for the selected offer.";
+    return NextResponse.json({ error: message }, { status: 503 });
+  }
 
   const trustedMetadata = buildStripeMetadata({
     tenantId: resultPayload.tenant_id,
@@ -237,8 +243,12 @@ export const POST = async (request: Request): Promise<Response> => {
     locale,
     utm,
     clickIds,
-    productType,
-    pricingVariant,
+    offerKey: offer.offer_key,
+    productType: offer.product_type,
+    creditsGranted: offer.credits_granted,
+    pricingVariant: offer.pricing_variant,
+    unitPriceEur: offer.display_price_eur,
+    currency: offer.currency,
     isUpsell: false,
     purchaseId
   });
@@ -285,13 +295,7 @@ export const POST = async (request: Request): Promise<Response> => {
       line_items: [
         {
           quantity: 1,
-          price_data: {
-            currency: "eur",
-            unit_amount: amount,
-            product_data: {
-              name: productLabel
-            }
-          }
+          price: stripePriceId
         }
       ],
       success_url: successUrl,

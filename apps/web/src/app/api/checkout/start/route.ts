@@ -9,6 +9,12 @@ import {
   assertMaxBodyBytes,
   rateLimit
 } from "../../../../lib/security/request_guards";
+import {
+  DEFAULT_OFFER_KEY,
+  getOffer,
+  isOfferKey,
+  type OfferKey
+} from "../../../../lib/pricing";
 import { buildStripeMetadata } from "../../../../lib/stripe/metadata";
 
 const normalizeBoolean = (value: unknown): boolean | null => {
@@ -55,14 +61,35 @@ export const POST = async (request: Request): Promise<Response> => {
     return bodyResponse;
   }
 
+  let offerKey: OfferKey = DEFAULT_OFFER_KEY;
+  try {
+    const clonedBody = (await request.clone().json()) as Record<string, unknown>;
+    const requestedOfferKey = normalizeString(clonedBody.offer_key);
+    if (requestedOfferKey) {
+      if (!isOfferKey(requestedOfferKey)) {
+        return Response.json({ error: "Invalid offer_key." }, { status: 400 });
+      }
+      offerKey = requestedOfferKey;
+    }
+  } catch {
+    offerKey = DEFAULT_OFFER_KEY;
+  }
+
+  const offer = getOffer(offerKey);
+
   return handleAnalyticsEvent(request, {
     event: "checkout_start",
     requireAttemptToken: true,
+    extendProperties: () => ({
+      offer_key: offer.offer_key,
+      product_type: offer.product_type,
+      credits_granted: offer.credits_granted,
+      pricing_variant: offer.pricing_variant,
+      unit_price_eur: offer.display_price_eur,
+      currency: offer.currency
+    }),
     extendResponse: ({ body, properties, utm, clickIds }) => {
-      const productType = normalizeString(body.product_type);
-      const pricingVariant = normalizeString(body.pricing_variant);
       const isUpsell = normalizeBoolean(body.is_upsell);
-      const purchaseId = normalizeString(body.purchase_id);
 
       return {
         stripe_metadata: buildStripeMetadata({
@@ -73,11 +100,15 @@ export const POST = async (request: Request): Promise<Response> => {
           locale: properties.locale,
           utm,
           clickIds,
-          productType,
           isUpsell,
-          pricingVariant,
+          offerKey: offer.offer_key,
+          productType: offer.product_type,
+          creditsGranted: offer.credits_granted,
+          pricingVariant: offer.pricing_variant,
+          unitPriceEur: offer.display_price_eur,
+          currency: offer.currency,
           deviceType: properties.device_type,
-          purchaseId
+          purchaseId: properties.purchase_id
         })
       };
     }

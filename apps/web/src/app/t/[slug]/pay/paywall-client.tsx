@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from "react";
 
+import type { OfferKey } from "../../../../lib/pricing";
+
 type PaywallOption = {
-  id: string;
+  offerKey: OfferKey;
   label: string;
   priceLabel: string;
-  productType: "single" | "pack_5" | "pack_10";
-  pricingVariant: "intro" | "base";
+  badge?: string;
+  description?: string;
 };
 
 type PaywallClientProps = {
@@ -30,7 +32,7 @@ const createPurchaseId = (): string => {
 
 export default function PaywallClient({ testId, sessionId, options }: PaywallClientProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [activeOptionId, setActiveOptionId] = useState<string | null>(null);
+  const [activeOfferKey, setActiveOfferKey] = useState<OfferKey | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -54,7 +56,7 @@ export default function PaywallClient({ testId, sessionId, options }: PaywallCli
     }
 
     setIsSubmitting(true);
-    setActiveOptionId(option.id);
+    setActiveOfferKey(option.offerKey);
     setError(null);
 
     const purchaseId = createPurchaseId();
@@ -68,8 +70,7 @@ export default function PaywallClient({ testId, sessionId, options }: PaywallCli
         body: JSON.stringify({
           test_id: testId,
           session_id: sessionId,
-          product_type: option.productType,
-          pricing_variant: option.pricingVariant,
+          offer_key: option.offerKey,
           is_upsell: false,
           purchase_id: purchaseId
         })
@@ -95,8 +96,7 @@ export default function PaywallClient({ testId, sessionId, options }: PaywallCli
         },
         body: JSON.stringify({
           purchase_id: purchaseId,
-          product_type: option.productType,
-          pricing_variant: option.pricingVariant,
+          offer_key: option.offerKey,
           stripe_metadata: stripeMetadata
         })
       });
@@ -118,7 +118,7 @@ export default function PaywallClient({ testId, sessionId, options }: PaywallCli
       setError("Unable to start checkout. Please try again.");
     } finally {
       setIsSubmitting(false);
-      setActiveOptionId(null);
+      setActiveOfferKey(null);
     }
   };
 
@@ -127,12 +127,13 @@ export default function PaywallClient({ testId, sessionId, options }: PaywallCli
       <h2 className="runner-question">Choose your report</h2>
       <ul className="option-list" aria-label="Paywall options">
         {options.map((option) => {
-          const isActive = activeOptionId === option.id;
+          const isActive = activeOfferKey === option.offerKey;
+          const badgePrefix = option.badge ? `${option.badge} · ` : "";
           const label = isActive
             ? "Starting checkout..."
-            : `${option.label} - ${option.priceLabel}`;
+            : `${badgePrefix}${option.label} - ${option.priceLabel}`;
           return (
-            <li key={option.id}>
+            <li key={option.offerKey}>
               <button
                 className="option-button"
                 type="button"
@@ -141,6 +142,7 @@ export default function PaywallClient({ testId, sessionId, options }: PaywallCli
               >
                 {label}
               </button>
+              {option.description ? <p>{option.description}</p> : null}
             </li>
           );
         })}
