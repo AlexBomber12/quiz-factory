@@ -13,6 +13,7 @@ import {
   CREDITS_COOKIE,
   CREDITS_COOKIE_TTL_SECONDS,
   grantCredits,
+  hasGrantId,
   parseCreditsCookie,
   setLastGrantMetadata,
   serializeCreditsCookie
@@ -177,7 +178,7 @@ export const POST = async (request: Request): Promise<Response> => {
     : metadata.credits_granted ?? 0;
   const requestCookies = parseCookies(request.headers.get("cookie"));
   const creditsStateBefore = parseCreditsCookie(requestCookies, tenantId);
-  const grantAlreadyApplied = creditsStateBefore.grant_ids.includes(purchaseId);
+  const grantAlreadyApplied = hasGrantId(creditsStateBefore, purchaseId);
   const creditsStateAfterGrant = grantCredits(creditsStateBefore, creditsGranted, purchaseId);
   const creditsStateAfter = setLastGrantMetadata(creditsStateAfterGrant, {
     grant_id: purchaseId,

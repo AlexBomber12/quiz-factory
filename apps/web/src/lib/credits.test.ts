@@ -5,7 +5,9 @@ import {
   CONSUMED_REPORTS_MAX,
   consumeCreditForReport,
   createReportKey,
+  GRANT_HISTORY_MAX,
   grantCredits,
+  hasGrantId,
   parseCreditsCookie,
   setLastGrantMetadata,
   serializeCreditsCookie
@@ -34,6 +36,24 @@ describe("credits cookie", () => {
     expect(grantedOnce.credits_remaining).toBe(5);
     expect(grantedTwice.credits_remaining).toBe(5);
     expect(grantedTwice.grant_ids).toEqual(["purchase-1"]);
+  });
+
+  it("preserves idempotency after grant history eviction", () => {
+    const totalGrants = GRANT_HISTORY_MAX + 5;
+    let state = parseCreditsCookie({}, TENANT_ID);
+
+    for (let index = 0; index < totalGrants; index += 1) {
+      state = grantCredits(state, 1, `purchase-${index}`);
+    }
+
+    const firstGrantId = "purchase-0";
+    expect(state.grant_ids.includes(firstGrantId)).toBe(false);
+    expect(hasGrantId(state, firstGrantId)).toBe(true);
+
+    const balanceBeforeReplay = state.credits_remaining;
+    const replayed = grantCredits(state, 1, firstGrantId);
+
+    expect(replayed.credits_remaining).toBe(balanceBeforeReplay);
   });
 
   it("consumes a credit once per report key", () => {

@@ -6,6 +6,9 @@ export const CREDITS_COOKIE_TTL_SECONDS = 60 * 60 * 24 * 365;
 const CREDITS_COOKIE_VERSION = 1;
 const CONSUMED_REPORTS_CAP = 25;
 const GRANT_HISTORY_CAP = 20;
+const GRANT_FILTER_BITS = 2048;
+const GRANT_FILTER_BYTES = GRANT_FILTER_BITS / 8;
+const GRANT_FILTER_HASH_COUNT = 4;
 const DEV_CREDITS_COOKIE_SECRET = "dev-credits-cookie-secret";
 
 type CookieValue = { value: string };
@@ -29,6 +32,7 @@ type CreditsTenantEntry = {
   credits_remaining: number;
   consumed_report_keys: string[];
   grant_ids: string[];
+  grant_filter: string | null;
   last_grant: CreditsGrantMetadata | null;
 };
 
@@ -42,6 +46,7 @@ export type CreditsState = {
   credits_remaining: number;
   consumed_report_keys: string[];
   grant_ids: string[];
+  grant_filter: string | null;
   last_grant: CreditsGrantMetadata | null;
   payload: CreditsCookiePayload;
 };
@@ -88,6 +93,84 @@ const dedupeAndCap = (values: unknown, cap: number): string[] => {
   }
 
   return result;
+};
+
+const createEmptyGrantFilter = (): Buffer => {
+  return Buffer.alloc(GRANT_FILTER_BYTES);
+};
+
+const decodeGrantFilter = (value: unknown): Buffer => {
+  const normalized = normalizeString(value);
+  if (!normalized) {
+    return createEmptyGrantFilter();
+  }
+
+  try {
+    const decoded = Buffer.from(normalized, "base64url");
+    if (decoded.length !== GRANT_FILTER_BYTES) {
+      return createEmptyGrantFilter();
+    }
+
+    return decoded;
+  } catch {
+    return createEmptyGrantFilter();
+  }
+};
+
+const isGrantFilterEmpty = (filter: Buffer): boolean => {
+  for (const byte of filter) {
+    if (byte !== 0) {
+      return false;
+    }
+  }
+
+  return true;
+};
+
+const encodeGrantFilter = (filter: Buffer): string | null => {
+  if (filter.length !== GRANT_FILTER_BYTES || isGrantFilterEmpty(filter)) {
+    return null;
+  }
+
+  return filter.toString("base64url");
+};
+
+const computeGrantFilterIndices = (grantId: string): number[] => {
+  const digest = createHmac("sha256", resolveCreditsCookieSecret()).update(grantId).digest();
+  const indices: number[] = [];
+
+  for (let index = 0; index < GRANT_FILTER_HASH_COUNT; index += 1) {
+    const offset = index * 4;
+    const value = digest.readUInt32BE(offset);
+    indices.push(value % GRANT_FILTER_BITS);
+  }
+
+  return indices;
+};
+
+const isGrantInFilter = (filter: Buffer, grantId: string): boolean => {
+  for (const index of computeGrantFilterIndices(grantId)) {
+    const byteIndex = Math.floor(index / 8);
+    const bitMask = 1 << (index % 8);
+    if ((filter[byteIndex] & bitMask) === 0) {
+      return false;
+    }
+  }
+
+  return true;
+};
+
+const addGrantToFilter = (filter: Buffer, grantId: string): Buffer => {
+  const nextFilter =
+    filter.length === GRANT_FILTER_BYTES ? Buffer.from(filter) : createEmptyGrantFilter();
+
+  for (const index of computeGrantFilterIndices(grantId)) {
+    const byteIndex = Math.floor(index / 8);
+    const bitMask = 1 << (index % 8);
+    nextFilter[byteIndex] = nextFilter[byteIndex] | bitMask;
+  }
+
+  return nextFilter;
 };
 
 const getCookieValue = (cookies: CookieSource, name: string): string | null => {
@@ -159,12 +242,17 @@ const sanitizeGrantMetadata = (value: unknown): CreditsGrantMetadata | null => {
   };
 };
 
+const sanitizeGrantFilter = (value: unknown): string | null => {
+  return encodeGrantFilter(decodeGrantFilter(value));
+};
+
 const sanitizeTenantEntry = (entry: unknown): CreditsTenantEntry => {
   if (!entry || typeof entry !== "object") {
     return {
       credits_remaining: 0,
       consumed_report_keys: [],
       grant_ids: [],
+      grant_filter: null,
       last_grant: null
     };
   }
@@ -174,6 +262,7 @@ const sanitizeTenantEntry = (entry: unknown): CreditsTenantEntry => {
     credits_remaining: normalizeNonNegativeInt(record.credits_remaining),
     consumed_report_keys: dedupeAndCap(record.consumed_report_keys, CONSUMED_REPORTS_CAP),
     grant_ids: dedupeAndCap(record.grant_ids, GRANT_HISTORY_CAP),
+    grant_filter: sanitizeGrantFilter(record.grant_filter),
     last_grant: sanitizeGrantMetadata(record.last_grant)
   };
 };
@@ -276,6 +365,7 @@ const buildState = (
     credits_remaining: tenantEntry.credits_remaining,
     consumed_report_keys: tenantEntry.consumed_report_keys,
     grant_ids: tenantEntry.grant_ids,
+    grant_filter: tenantEntry.grant_filter,
     last_grant: tenantEntry.last_grant,
     payload: nextPayload
   };
@@ -315,6 +405,20 @@ export const serializeCreditsCookie = (state: CreditsState): string => {
   return serializePayload(state.payload);
 };
 
+export const hasGrantId = (state: CreditsState, grantId: string): boolean => {
+  const normalizedGrantId = normalizeString(grantId);
+  if (!normalizedGrantId) {
+    return false;
+  }
+
+  if (state.grant_ids.includes(normalizedGrantId)) {
+    return true;
+  }
+
+  const grantFilter = decodeGrantFilter(state.grant_filter);
+  return isGrantInFilter(grantFilter, normalizedGrantId);
+};
+
 export const grantCredits = (
   state: CreditsState,
   credits: number,
@@ -327,18 +431,23 @@ export const grantCredits = (
   }
 
   const normalizedGrantId = normalizeString(grantId);
-  if (normalizedGrantId && state.grant_ids.includes(normalizedGrantId)) {
+  if (normalizedGrantId && hasGrantId(state, normalizedGrantId)) {
     return state;
   }
 
+  const grantFilter = decodeGrantFilter(state.grant_filter);
   const nextGrantIds = normalizedGrantId
     ? dedupeAndCap([normalizedGrantId, ...state.grant_ids], GRANT_HISTORY_CAP)
     : state.grant_ids;
+  const nextGrantFilter = normalizedGrantId
+    ? encodeGrantFilter(addGrantToFilter(grantFilter, normalizedGrantId))
+    : state.grant_filter;
 
   const nextEntry: CreditsTenantEntry = {
     credits_remaining: state.credits_remaining + creditsToGrant,
     consumed_report_keys: state.consumed_report_keys,
     grant_ids: nextGrantIds,
+    grant_filter: nextGrantFilter,
     last_grant: state.last_grant
   };
 
@@ -358,6 +467,7 @@ export const setLastGrantMetadata = (
     credits_remaining: state.credits_remaining,
     consumed_report_keys: state.consumed_report_keys,
     grant_ids: state.grant_ids,
+    grant_filter: state.grant_filter,
     last_grant: sanitized
   };
 
@@ -388,6 +498,7 @@ export const consumeCreditForReport = (
       CONSUMED_REPORTS_CAP
     ),
     grant_ids: state.grant_ids,
+    grant_filter: state.grant_filter,
     last_grant: state.last_grant
   };
 
