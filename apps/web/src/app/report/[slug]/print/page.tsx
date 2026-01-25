@@ -24,6 +24,7 @@ type PageProps = {
   params: {
     slug: string;
   };
+  searchParams?: Record<string, string | string[] | undefined>;
 };
 
 const resolveReportTestId = (slug: string, tenantId: string): string | null => {
@@ -38,6 +39,21 @@ const resolveReportTestId = (slug: string, tenantId: string): string | null => {
   }
 
   return testId;
+};
+
+const resolveTokenParam = (
+  value: string | string[] | undefined
+): string | null => {
+  if (!value) {
+    return null;
+  }
+
+  if (Array.isArray(value)) {
+    return value[0]?.trim() ?? null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
 };
 
 const renderBlocked = (slug: string) => {
@@ -119,9 +135,10 @@ export const generateMetadata = async ({ params }: PageProps): Promise<Metadata>
   return buildMetadata(title, description, path, canonical, ogImage, seo.locales);
 };
 
-export default async function ReportPrintPage({ params }: PageProps) {
+export default async function ReportPrintPage({ params, searchParams }: PageProps) {
   const context = await resolveTenantContext();
   const testId = resolveReportTestId(params.slug, context.tenantId);
+  const queryReportToken = resolveTokenParam(searchParams?.t);
 
   if (!testId) {
     return (
@@ -144,20 +161,25 @@ export default async function ReportPrintPage({ params }: PageProps) {
   const resultCookieValue = cookieStore.get(RESULT_COOKIE)?.value ?? null;
   const resultPayload = resultCookieValue ? verifyResultCookie(resultCookieValue) : null;
 
-  if (!reportPayload || !resultPayload) {
+  const hasCookieAccess =
+    reportPayload &&
+    resultPayload &&
+    reportPayload.tenant_id === context.tenantId &&
+    reportPayload.test_id === testId &&
+    resultPayload.tenant_id === reportPayload.tenant_id &&
+    resultPayload.test_id === reportPayload.test_id &&
+    resultPayload.session_id === reportPayload.session_id &&
+    resultPayload.distinct_id === reportPayload.distinct_id;
+
+  if (!hasCookieAccess && !queryReportToken) {
     return renderBlocked(params.slug);
   }
 
-  if (
-    reportPayload.tenant_id !== context.tenantId ||
-    reportPayload.test_id !== testId ||
-    resultPayload.tenant_id !== reportPayload.tenant_id ||
-    resultPayload.test_id !== reportPayload.test_id ||
-    resultPayload.session_id !== reportPayload.session_id ||
-    resultPayload.distinct_id !== reportPayload.distinct_id
-  ) {
-    return renderBlocked(params.slug);
-  }
-
-  return <PrintClient slug={params.slug} testId={testId} />;
+  return (
+    <PrintClient
+      slug={params.slug}
+      testId={testId}
+      reportLinkToken={queryReportToken}
+    />
+  );
 }

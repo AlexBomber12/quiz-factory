@@ -246,7 +246,7 @@ Queue (in order)
 - Depends on: PR-REPORT-01
 
 39) PR-PROD-04: Shareable Report Links (Signed Access Token, No Accounts)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-PROD-04.md
 - Depends on: PR-PROD-03 and PR-REPORT-01
 

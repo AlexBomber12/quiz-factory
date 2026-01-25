@@ -12,13 +12,15 @@ type ReportPdfButtonProps = {
   purchaseId: string;
   slug: string;
   pdfMode: ReportPdfMode;
+  reportLinkToken: string | null;
 };
 
 export default function ReportPdfButton({
   testId,
   purchaseId,
   slug,
-  pdfMode
+  pdfMode,
+  reportLinkToken
 }: ReportPdfButtonProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -64,7 +66,10 @@ export default function ReportPdfButton({
     } finally {
       setIsSubmitting(false);
       if (shouldNavigateToPrint) {
-        router.push(`/report/${slug}/print`);
+        const printPath = reportLinkToken
+          ? `/report/${slug}/print?t=${encodeURIComponent(reportLinkToken)}`
+          : `/report/${slug}/print`;
+        router.push(printPath);
       }
     }
   };

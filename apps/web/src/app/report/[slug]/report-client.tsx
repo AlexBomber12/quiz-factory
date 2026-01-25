@@ -47,6 +47,8 @@ type ReportClientProps = {
   testId: string;
   sharePath: string;
   shareUrl: string | null;
+  reportLinkToken: string | null;
+  reportLinkUrl: string | null;
   shareTitle: string;
   pdfMode: ReportPdfMode;
 };
@@ -65,6 +67,8 @@ export default function ReportClient({
   testId,
   sharePath,
   shareUrl,
+  reportLinkToken,
+  reportLinkUrl,
   shareTitle,
   pdfMode
 }: ReportClientProps) {
@@ -76,14 +80,23 @@ export default function ReportClient({
     const loadReport = async () => {
       setState({ status: "loading" });
 
+      const requestUrl = reportLinkToken
+        ? `/api/report/access?t=${encodeURIComponent(reportLinkToken)}`
+        : "/api/report/access";
+
       let response: Response | null = null;
       try {
-        response = await fetch("/api/report/access", {
+        const payload: Record<string, unknown> = { slug };
+        if (reportLinkToken) {
+          payload.report_link_token = reportLinkToken;
+        }
+
+        response = await fetch(requestUrl, {
           method: "POST",
           headers: {
             "content-type": "application/json"
           },
-          body: JSON.stringify({ slug })
+          body: JSON.stringify(payload)
         });
       } catch {
         response = null;
@@ -148,7 +161,7 @@ export default function ReportClient({
     return () => {
       cancelled = true;
     };
-  }, [slug, testId]);
+  }, [slug, testId, reportLinkToken]);
 
   if (state.status === "loading") {
     return (
@@ -216,6 +229,7 @@ export default function ReportClient({
           sessionId={sessionId}
           sharePath={sharePath}
           shareUrl={shareUrl}
+          reportLinkUrl={reportLinkUrl}
           shareTitle={shareTitle}
         />
         <DisclaimerSection />
@@ -233,6 +247,7 @@ export default function ReportClient({
             purchaseId={purchaseId}
             slug={report.slug}
             pdfMode={pdfMode}
+            reportLinkToken={reportLinkToken}
           />
           <Link className="text-link" href={testHrefForSlug(report.slug)}>
             Back to the test

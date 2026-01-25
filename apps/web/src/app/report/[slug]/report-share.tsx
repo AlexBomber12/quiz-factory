@@ -12,6 +12,7 @@ type ReportShareProps = {
   sessionId: string;
   sharePath: string;
   shareUrl: string | null;
+  reportLinkUrl: string | null;
   shareTitle: string;
 };
 
@@ -48,10 +49,24 @@ export default function ReportShare({
   sessionId,
   sharePath,
   shareUrl,
+  reportLinkUrl,
   shareTitle
 }: ReportShareProps) {
   const resolvedUrl = useMemo(() => buildResolvedUrl(sharePath, shareUrl), [sharePath, shareUrl]);
+  const resolvedReportUrl = useMemo(() => {
+    if (!reportLinkUrl) {
+      return null;
+    }
+
+    const trimmed = reportLinkUrl.trim();
+    if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+      return trimmed;
+    }
+
+    return buildResolvedUrl(trimmed, null);
+  }, [reportLinkUrl]);
   const [isCopied, setIsCopied] = useState(false);
+  const [isReportCopied, setIsReportCopied] = useState(false);
 
   useEffect(() => {
     if (!isCopied) {
@@ -62,9 +77,18 @@ export default function ReportShare({
     return () => window.clearTimeout(handle);
   }, [isCopied]);
 
+  useEffect(() => {
+    if (!isReportCopied) {
+      return;
+    }
+
+    const handle = window.setTimeout(() => setIsReportCopied(false), 1500);
+    return () => window.clearTimeout(handle);
+  }, [isReportCopied]);
+
   const shareText = `${shareTitle} - Quiz Factory`;
 
-  const handleCopy = async () => {
+  const handleCopyQuiz = async () => {
     void postShareClick(testId, sessionId, "copy_link");
 
     if (typeof navigator === "undefined" || !navigator.clipboard) {
@@ -76,6 +100,25 @@ export default function ReportShare({
       setIsCopied(true);
     } catch {
       setIsCopied(false);
+    }
+  };
+
+  const handleCopyReport = async () => {
+    if (!resolvedReportUrl) {
+      return;
+    }
+
+    void postShareClick(testId, sessionId, "copy_report_link");
+
+    if (typeof navigator === "undefined" || !navigator.clipboard) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(resolvedReportUrl);
+      setIsReportCopied(true);
+    } catch {
+      setIsReportCopied(false);
     }
   };
 
@@ -101,7 +144,12 @@ export default function ReportShare({
         <CardTitle className="text-2xl">Share this quiz</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-        <Button type="button" variant="outline" onClick={handleCopy}>
+        {resolvedReportUrl ? (
+          <Button type="button" variant="outline" onClick={handleCopyReport}>
+            {isReportCopied ? "Copied" : "Copy report link"}
+          </Button>
+        ) : null}
+        <Button type="button" variant="outline" onClick={handleCopyQuiz}>
           {isCopied ? "Copied" : "Copy link"}
         </Button>
         <Button
@@ -122,4 +170,3 @@ export default function ReportShare({
     </Card>
   );
 }
-

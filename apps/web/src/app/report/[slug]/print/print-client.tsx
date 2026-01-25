@@ -35,6 +35,7 @@ type ReportAccessPayload = {
 type PrintClientProps = {
   slug: string;
   testId: string;
+  reportLinkToken: string | null;
 };
 
 type LoadState =
@@ -44,10 +45,13 @@ type LoadState =
   | { status: "ready"; payload: ReportAccessPayload };
 
 const paywallHrefForSlug = (slug: string): string => `/t/${slug}/pay`;
-const reportHrefForSlug = (slug: string): string => `/report/${slug}`;
+const reportHrefForSlug = (slug: string, reportLinkToken: string | null): string =>
+  reportLinkToken
+    ? `/report/${slug}?t=${encodeURIComponent(reportLinkToken)}`
+    : `/report/${slug}`;
 const testHrefForSlug = (slug: string): string => `/t/${slug}`;
 
-export default function PrintClient({ slug, testId }: PrintClientProps) {
+export default function PrintClient({ slug, testId, reportLinkToken }: PrintClientProps) {
   const [state, setState] = useState<LoadState>({ status: "loading" });
 
   useEffect(() => {
@@ -56,14 +60,23 @@ export default function PrintClient({ slug, testId }: PrintClientProps) {
     const loadReport = async () => {
       setState({ status: "loading" });
 
+      const requestUrl = reportLinkToken
+        ? `/api/report/access?t=${encodeURIComponent(reportLinkToken)}`
+        : "/api/report/access";
+
       let response: Response | null = null;
       try {
-        response = await fetch("/api/report/access", {
+        const payload: Record<string, unknown> = { slug };
+        if (reportLinkToken) {
+          payload.report_link_token = reportLinkToken;
+        }
+
+        response = await fetch(requestUrl, {
           method: "POST",
           headers: {
             "content-type": "application/json"
           },
-          body: JSON.stringify({ slug })
+          body: JSON.stringify(payload)
         });
       } catch {
         response = null;
@@ -128,7 +141,7 @@ export default function PrintClient({ slug, testId }: PrintClientProps) {
     return () => {
       cancelled = true;
     };
-  }, [slug, testId]);
+  }, [slug, testId, reportLinkToken]);
 
   if (state.status === "loading") {
     return (
@@ -192,7 +205,7 @@ export default function PrintClient({ slug, testId }: PrintClientProps) {
 
       <div className={styles.printControls}>
         <PrintTrigger />
-        <Link className="text-link" href={reportHrefForSlug(report.slug)}>
+        <Link className="text-link" href={reportHrefForSlug(report.slug, reportLinkToken)}>
           Back to report
         </Link>
       </div>
