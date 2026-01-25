@@ -226,7 +226,7 @@ Queue (in order)
 - Depends on: PR-PROD-01
 
 35) PR-REPORT-01: Paid Report UX Upgrade (Mobile First, Trust, Upsell)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-REPORT-01.md
 - Depends on: PR-PROD-03
 

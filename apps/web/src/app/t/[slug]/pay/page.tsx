@@ -8,13 +8,16 @@ import {
   verifyResultCookie
 } from "../../../../lib/product/result_cookie";
 import { createReportKey, parseCreditsCookie } from "../../../../lib/credits";
-import { listOffers } from "../../../../lib/pricing";
+import { isOfferKey, listOffers } from "../../../../lib/pricing";
 import { resolveTenantContext } from "../../../../lib/tenants/request";
 import PaywallClient from "./paywall-client";
 
 type PageProps = {
   params: {
     slug: string;
+  };
+  searchParams?: {
+    offer_key?: string | string[];
   };
 };
 
@@ -32,7 +35,7 @@ const resolvePaywallTestId = (slug: string, tenantId: string): string | null => 
   return testId;
 };
 
-export default async function PaywallPage({ params }: PageProps) {
+export default async function PaywallPage({ params, searchParams }: PageProps) {
   const context = await resolveTenantContext();
   const testId = resolvePaywallTestId(params.slug, context.tenantId);
 
@@ -79,6 +82,9 @@ export default async function PaywallPage({ params }: PageProps) {
   const hasReportAccess =
     hasGrantReference &&
     (creditsRemaining > 0 || creditsState.consumed_report_keys.includes(reportKey));
+  const offerKeyParam = searchParams?.offer_key;
+  const offerKeyCandidate = Array.isArray(offerKeyParam) ? offerKeyParam[0] : offerKeyParam;
+  const preferredOfferKey = isOfferKey(offerKeyCandidate) ? offerKeyCandidate : null;
   const priceFormatter = new Intl.NumberFormat(context.locale, {
     style: "currency",
     currency: "EUR"
@@ -106,6 +112,7 @@ export default async function PaywallPage({ params }: PageProps) {
         options={options}
         creditsRemaining={creditsRemaining}
         hasReportAccess={hasReportAccess}
+        preferredOfferKey={preferredOfferKey}
       />
 
       <div className="cta-row">

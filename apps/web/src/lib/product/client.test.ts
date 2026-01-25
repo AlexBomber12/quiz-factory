@@ -4,6 +4,8 @@ import {
   completeAttempt,
   emitAttemptEntryPageView,
   emitReportPdfDownload,
+  emitUpsellAccept,
+  emitUpsellView,
   startAttempt
 } from "./client";
 
@@ -115,6 +117,64 @@ describe("product client helpers", () => {
     expect(body).toEqual({
       test_id: "test-demo",
       purchase_id: "purchase-123"
+    });
+  });
+
+  it("posts upsell view payload", async () => {
+    fetchSpy.mockResolvedValueOnce(new Response(null, { status: 200 }));
+
+    await emitUpsellView({
+      test_id: "test-demo",
+      purchase_id: "purchase-123",
+      session_id: "session-123",
+      upsell_id: "pack5"
+    });
+
+    expect(fetchSpy).toHaveBeenCalledOnce();
+    const [url, options] = fetchSpy.mock.calls[0] as [
+      string,
+      { method?: string; headers?: { [key: string]: string }; body?: string }
+    ];
+    expect(url).toBe("/api/upsell/view");
+    expect(options?.method).toBe("POST");
+    expect(options?.headers).toEqual({
+      "content-type": "application/json"
+    });
+    const body = JSON.parse(options?.body as string);
+    expect(body).toEqual({
+      test_id: "test-demo",
+      purchase_id: "purchase-123",
+      session_id: "session-123",
+      upsell_id: "pack5"
+    });
+  });
+
+  it("posts upsell accept payload", async () => {
+    fetchSpy.mockResolvedValueOnce(new Response(null, { status: 200 }));
+
+    await emitUpsellAccept({
+      test_id: "test-demo",
+      purchase_id: "purchase-123",
+      session_id: "session-123",
+      upsell_id: "pack5"
+    });
+
+    expect(fetchSpy).toHaveBeenCalledOnce();
+    const [url, options] = fetchSpy.mock.calls[0] as [
+      string,
+      { method?: string; headers?: { [key: string]: string }; body?: string }
+    ];
+    expect(url).toBe("/api/upsell/accept");
+    expect(options?.method).toBe("POST");
+    expect(options?.headers).toEqual({
+      "content-type": "application/json"
+    });
+    const body = JSON.parse(options?.body as string);
+    expect(body).toEqual({
+      test_id: "test-demo",
+      purchase_id: "purchase-123",
+      session_id: "session-123",
+      upsell_id: "pack5"
     });
   });
 

@@ -5,6 +5,15 @@ import { useEffect, useState } from "react";
 
 import ReportAnalytics from "./report-analytics";
 import ReportPdfButton from "./report-pdf-button";
+import {
+  DisclaimerSection,
+  InterpretationSection,
+  NextStepsSection,
+  ReportHeader,
+  ReportSummary,
+  ScoreSection,
+  UpsellSection
+} from "./report-sections";
 
 type ScaleEntry = {
   scale: string;
@@ -44,13 +53,6 @@ type LoadState =
 
 const paywallHrefForSlug = (slug: string): string => `/t/${slug}/pay`;
 const testHrefForSlug = (slug: string): string => `/t/${slug}`;
-
-const creditsMessage = (balance: number): string => {
-  if (balance === 1) {
-    return "You have 1 credit remaining.";
-  }
-  return `You have ${balance} credits remaining.`;
-};
 
 export default function ReportClient({ slug, testId }: ReportClientProps) {
   const [state, setState] = useState<LoadState>({ status: "loading" });
@@ -190,44 +192,27 @@ export default function ReportClient({ slug, testId }: ReportClientProps) {
         consumedCredit={payload.consumed_credit}
         creditsBalanceAfter={balanceAfter}
       />
-      <header className="hero">
-        <p className="eyebrow">Quiz Factory</p>
-        <h1>{report.report_title}</h1>
-        <p>Your paid report is ready.</p>
-        <p className="status-message">{creditsMessage(balanceAfter)}</p>
-      </header>
+      <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
+        <ReportHeader reportTitle={report.report_title} creditsBalanceAfter={balanceAfter} />
+        <ReportSummary band={report.band} />
+        <ScoreSection scaleEntries={report.scale_entries} totalScore={report.total_score} />
+        <InterpretationSection band={report.band} />
+        <NextStepsSection />
+        <DisclaimerSection />
+        <UpsellSection
+          testId={report.test_id}
+          sessionId={sessionId}
+          purchaseId={purchaseId}
+          slug={report.slug}
+          creditsBalanceAfter={balanceAfter}
+        />
 
-      <div className="runner-card">
-        <h2 className="runner-question">{report.band.headline}</h2>
-        <p>{report.band.summary}</p>
-        <ul>
-          {report.band.bullets.map((bullet) => (
-            <li key={bullet}>{bullet}</li>
-          ))}
-        </ul>
-      </div>
-
-      {report.scale_entries.length > 0 ? (
-        <div className="runner-card">
-          <h2 className="runner-question">Score breakdown</h2>
-          <div className="test-meta">
-            {report.scale_entries.map((entry) => (
-              <div key={entry.scale}>
-                <strong>{entry.scale}:</strong> {entry.value}
-              </div>
-            ))}
-            <div>
-              <strong>Total score:</strong> {report.total_score}
-            </div>
-          </div>
+        <div className="flex flex-col items-start gap-3 print:hidden sm:flex-row sm:items-center">
+          <ReportPdfButton testId={report.test_id} purchaseId={purchaseId} slug={report.slug} />
+          <Link className="text-link" href={testHrefForSlug(report.slug)}>
+            Back to the test
+          </Link>
         </div>
-      ) : null}
-
-      <div className="cta-row">
-        <ReportPdfButton testId={report.test_id} purchaseId={purchaseId} slug={report.slug} />
-        <Link className="text-link" href={testHrefForSlug(report.slug)}>
-          Back to the test
-        </Link>
       </div>
     </section>
   );
