@@ -1,0 +1,13 @@
+{
+  "spec_exceptions": [
+    {
+      "spec": "content/tests/test-focus-rhythm/spec.json",
+      "reason": "Placeholder ES/PT-BR copy; keep explicit until native translations land."
+    }
+  ],
+  "terms": [
+    "epc",
+    "rfid"
+  ],
+  "short_token_length": 4
+}

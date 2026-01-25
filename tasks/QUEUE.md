@@ -221,7 +221,7 @@ Queue (in order)
 - Depends on: PR-PROD-03
 
 34) PR-CONTENT-05: Localization Quality Lint (EN vs ES vs PT-BR) + Golden Test Fix
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-CONTENT-05.md
 - Depends on: PR-PROD-01
 
