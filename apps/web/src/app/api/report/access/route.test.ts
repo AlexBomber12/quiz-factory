@@ -25,6 +25,7 @@ import {
   type ReportTokenPayload
 } from "../../../../lib/product/report_token";
 import { RESULT_COOKIE, signResultCookie } from "../../../../lib/product/result_cookie";
+import { issueReportLinkToken } from "../../../../lib/report_link_token";
 
 const HOST = "tenant.example.com";
 const TENANT_ID = "tenant-tenant-example-com";
@@ -50,8 +51,14 @@ const setHeaders = (values: Record<string, string>) => {
   headerValues = values;
 };
 
-const buildRequest = (cookieHeader: string) =>
-  new Request("https://tenant.example.com/api/report/access", {
+const buildRequest = (cookieHeader: string, reportLinkToken?: string) => {
+  const url = reportLinkToken
+    ? `https://tenant.example.com/api/report/access?t=${encodeURIComponent(
+        reportLinkToken
+      )}`
+    : "https://tenant.example.com/api/report/access";
+
+  return new Request(url, {
     method: "POST",
     headers: {
       "content-type": "application/json",
@@ -61,6 +68,7 @@ const buildRequest = (cookieHeader: string) =>
     },
     body: JSON.stringify({ slug: SLUG })
   });
+};
 
 const createResultCookie = (): string =>
   signResultCookie({
@@ -91,6 +99,25 @@ const createReportToken = (): string => {
   };
 
   return signReportToken(payload);
+};
+
+const createReportLinkToken = (reportKey: string): string => {
+  const expiresAt = new Date(Date.now() + 60 * 60 * 24 * 1000);
+
+  return issueReportLinkToken({
+    tenant_id: TENANT_ID,
+    test_id: TEST_ID,
+    report_key: reportKey,
+    locale: "en",
+    expires_at: expiresAt,
+    purchase_id: PURCHASE_ID,
+    session_id: SESSION_ID,
+    band_id: BAND_ID,
+    computed_at_utc: new Date().toISOString(),
+    scale_scores: {
+      [SCALE_ID]: 4
+    }
+  });
 };
 
 const createCreditsState = (credits: number) => {
@@ -178,5 +205,24 @@ describe("POST /api/report/access", () => {
     expect(response.status).toBe(402);
     const payload = await response.json();
     expect(payload.error).toBe("Insufficient credits.");
+  });
+
+  it("allows access with a valid report link token when cookies are missing", async () => {
+    const response = await POST(buildRequest("", createReportLinkToken(REPORT_KEY)));
+
+    expect(response.status).toBe(200);
+    const payload = await response.json();
+    expect(payload.ok).toBe(true);
+    expect(payload.purchase_id).toBe(PURCHASE_ID);
+    expect(payload.session_id).toBe(SESSION_ID);
+    expect(payload.consumed_credit).toBe(false);
+  });
+
+  it("rejects report link tokens with mismatched report keys", async () => {
+    const response = await POST(buildRequest("", createReportLinkToken("wrong-report-key")));
+
+    expect(response.status).toBe(403);
+    const payload = await response.json();
+    expect(payload.error).toBe("Report access is invalid.");
   });
 });

@@ -4,8 +4,10 @@ import { cookies } from "next/headers";
 
 import { getTenantTestIds, resolveTestIdBySlug } from "../../../lib/content/catalog";
 import { loadLocalizedTest } from "../../../lib/content/load";
+import { createReportKey } from "../../../lib/credits";
 import { REPORT_TOKEN, verifyReportToken } from "../../../lib/product/report_token";
 import { RESULT_COOKIE, verifyResultCookie } from "../../../lib/product/result_cookie";
+import { issueReportLinkToken } from "../../../lib/report_link_token";
 import { resolveReportPdfMode } from "../../../lib/report/pdf_mode";
 import type { LocaleTag } from "../../../lib/content/types";
 import {
@@ -24,7 +26,10 @@ type PageProps = {
   params: {
     slug: string;
   };
+  searchParams?: Record<string, string | string[] | undefined>;
 };
+
+const REPORT_LINK_TOKEN_TTL_SECONDS = 60 * 60 * 24 * 7;
 
 const resolveReportTestId = (slug: string, tenantId: string): string | null => {
   const testId = resolveTestIdBySlug(slug);
@@ -38,6 +43,21 @@ const resolveReportTestId = (slug: string, tenantId: string): string | null => {
   }
 
   return testId;
+};
+
+const resolveTokenParam = (
+  value: string | string[] | undefined
+): string | null => {
+  if (!value) {
+    return null;
+  }
+
+  if (Array.isArray(value)) {
+    return value[0]?.trim() ?? null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
 };
 
 const renderBlocked = (slug: string) => {
@@ -119,10 +139,11 @@ export const generateMetadata = async ({ params }: PageProps): Promise<Metadata>
   return buildMetadata(title, description, path, canonical, ogImage, seo.locales);
 };
 
-export default async function ReportPage({ params }: PageProps) {
+export default async function ReportPage({ params, searchParams }: PageProps) {
   const context = await resolveTenantContext();
   const testId = resolveReportTestId(params.slug, context.tenantId);
   const pdfMode = resolveReportPdfMode();
+  const queryReportToken = resolveTokenParam(searchParams?.t);
 
   if (!testId) {
     return (
@@ -145,24 +166,52 @@ export default async function ReportPage({ params }: PageProps) {
   const resultCookieValue = cookieStore.get(RESULT_COOKIE)?.value ?? null;
   const resultPayload = resultCookieValue ? verifyResultCookie(resultCookieValue) : null;
 
-  if (!reportPayload || !resultPayload) {
+  const hasCookieAccess =
+    reportPayload &&
+    resultPayload &&
+    reportPayload.tenant_id === context.tenantId &&
+    reportPayload.test_id === testId &&
+    resultPayload.tenant_id === reportPayload.tenant_id &&
+    resultPayload.test_id === reportPayload.test_id &&
+    resultPayload.session_id === reportPayload.session_id &&
+    resultPayload.distinct_id === reportPayload.distinct_id;
+
+  if (!hasCookieAccess && !queryReportToken) {
     return renderBlocked(params.slug);
   }
 
-  if (
-    reportPayload.tenant_id !== context.tenantId ||
-    reportPayload.test_id !== testId ||
-    resultPayload.tenant_id !== reportPayload.tenant_id ||
-    resultPayload.test_id !== reportPayload.test_id ||
-    resultPayload.session_id !== reportPayload.session_id ||
-    resultPayload.distinct_id !== reportPayload.distinct_id
-  ) {
-    return renderBlocked(params.slug);
+  let reportLinkToken = queryReportToken;
+
+  if (hasCookieAccess && reportPayload && resultPayload) {
+    const expiresAt = new Date(Date.now() + REPORT_LINK_TOKEN_TTL_SECONDS * 1000);
+    const reportKey = createReportKey(
+      context.tenantId,
+      testId,
+      reportPayload.session_id
+    );
+    reportLinkToken = issueReportLinkToken({
+      tenant_id: context.tenantId,
+      test_id: testId,
+      report_key: reportKey,
+      locale: context.locale,
+      expires_at: expiresAt,
+      purchase_id: reportPayload.purchase_id,
+      session_id: reportPayload.session_id,
+      band_id: resultPayload.band_id,
+      computed_at_utc: resultPayload.computed_at_utc,
+      scale_scores: resultPayload.scale_scores
+    });
   }
 
   const sharePath = `/t/${params.slug}`;
   const shareUrl = buildCanonical(context, sharePath);
   const shareTitle = loadLocalizedTest(testId, context.locale).title;
+  const reportLinkPath = reportLinkToken
+    ? `/report/${params.slug}?t=${encodeURIComponent(reportLinkToken)}`
+    : null;
+  const reportLinkUrl = reportLinkPath
+    ? buildCanonical(context, reportLinkPath) ?? reportLinkPath
+    : null;
 
   return (
     <ReportClient
@@ -170,6 +219,8 @@ export default async function ReportPage({ params }: PageProps) {
       testId={testId}
       sharePath={sharePath}
       shareUrl={shareUrl}
+      reportLinkToken={reportLinkToken}
+      reportLinkUrl={reportLinkUrl}
       shareTitle={shareTitle}
       pdfMode={pdfMode}
     />
