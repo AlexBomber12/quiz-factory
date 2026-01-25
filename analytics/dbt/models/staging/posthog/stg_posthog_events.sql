@@ -41,8 +41,12 @@ with source as (
       else null
     end as referrer,
     json_value(properties, '$.purchase_id') as purchase_id,
-    safe_cast(json_value(properties, '$.credits_granted') as numeric) as credits_granted,
-    safe_cast(json_value(properties, '$.credits_balance_after') as numeric) as credits_balance_after,
+    nullif(trim(json_value(properties, '$.offer_key')), '') as offer_key,
+    nullif(trim(json_value(properties, '$.product_type')), '') as product_type,
+    nullif(trim(json_value(properties, '$.pricing_variant')), '') as pricing_variant,
+    safe_cast(json_value(properties, '$.credits_granted') as int64) as credits_granted,
+    safe_cast(json_value(properties, '$.credits_balance_after') as int64)
+      as credits_balance_after,
     safe_cast(json_value(properties, '$.consumed_credit') as bool) as consumed_credit,
     safe_cast(json_value(properties, '$.amount_eur') as numeric) as amount_eur,
     safe_cast(json_value(properties, '$.is_internal') as bool) as is_internal

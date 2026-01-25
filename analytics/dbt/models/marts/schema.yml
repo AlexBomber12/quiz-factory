@@ -53,6 +53,24 @@ models:
         tests:
           - not_null
 
+  - name: mart_unit_econ_offers_daily
+    columns:
+      - name: date
+        tests:
+          - not_null
+      - name: tenant_id
+        tests:
+          - not_null
+      - name: locale
+        tests:
+          - not_null
+      - name: offer_key
+        tests:
+          - not_null
+      - name: pricing_variant
+        tests:
+          - not_null
+
   - name: mart_unit_econ_daily
     columns:
       - name: date
@@ -76,6 +94,27 @@ models:
       - name: credits_sold_total
         tests:
           - not_null
+      - name: purchases_single_count
+        tests:
+          - not_null
+      - name: purchases_pack_count
+        tests:
+          - not_null
+      - name: credits_granted_total
+        tests:
+          - not_null
+      - name: credits_consumed_total
+        tests:
+          - not_null
       - name: purchases_intro
+        tests:
+          - not_null
+
+  - name: mart_credits_reconciliation_daily
+    columns:
+      - name: date
+        tests:
+          - not_null
+      - name: tenant_id
         tests:
           - not_null

@@ -18,3 +18,7 @@ models:
 vars:
   reporting_timezone: "UTC"
   incremental_lookback_days: 2
+  credits_attribution_lookback_days: 30
+  credits_guard_lookback_days: 30
+  credits_guard_overage_allowance: 5
+  offer_key_required_cutoff_date: "2100-01-01"

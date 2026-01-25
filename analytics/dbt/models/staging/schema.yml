@@ -65,6 +65,9 @@ models:
         tests:
           - not_null
       - name: pricing_variant
+      - name: offer_key
+      - name: credits_granted
+      - name: unit_price_eur
 
   - name: stg_stripe_refunds
     columns:
