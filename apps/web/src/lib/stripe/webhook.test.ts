@@ -42,8 +42,11 @@ const buildCheckoutCompletedEvent = () => ({
         utm_medium: "cpc",
         utm_campaign: "spring",
         fbclid: "fb-1",
+        offer_key: "single_intro_4900",
+        credits_granted: "1",
         product_type: "single",
         pricing_variant: "intro",
+        unit_price_eur: "49",
         is_upsell: "false"
       }
     }
@@ -101,8 +104,11 @@ describe("stripe webhook processing", () => {
     expect(purchaseRow.utm_source).toBe("google");
     expect(purchaseRow.fbclid).toBe("fb-1");
     expect(purchaseRow.is_upsell).toBe(false);
+    expect(purchaseRow.offer_key).toBe("single_intro_4900");
     expect(purchaseRow.product_type).toBe("single");
     expect(purchaseRow.pricing_variant).toBe("intro");
+    expect(purchaseRow.credits_granted).toBe(1);
+    expect(purchaseRow.unit_price_eur).toBe(49);
   });
 
   it("dedupes repeated Stripe events", async () => {
@@ -175,5 +181,9 @@ describe("stripe webhook processing", () => {
     expect(properties.session_id).toBe("session-abc");
     expect(properties.currency).toBe("eur");
     expect(properties.is_upsell).toBe(false);
+    expect(properties.offer_key).toBe("single_intro_4900");
+    expect(properties.pricing_variant).toBe("intro");
+    expect(properties.credits_granted).toBe(1);
+    expect(properties.unit_price_eur).toBe(49);
   });
 });

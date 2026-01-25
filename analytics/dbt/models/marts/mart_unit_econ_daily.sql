@@ -72,6 +72,25 @@ offer_rollup as (
   group by date, tenant_id, test_id, locale, channel_key
 ),
 
+offer_unit_econ_rollup as (
+  select
+    date,
+    tenant_id,
+    test_id,
+    locale,
+    channel_key,
+    sum(purchases_single_count) as purchases_single_count,
+    sum(purchases_pack_count) as purchases_pack_count,
+    sum(credits_granted_total) as credits_granted_total,
+    sum(credits_consumed_total) as credits_consumed_total,
+    sum(revenue_eur) as credits_revenue_eur
+  from {{ ref('mart_unit_econ_offers_daily') }}
+  {% if is_incremental() %}
+    where date >= {{ incremental_date }}
+  {% endif %}
+  group by date, tenant_id, test_id, locale, channel_key
+),
+
 purchase_events as (
   select
     purchase_id,
@@ -233,6 +252,16 @@ all_keys as (
     locale,
     channel_key
   from offer_rollup
+
+  union distinct
+
+  select
+    date,
+    tenant_id,
+    test_id,
+    locale,
+    channel_key
+  from offer_unit_econ_rollup
 ),
 
 joined as (
@@ -255,7 +284,12 @@ joined as (
     o.purchases_pack_10,
     o.purchases_intro,
     o.credits_sold_total,
-    o.effective_price_per_credit_eur
+    o.effective_price_per_credit_eur,
+    u.purchases_single_count,
+    u.purchases_pack_count,
+    u.credits_granted_total,
+    u.credits_consumed_total,
+    u.credits_revenue_eur
   from all_keys k
   left join pnl p
     on k.date = p.date
@@ -281,6 +315,12 @@ joined as (
     and k.test_id = o.test_id
     and k.locale = o.locale
     and k.channel_key = o.channel_key
+  left join offer_unit_econ_rollup u
+    on k.date = u.date
+    and k.tenant_id = u.tenant_id
+    and k.test_id = u.test_id
+    and k.locale = u.locale
+    and k.channel_key = u.channel_key
 )
 
 select
@@ -289,10 +329,13 @@ select
   test_id,
   locale,
   channel_key,
+  coalesce(credits_revenue_eur, gross_revenue_eur) as revenue_eur,
   safe_divide(gross_revenue_eur, purchases) as aov_eur,
   safe_divide(contribution_margin_eur, purchases) as profit_per_purchase_eur,
   safe_divide(contribution_margin_eur, visits) as profit_per_visit_eur,
   safe_divide(ad_spend_eur, first_time_purchasers_count) as cac_eur,
+  coalesce(purchases_single_count, 0) as purchases_single_count,
+  coalesce(purchases_pack_count, 0) as purchases_pack_count,
   coalesce(purchases_single, 0) as purchases_single,
   coalesce(purchases_pack_5, 0) as purchases_pack_5,
   coalesce(purchases_pack_10, 0) as purchases_pack_10,
@@ -301,6 +344,16 @@ select
     purchases_offer_total
   ) as pack_purchase_share,
   coalesce(credits_sold_total, 0) as credits_sold_total,
+  coalesce(credits_granted_total, 0) as credits_granted_total,
+  coalesce(credits_consumed_total, 0) as credits_consumed_total,
+  safe_divide(
+    coalesce(credits_revenue_eur, gross_revenue_eur),
+    nullif(coalesce(credits_consumed_total, 0), 0)
+  ) as effective_price_per_consumed_report_eur,
+  safe_divide(
+    contribution_margin_eur,
+    nullif(coalesce(credits_consumed_total, 0), 0)
+  ) as contribution_margin_per_consumed_report_eur,
   effective_price_per_credit_eur,
   coalesce(purchases_intro, 0) as purchases_intro,
   safe_divide(coalesce(purchases_intro, 0), purchases_offer_total) as intro_purchase_share

@@ -216,7 +216,7 @@ Queue (in order)
 - Depends on: PR-PROD-02
 
 33) PR-ANALYTICS-23: Unit Economics Truth (Credits, Offers, Effective ARP Report)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-ANALYTICS-23.md
 - Depends on: PR-PROD-03
 

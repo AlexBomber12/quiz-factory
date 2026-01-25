@@ -89,6 +89,7 @@ Required dimensions for every fact row:
 
 ## 6. Financial metrics (definitions and formulas)
 - gross_revenue_eur = sum(amount_gross_eur) from successful purchases.
+- revenue_eur = gross_revenue_eur; used as the purchase revenue term in unit economics models.
 - payment_fees_eur = sum(processor_fees_eur) from Stripe balance transaction facts.
 - refunds_eur = sum(refund_amount_eur) from successful refunds.
 - disputes_fees_eur = sum(dispute_fee_eur) where applicable.
@@ -112,8 +113,15 @@ Required dimensions for every fact row:
 - pack_size = report credits per purchase: 1, 5, 10, or null when unknown.
 - credits_sold = purchases * pack_size, with null pack_size treated as 0.
 - effective_price_per_credit_eur = gross_revenue_eur / credits_sold.
+- purchases_single_count = count of purchases where offer_type = single.
+- purchases_pack_count = count of purchases where offer_type in (pack_5, pack_10).
+- credits_granted_total = sum(credits_granted) from Stripe metadata; fall back to pack_size when missing, else 0.
+- credits_consumed_total = count of report_view events where consumed_credit = true.
+- effective_price_per_consumed_report_eur = revenue_eur / credits_consumed_total.
+- contribution_margin_per_consumed_report_eur = contribution_margin_eur / credits_consumed_total.
 - pack_purchase_share = (purchases_pack_5 + purchases_pack_10) / total purchases (counted by purchase_id).
 - intro_purchase_share = purchases_intro / total purchases (counted by purchase_id).
+- Offer-level allocation rule: when unit economics is reported by offer_key and pricing_variant, channel-level P&L metrics are allocated within (date, tenant_id, test_id, locale, channel_key) by revenue share; when revenue is 0, allocate by credits_consumed share.
 - Payback days: defined for future subscriptions as the days to recover CAC from contribution margin, future metric.
 - Cohort LTV windows:
   - LTV_7, LTV_30, LTV_90 based on contribution margin per user cohort (distinct_id).

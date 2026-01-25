@@ -261,8 +261,11 @@ export const buildPurchaseRowFromCheckoutSession = (
     amount_eur: toAmountEur(session.amount_total),
     currency,
     status,
+    offer_key: metadata.offer_key,
     product_type: metadata.product_type,
     pricing_variant: metadata.pricing_variant,
+    credits_granted: metadata.credits_granted,
+    unit_price_eur: metadata.unit_price_eur,
     is_upsell: metadata.is_upsell,
     tenant_id: metadata.tenant_id,
     test_id: metadata.test_id,
@@ -413,7 +416,11 @@ const handleCheckoutSessionCompleted = async (
     properties.purchase_id = purchaseRow.purchase_id;
     properties.amount_eur = purchaseRow.amount_eur;
     properties.currency = purchaseRow.currency;
+    properties.offer_key = purchaseRow.offer_key;
     properties.product_type = purchaseRow.product_type;
+    properties.pricing_variant = purchaseRow.pricing_variant;
+    properties.credits_granted = purchaseRow.credits_granted;
+    properties.unit_price_eur = purchaseRow.unit_price_eur;
     properties.payment_provider = "stripe";
     properties.is_upsell = purchaseRow.is_upsell ?? false;
     captureValidatedEvent("purchase_success", properties, deps);

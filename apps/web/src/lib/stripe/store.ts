@@ -17,8 +17,11 @@ export type StripePurchaseRow = {
   amount_eur: number | null;
   currency: string | null;
   status: string | null;
+  offer_key: string | null;
   product_type: string | null;
   pricing_variant: string | null;
+  credits_granted: number | null;
+  unit_price_eur: number | null;
   is_upsell: boolean | null;
   tenant_id: string | null;
   test_id: string | null;
