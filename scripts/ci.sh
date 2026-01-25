@@ -85,6 +85,10 @@ run_app() {
   python3 "$ROOT_DIR/scripts/tenants/validate_tenants.py"
   echo "==> Content catalog validation"
   python3 "$ROOT_DIR/scripts/content/validate_catalog.py"
+  echo "==> Locale quality lint"
+  python3 "$ROOT_DIR/scripts/content/lint_locales.py" \
+    --tests-root "$ROOT_DIR/content/tests" \
+    --required-locales en es pt-BR
   echo "==> Content tooling tests"
   python3 "$ROOT_DIR/scripts/content/content_factory_test.py"
   python3 "$ROOT_DIR/scripts/content/test_values_compass_md_to_spec.py"

@@ -15,20 +15,20 @@
       "paid_report_structure": "- Summary of your focus style\n- Summary of your flexibility style\n- Tips for balance"
     },
     "es": {
-      "title": "Focus and Flex Mini",
-      "short_description": "A quick check on how you balance focus and flexibility.",
-      "intro": "Answer these statements based on how you work most days.",
-      "instructions": "Choose the option that feels most true for you.",
-      "paywall_hook": "Unlock your full focus and flexibility report.",
-      "paid_report_structure": "- Summary of your focus style\n- Summary of your flexibility style\n- Tips for balance"
+      "title": "Mini de Enfoque y Flex",
+      "short_description": "Un chequeo rápido de cómo equilibras el enfoque y la flexibilidad.",
+      "intro": "Responde estas frases según cómo trabajas la mayoría de los días.",
+      "instructions": "Elige la opción que más se parezca a ti.",
+      "paywall_hook": "Desbloquea tu informe completo de enfoque y flexibilidad.",
+      "paid_report_structure": "- Resumen de tu estilo de enfoque\n- Resumen de tu estilo de flexibilidad\n- Consejos para encontrar equilibrio"
     },
     "pt-BR": {
-      "title": "Focus and Flex Mini",
-      "short_description": "A quick check on how you balance focus and flexibility.",
-      "intro": "Answer these statements based on how you work most days.",
-      "instructions": "Choose the option that feels most true for you.",
-      "paywall_hook": "Unlock your full focus and flexibility report.",
-      "paid_report_structure": "- Summary of your focus style\n- Summary of your flexibility style\n- Tips for balance"
+      "title": "Mini de Foco e Flex",
+      "short_description": "Um check rápido de como você equilibra foco e flexibilidade.",
+      "intro": "Responda estas frases pensando em como você trabalha na maioria dos dias.",
+      "instructions": "Escolha a opção que mais combina com você.",
+      "paywall_hook": "Desbloqueie seu relatório completo de foco e flexibilidade.",
+      "paid_report_structure": "- Resumo do seu estilo de foco\n- Resumo do seu estilo de flexibilidade\n- Dicas para manter o equilíbrio"
     }
   },
   "scales": [
@@ -41,8 +41,8 @@
       "scale_id": "focus",
       "prompt": {
         "en": "I like to stay with one task until it is done.",
-        "es": "I like to stay with one task until it is done.",
-        "pt-BR": "I like to stay with one task until it is done."
+        "es": "Me gusta mantenerme en una sola tarea hasta terminarla.",
+        "pt-BR": "Gosto de ficar em uma tarefa só até terminar."
       }
     },
     {
@@ -50,8 +50,8 @@
       "scale_id": "focus",
       "prompt": {
         "en": "I prefer a clear plan before I start.",
-        "es": "I prefer a clear plan before I start.",
-        "pt-BR": "I prefer a clear plan before I start."
+        "es": "Prefiero tener un plan claro antes de empezar.",
+        "pt-BR": "Prefiro ter um plano claro antes de começar."
       }
     },
     {
@@ -59,8 +59,8 @@
       "scale_id": "flexibility",
       "prompt": {
         "en": "I am comfortable changing course quickly.",
-        "es": "I am comfortable changing course quickly.",
-        "pt-BR": "I am comfortable changing course quickly."
+        "es": "Me siento cómodo cambiando de rumbo rápido.",
+        "pt-BR": "Fico à vontade para mudar de direção rápido."
       }
     },
     {
@@ -68,8 +68,8 @@
       "scale_id": "flexibility",
       "prompt": {
         "en": "I adapt when priorities shift.",
-        "es": "I adapt when priorities shift.",
-        "pt-BR": "I adapt when priorities shift."
+        "es": "Me adapto cuando cambian las prioridades.",
+        "pt-BR": "Me adapto quando as prioridades mudam."
       }
     }
   ],

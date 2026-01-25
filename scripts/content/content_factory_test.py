@@ -9,6 +9,7 @@ CONTENT_DIR = ROOT_DIR / "scripts" / "content"
 sys.path.insert(0, str(CONTENT_DIR))
 
 import import_questions_csv
+import lint_locales
 import new_test
 import validate_catalog
 
@@ -154,6 +155,20 @@ class ContentFactoryTest(unittest.TestCase):
         validation_errors: list[str] = []
         validate_catalog.validate_spec(spec_path, data, validation_errors)
         self.assertTrue(any("scale_id must be listed in scales" in error for error in validation_errors))
+
+    def test_locale_lint_short_multiword_phrase_is_not_trivial(self) -> None:
+        allowlist = lint_locales.Allowlist(set(), {"epc", "rfid"}, 4)
+        self.assertFalse(
+            lint_locales.is_trivial_or_allowlisted("Work with your team", allowlist)
+        )
+
+    def test_locale_lint_single_short_token_is_trivial(self) -> None:
+        allowlist = lint_locales.Allowlist(set(), {"epc", "rfid"}, 4)
+        self.assertTrue(lint_locales.is_trivial_or_allowlisted("Plan", allowlist))
+
+    def test_locale_lint_allowlisted_terms_remain_trivial(self) -> None:
+        allowlist = lint_locales.Allowlist(set(), {"epc", "rfid"}, 4)
+        self.assertTrue(lint_locales.is_trivial_or_allowlisted("EPC RFID", allowlist))
 
 
 if __name__ == "__main__":
