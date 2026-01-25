@@ -19,6 +19,12 @@ type ReportPdfParams = {
   purchase_id: string;
 };
 
+type ShareClickParams = {
+  test_id: string;
+  session_id: string;
+  share_target: string;
+};
+
 type UpsellEventParams = {
   test_id: string;
   purchase_id: string;
@@ -82,6 +88,13 @@ export const emitReportPdfDownload = async (params: ReportPdfParams): Promise<vo
   const response = await postJson("/api/report/pdf", params);
   if (!response.ok) {
     throw new Error("Failed to emit report pdf download.");
+  }
+};
+
+export const emitShareClick = async (params: ShareClickParams): Promise<void> => {
+  const response = await postJson("/api/share/click", params);
+  if (!response.ok) {
+    throw new Error("Failed to emit share click.");
   }
 };
 

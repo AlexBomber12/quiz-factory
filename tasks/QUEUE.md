@@ -236,7 +236,7 @@ Queue (in order)
 - Depends on: PR-PROD-01
 
 37) PR-SEO-02: SEO Scaling Enhancements (Lastmod, OG Images, Metadata Hygiene)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-SEO-02.md
 - Depends on: PR-PROD-01
 

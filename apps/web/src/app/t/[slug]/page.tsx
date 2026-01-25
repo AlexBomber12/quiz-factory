@@ -13,6 +13,15 @@ import {
 import { Separator } from "../../../components/ui/separator";
 import { resolveTenantTestBySlug } from "../../../lib/catalog/catalog";
 import { loadTestSpecById } from "../../../lib/content/load";
+import {
+  buildCanonical,
+  buildLocaleAlternatesForPath,
+  buildOgImagePath,
+  buildOpenGraphLocales,
+  buildTenantLabel,
+  resolveSeoTestContext,
+  resolveTenantSeoContext
+} from "../../../lib/seo/metadata";
 import { resolveTenantContext, type TenantRequestContext } from "../../../lib/tenants/request";
 
 type PageProps = {
@@ -22,21 +31,6 @@ type PageProps = {
 };
 
 const FALLBACK_LOCALE: TenantRequestContext["locale"] = "en";
-
-const buildRequestCanonical = (
-  context: TenantRequestContext,
-  path: string
-): string | null => {
-  const host = context.requestHost ?? context.host;
-  if (!host) {
-    return null;
-  }
-
-  const protocol =
-    process.env.NODE_ENV === "production" ? "https" : context.protocol;
-  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-  return `${protocol}://${host}${normalizedPath}`;
-};
 
 const resolveIntroCopy = (
   testId: string,
@@ -62,42 +56,74 @@ const HAS_RUN_ROUTE = true;
 export const generateMetadata = async ({ params }: PageProps): Promise<Metadata> => {
   const context = await resolveTenantContext();
   const test = resolveTenantTestBySlug(context.tenantId, context.locale, params.slug);
-  const ogImage = buildRequestCanonical(context, "/og.png");
+  const tenantSeo = resolveTenantSeoContext({ tenantId: context.tenantId });
+  const tenantLabel = buildTenantLabel(context);
+  const fallbackOgImage = buildCanonical(context, "/og.png");
 
   const buildMetadata = (
     title: string,
     description: string,
-    canonical: string | null
+    path: string,
+    canonical: string | null,
+    ogImage: string | null,
+    locales: ReadonlyArray<TenantRequestContext["locale"]>
   ): Metadata => {
+    const languages = buildLocaleAlternatesForPath(context, path, locales);
+    const { ogLocale, alternateLocale } = buildOpenGraphLocales(context.locale, locales);
     const metadata: Metadata = {
       title,
       description,
       openGraph: {
         title,
         description,
+        locale: ogLocale,
+        alternateLocale,
         url: canonical ?? undefined,
         images: ogImage ? [{ url: ogImage }] : undefined
       }
     };
 
     if (canonical) {
-      metadata.alternates = { canonical };
+      metadata.alternates = {
+        canonical,
+        languages
+      };
     }
 
     return metadata;
   };
 
   if (!test) {
-    const canonical = buildRequestCanonical(context, `/t/${params.slug}`);
+    const path = `/t/${params.slug}`;
+    const canonical = buildCanonical(context, path);
     return buildMetadata(
-      "Quiz Factory",
+      `${tenantLabel} | Quiz Factory`,
       "This test is not available for this tenant.",
-      canonical
+      path,
+      canonical,
+      fallbackOgImage,
+      tenantSeo.locales
     );
   }
 
-  const canonical = buildRequestCanonical(context, `/t/${test.slug}`);
-  return buildMetadata(test.title, test.short_description, canonical);
+  const seo = resolveSeoTestContext({
+    tenantId: context.tenantId,
+    testId: test.test_id
+  });
+  const path = `/t/${test.slug}`;
+  const canonical = buildCanonical(context, path);
+  const ogPath = buildOgImagePath(`/t/${test.slug}/opengraph-image`, seo.token);
+  const ogImage = buildCanonical(context, ogPath) ?? fallbackOgImage;
+  const title = `${test.title} (${test.slug}) | ${tenantLabel} | Quiz Factory`;
+
+  return buildMetadata(
+    title,
+    test.short_description,
+    path,
+    canonical,
+    ogImage,
+    seo.locales
+  );
 };
 
 export default async function TestLandingPage({ params }: PageProps) {

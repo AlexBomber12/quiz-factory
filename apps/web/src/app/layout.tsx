@@ -1,14 +1,17 @@
 import "./globals.css";
 import type { ReactNode } from "react";
 
+import { resolveTenantContext } from "../lib/tenants/request";
+
 export const metadata = {
   title: "Quiz Factory",
   description: "Factory-floor tooling for quiz creation"
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  const context = await resolveTenantContext();
   return (
-    <html lang="en">
+    <html lang={context.locale}>
       <body className="min-h-screen bg-background text-foreground font-sans antialiased">
         <div className="flex min-h-screen flex-col">
           <header className="border-b border-border/60">

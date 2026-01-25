@@ -4,6 +4,7 @@ import {
   completeAttempt,
   emitAttemptEntryPageView,
   emitReportPdfDownload,
+  emitShareClick,
   emitUpsellAccept,
   emitUpsellView,
   startAttempt
@@ -117,6 +118,33 @@ describe("product client helpers", () => {
     expect(body).toEqual({
       test_id: "test-demo",
       purchase_id: "purchase-123"
+    });
+  });
+
+  it("posts share click payload", async () => {
+    fetchSpy.mockResolvedValueOnce(new Response(null, { status: 200 }));
+
+    await emitShareClick({
+      test_id: "test-demo",
+      session_id: "session-123",
+      share_target: "copy_link"
+    });
+
+    expect(fetchSpy).toHaveBeenCalledOnce();
+    const [url, options] = fetchSpy.mock.calls[0] as [
+      string,
+      { method?: string; headers?: { [key: string]: string }; body?: string }
+    ];
+    expect(url).toBe("/api/share/click");
+    expect(options?.method).toBe("POST");
+    expect(options?.headers).toEqual({
+      "content-type": "application/json"
+    });
+    const body = JSON.parse(options?.body as string);
+    expect(body).toEqual({
+      test_id: "test-demo",
+      session_id: "session-123",
+      share_target: "copy_link"
     });
   });
 
