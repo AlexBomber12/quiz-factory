@@ -122,6 +122,64 @@ export const POST = async (request: Request): Promise<Response> => {
   const reportPayload = reportTokenValue ? verifyReportToken(reportTokenValue) : null;
   const resultPayload = resultCookieValue ? verifyResultCookie(resultCookieValue) : null;
 
+  if (reportLinkTokenValue) {
+    if (!reportLinkPayload) {
+      return NextResponse.json({ error: "Report access is invalid." }, { status: 403 });
+    }
+
+    if (
+      reportLinkPayload.tenant_id !== context.tenantId ||
+      reportLinkPayload.test_id !== testId
+    ) {
+      return NextResponse.json({ error: "Report access is invalid." }, { status: 403 });
+    }
+
+    const reportKey = createReportKey(
+      context.tenantId,
+      testId,
+      reportLinkPayload.session_id
+    );
+    if (reportKey !== reportLinkPayload.report_key) {
+      return NextResponse.json({ error: "Report access is invalid." }, { status: 403 });
+    }
+
+    const test = loadLocalizedTest(testId, reportLinkPayload.locale);
+    const band = test.result_bands.find(
+      (candidate) => candidate.band_id === reportLinkPayload.band_id
+    );
+    const bandCopy = band?.copy[test.locale];
+
+    if (!band || !bandCopy) {
+      return NextResponse.json({ error: "Report content unavailable." }, { status: 404 });
+    }
+
+    const scaleEntries = Object.entries(reportLinkPayload.scale_scores)
+      .sort((left, right) => left[0].localeCompare(right[0]))
+      .map(([scale, value]) => ({ scale, value }));
+    const totalScore = scaleEntries.reduce((sum, entry) => sum + entry.value, 0);
+    const creditsState = parseCreditsCookie(cookieRecord, context.tenantId);
+
+    return NextResponse.json({
+      ok: true,
+      report: {
+        test_id: test.test_id,
+        slug: test.slug,
+        report_title: test.report_title,
+        band: {
+          headline: bandCopy.headline,
+          summary: bandCopy.summary,
+          bullets: bandCopy.bullets
+        },
+        scale_entries: scaleEntries,
+        total_score: totalScore
+      },
+      purchase_id: reportLinkPayload.purchase_id,
+      session_id: reportLinkPayload.session_id,
+      credits_balance_after: creditsState.credits_remaining,
+      consumed_credit: false
+    });
+  }
+
   const hasCookiePayloads = Boolean(reportPayload && resultPayload);
   const matchesContext =
     reportPayload &&
@@ -205,60 +263,6 @@ export const POST = async (request: Request): Promise<Response> => {
     });
 
     return response;
-  }
-
-  if (reportLinkPayload) {
-    if (
-      reportLinkPayload.tenant_id !== context.tenantId ||
-      reportLinkPayload.test_id !== testId
-    ) {
-      return NextResponse.json({ error: "Report access is invalid." }, { status: 403 });
-    }
-
-    const reportKey = createReportKey(
-      context.tenantId,
-      testId,
-      reportLinkPayload.session_id
-    );
-    if (reportKey !== reportLinkPayload.report_key) {
-      return NextResponse.json({ error: "Report access is invalid." }, { status: 403 });
-    }
-
-    const test = loadLocalizedTest(testId, reportLinkPayload.locale);
-    const band = test.result_bands.find(
-      (candidate) => candidate.band_id === reportLinkPayload.band_id
-    );
-    const bandCopy = band?.copy[test.locale];
-
-    if (!band || !bandCopy) {
-      return NextResponse.json({ error: "Report content unavailable." }, { status: 404 });
-    }
-
-    const scaleEntries = Object.entries(reportLinkPayload.scale_scores)
-      .sort((left, right) => left[0].localeCompare(right[0]))
-      .map(([scale, value]) => ({ scale, value }));
-    const totalScore = scaleEntries.reduce((sum, entry) => sum + entry.value, 0);
-    const creditsState = parseCreditsCookie(cookieRecord, context.tenantId);
-
-    return NextResponse.json({
-      ok: true,
-      report: {
-        test_id: test.test_id,
-        slug: test.slug,
-        report_title: test.report_title,
-        band: {
-          headline: bandCopy.headline,
-          summary: bandCopy.summary,
-          bullets: bandCopy.bullets
-        },
-        scale_entries: scaleEntries,
-        total_score: totalScore
-      },
-      purchase_id: reportLinkPayload.purchase_id,
-      session_id: reportLinkPayload.session_id,
-      credits_balance_after: creditsState.credits_remaining,
-      consumed_credit: false
-    });
   }
 
   if (!hasCookiePayloads) {

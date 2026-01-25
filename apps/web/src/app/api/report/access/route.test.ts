@@ -225,4 +225,17 @@ describe("POST /api/report/access", () => {
     const payload = await response.json();
     expect(payload.error).toBe("Report access is invalid.");
   });
+
+  it("does not fall back to cookies when a report link token is invalid", async () => {
+    const cookieHeader = [
+      `${REPORT_TOKEN}=${createReportToken()}`,
+      `${RESULT_COOKIE}=${createResultCookie()}`
+    ].join("; ");
+
+    const response = await POST(buildRequest(cookieHeader, "invalid-token"));
+
+    expect(response.status).toBe(403);
+    const payload = await response.json();
+    expect(payload.error).toBe("Report access is invalid.");
+  });
 });
