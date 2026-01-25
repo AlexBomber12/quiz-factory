@@ -18,6 +18,7 @@ type PageProps = {
   };
   searchParams?: {
     offer_key?: string | string[];
+    is_upsell?: string | string[];
   };
 };
 
@@ -33,6 +34,16 @@ const resolvePaywallTestId = (slug: string, tenantId: string): string | null => 
   }
 
   return testId;
+};
+
+const parseIsUpsellParam = (value: string | string[] | undefined): boolean => {
+  const rawValue = Array.isArray(value) ? value[0] : value;
+  if (!rawValue) {
+    return false;
+  }
+
+  const normalized = rawValue.trim().toLowerCase();
+  return normalized === "true" || normalized === "1";
 };
 
 export default async function PaywallPage({ params, searchParams }: PageProps) {
@@ -85,6 +96,7 @@ export default async function PaywallPage({ params, searchParams }: PageProps) {
   const offerKeyParam = searchParams?.offer_key;
   const offerKeyCandidate = Array.isArray(offerKeyParam) ? offerKeyParam[0] : offerKeyParam;
   const preferredOfferKey = isOfferKey(offerKeyCandidate) ? offerKeyCandidate : null;
+  const isUpsell = parseIsUpsellParam(searchParams?.is_upsell);
   const priceFormatter = new Intl.NumberFormat(context.locale, {
     style: "currency",
     currency: "EUR"
@@ -113,6 +125,7 @@ export default async function PaywallPage({ params, searchParams }: PageProps) {
         creditsRemaining={creditsRemaining}
         hasReportAccess={hasReportAccess}
         preferredOfferKey={preferredOfferKey}
+        isUpsell={isUpsell}
       />
 
       <div className="cta-row">

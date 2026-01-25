@@ -20,6 +20,7 @@ type PaywallClientProps = {
   creditsRemaining: number;
   hasReportAccess: boolean;
   preferredOfferKey?: OfferKey | null;
+  isUpsell?: boolean;
 };
 
 const createPurchaseId = (): string => {
@@ -41,7 +42,8 @@ export default function PaywallClient({
   options,
   creditsRemaining,
   hasReportAccess,
-  preferredOfferKey = null
+  preferredOfferKey = null,
+  isUpsell = false
 }: PaywallClientProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeOfferKey, setActiveOfferKey] = useState<OfferKey | null>(null);
@@ -85,7 +87,7 @@ export default function PaywallClient({
           test_id: testId,
           session_id: sessionId,
           offer_key: option.offerKey,
-          is_upsell: false,
+          is_upsell: isUpsell,
           purchase_id: purchaseId
         })
       });

@@ -336,7 +336,11 @@ export function UpsellSection({
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const hasEmittedViewRef = useRef(false);
-  const paywallHref = `/t/${slug}/pay?offer_key=${encodeURIComponent(upsellId)}`;
+  const paywallParams = new URLSearchParams({
+    offer_key: upsellId,
+    is_upsell: "true"
+  });
+  const paywallHref = `/t/${slug}/pay?${paywallParams.toString()}`;
   const creditsLine =
     creditsBalanceAfter > 0 ? creditsMessage(creditsBalanceAfter) : "You have no credits remaining.";
 
