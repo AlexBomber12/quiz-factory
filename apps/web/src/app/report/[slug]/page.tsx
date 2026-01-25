@@ -6,6 +6,7 @@ import { getTenantTestIds, resolveTestIdBySlug } from "../../../lib/content/cata
 import { loadLocalizedTest } from "../../../lib/content/load";
 import { REPORT_TOKEN, verifyReportToken } from "../../../lib/product/report_token";
 import { RESULT_COOKIE, verifyResultCookie } from "../../../lib/product/result_cookie";
+import { resolveReportPdfMode } from "../../../lib/report/pdf_mode";
 import type { LocaleTag } from "../../../lib/content/types";
 import {
   buildCanonical,
@@ -121,6 +122,7 @@ export const generateMetadata = async ({ params }: PageProps): Promise<Metadata>
 export default async function ReportPage({ params }: PageProps) {
   const context = await resolveTenantContext();
   const testId = resolveReportTestId(params.slug, context.tenantId);
+  const pdfMode = resolveReportPdfMode();
 
   if (!testId) {
     return (
@@ -169,6 +171,7 @@ export default async function ReportPage({ params }: PageProps) {
       sharePath={sharePath}
       shareUrl={shareUrl}
       shareTitle={shareTitle}
+      pdfMode={pdfMode}
     />
   );
 }
