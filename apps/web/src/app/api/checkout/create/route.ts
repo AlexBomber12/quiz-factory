@@ -21,6 +21,7 @@ import {
   type OfferKey
 } from "../../../../lib/pricing";
 import { createStripeClient } from "../../../../lib/stripe/client";
+import { assertStripeEnvConfigured } from "../../../../lib/stripe/env";
 import { buildStripeMetadata } from "../../../../lib/stripe/metadata";
 import { resolveLocale, resolveTenant } from "../../../../lib/tenants/resolve";
 import eventsContract from "../../../../../../../analytics/events.json";
@@ -43,6 +44,11 @@ const REQUIRED_METADATA_KEYS = [
   "purchase_id",
   "is_upsell"
 ] as const;
+
+assertStripeEnvConfigured({
+  context: "/api/checkout/create",
+  required: ["STRIPE_SECRET_KEY"]
+});
 
 const normalizeKey = (value: string): string => value.trim().toLowerCase();
 

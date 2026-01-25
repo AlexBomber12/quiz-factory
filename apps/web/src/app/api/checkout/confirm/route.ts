@@ -34,9 +34,15 @@ import {
   rateLimit
 } from "../../../../lib/security/request_guards";
 import { createStripeClient } from "../../../../lib/stripe/client";
+import { assertStripeEnvConfigured } from "../../../../lib/stripe/env";
 import { parseStripeMetadata } from "../../../../lib/stripe/metadata";
 
 const REPORT_TOKEN_TTL_SECONDS = 60 * 60 * 24;
+
+assertStripeEnvConfigured({
+  context: "/api/checkout/confirm",
+  required: ["STRIPE_SECRET_KEY"]
+});
 
 const requireString = (value: unknown): string | null => {
   if (typeof value !== "string") {

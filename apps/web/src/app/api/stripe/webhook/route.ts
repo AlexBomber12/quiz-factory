@@ -4,10 +4,16 @@ import { capturePosthogEvent } from "../../../../lib/analytics/posthog";
 import { assertAllowedMethod } from "../../../../lib/security/request_guards";
 import { createStripeBigQueryStore } from "../../../../lib/stripe/bigquery";
 import { createStripeClient } from "../../../../lib/stripe/client";
+import { assertStripeEnvConfigured } from "../../../../lib/stripe/env";
 import {
   handleStripeWebhookEvent,
   verifyStripeSignature
 } from "../../../../lib/stripe/webhook";
+
+assertStripeEnvConfigured({
+  context: "/api/stripe/webhook",
+  required: ["STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET"]
+});
 
 const isJsonLikeContentType = (value: string | null): boolean => {
   if (!value) {

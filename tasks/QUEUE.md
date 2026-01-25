@@ -231,7 +231,7 @@ Queue (in order)
 - Depends on: PR-PROD-03
 
 36) PR-OPS-DEPLOY-01: Minimal Production Deploy Runbook and Smoke Gates
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-OPS-DEPLOY-01.md
 - Depends on: PR-PROD-01
 
