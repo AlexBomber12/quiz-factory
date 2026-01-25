@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { emitReportPdfDownload } from "../../../lib/product/client";
+import { Button } from "../../../components/ui/button";
 
 type ReportPdfButtonProps = {
   testId: string;
@@ -38,13 +39,14 @@ export default function ReportPdfButton({
   };
 
   return (
-    <button
-      className="secondary-button"
+    <Button
       type="button"
+      variant="outline"
       onClick={handleClick}
       disabled={isSubmitting}
+      className="print:hidden"
     >
       Save as PDF
-    </button>
+    </Button>
   );
 }

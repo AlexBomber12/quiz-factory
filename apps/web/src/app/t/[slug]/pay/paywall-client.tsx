@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import type { OfferKey } from "../../../../lib/pricing";
 
@@ -19,6 +19,8 @@ type PaywallClientProps = {
   options: ReadonlyArray<PaywallOption>;
   creditsRemaining: number;
   hasReportAccess: boolean;
+  preferredOfferKey?: OfferKey | null;
+  isUpsell?: boolean;
 };
 
 const createPurchaseId = (): string => {
@@ -39,7 +41,9 @@ export default function PaywallClient({
   slug,
   options,
   creditsRemaining,
-  hasReportAccess
+  hasReportAccess,
+  preferredOfferKey = null,
+  isUpsell = false
 }: PaywallClientProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeOfferKey, setActiveOfferKey] = useState<OfferKey | null>(null);
@@ -83,7 +87,7 @@ export default function PaywallClient({
           test_id: testId,
           session_id: sessionId,
           offer_key: option.offerKey,
-          is_upsell: false,
+          is_upsell: isUpsell,
           purchase_id: purchaseId
         })
       });
@@ -182,6 +186,20 @@ export default function PaywallClient({
     creditButtonLabel = "Use 1 credit";
   }
 
+  const orderedOptions = useMemo(() => {
+    if (!preferredOfferKey) {
+      return [...options];
+    }
+
+    const preferredOption = options.find((option) => option.offerKey === preferredOfferKey);
+    if (!preferredOption) {
+      return [...options];
+    }
+
+    const remaining = options.filter((option) => option.offerKey !== preferredOfferKey);
+    return [preferredOption, ...remaining];
+  }, [options, preferredOfferKey]);
+
   return (
     <div className="runner-card">
       <h2 className="runner-question">Choose your report</h2>
@@ -203,16 +221,21 @@ export default function PaywallClient({
         </button>
       ) : null}
       <ul className="option-list" aria-label="Paywall options">
-        {options.map((option) => {
+        {orderedOptions.map((option) => {
           const isActive = activeOfferKey === option.offerKey;
+          const isPreferred = preferredOfferKey === option.offerKey;
           const badgePrefix = option.badge ? `${option.badge} · ` : "";
+          const preferredPrefix = isPreferred ? "Recommended · " : "";
           const label = isActive
             ? "Starting checkout..."
-            : `${badgePrefix}${option.label} - ${option.priceLabel}`;
+            : `${preferredPrefix}${badgePrefix}${option.label} - ${option.priceLabel}`;
+          const buttonClassName = isPreferred
+            ? "option-button border-foreground/40 bg-accent/40"
+            : "option-button";
           return (
             <li key={option.offerKey}>
               <button
-                className="option-button"
+                className={buttonClassName}
                 type="button"
                 disabled={isSubmitting}
                 onClick={() => handleCheckout(option)}

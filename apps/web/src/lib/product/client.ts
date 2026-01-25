@@ -19,6 +19,13 @@ type ReportPdfParams = {
   purchase_id: string;
 };
 
+type UpsellEventParams = {
+  test_id: string;
+  purchase_id: string;
+  session_id: string;
+  upsell_id: string;
+};
+
 const postJson = async (url: string, body: Record<string, unknown>): Promise<Response> => {
   return fetch(url, {
     method: "POST",
@@ -75,6 +82,20 @@ export const emitReportPdfDownload = async (params: ReportPdfParams): Promise<vo
   const response = await postJson("/api/report/pdf", params);
   if (!response.ok) {
     throw new Error("Failed to emit report pdf download.");
+  }
+};
+
+export const emitUpsellView = async (params: UpsellEventParams): Promise<void> => {
+  const response = await postJson("/api/upsell/view", params);
+  if (!response.ok) {
+    throw new Error("Failed to emit upsell view.");
+  }
+};
+
+export const emitUpsellAccept = async (params: UpsellEventParams): Promise<void> => {
+  const response = await postJson("/api/upsell/accept", params);
+  if (!response.ok) {
+    throw new Error("Failed to emit upsell accept.");
   }
 };
 
