@@ -1,6 +1,23 @@
 import { NextResponse } from "next/server";
 
-import { normalizeString } from "../../../../lib/analytics/session";
+import { buildBaseEventProperties } from "../../../../lib/analytics/events";
+import { capturePosthogEvent } from "../../../../lib/analytics/posthog";
+import {
+  normalizeString,
+  parseCookies,
+  type ClickIdParams,
+  type UtmParams
+} from "../../../../lib/analytics/session";
+import { validateAnalyticsEventPayload } from "../../../../lib/analytics/validate";
+import {
+  CREDITS_COOKIE,
+  CREDITS_COOKIE_TTL_SECONDS,
+  grantCredits,
+  parseCreditsCookie,
+  setLastGrantMetadata,
+  serializeCreditsCookie
+} from "../../../../lib/credits";
+import { getOffer, isOfferKey } from "../../../../lib/pricing";
 import {
   REPORT_TOKEN,
   type ReportTokenPayload,
@@ -35,6 +52,14 @@ const requireRecord = (value: unknown): Record<string, unknown> | null => {
   }
 
   return value as Record<string, unknown>;
+};
+
+const toAmountEur = (amount: unknown): number | null => {
+  if (typeof amount !== "number" || !Number.isFinite(amount)) {
+    return null;
+  }
+
+  return Number((amount / 100).toFixed(2));
 };
 
 const isPaidSession = (session: {
@@ -139,17 +164,89 @@ export const POST = async (request: Request): Promise<Response> => {
     );
   }
 
+  const tenantId = required.tenant_id ?? "";
+  const purchaseId = required.purchase_id ?? "";
+  const testId = required.test_id ?? "";
+  const sessionId = required.session_id ?? "";
+  const distinctId = required.distinct_id ?? "";
+  const productType = required.product_type ?? "";
+  const pricingVariant = required.pricing_variant ?? "";
+
+  const creditsGranted = isOfferKey(metadata.offer_key)
+    ? getOffer(metadata.offer_key).credits_granted
+    : metadata.credits_granted ?? 0;
+  const requestCookies = parseCookies(request.headers.get("cookie"));
+  const creditsStateBefore = parseCreditsCookie(requestCookies, tenantId);
+  const grantAlreadyApplied = creditsStateBefore.grant_ids.includes(purchaseId);
+  const creditsStateAfterGrant = grantCredits(creditsStateBefore, creditsGranted, purchaseId);
+  const creditsStateAfter = setLastGrantMetadata(creditsStateAfterGrant, {
+    grant_id: purchaseId,
+    offer_key: metadata.offer_key,
+    product_type: productType,
+    pricing_variant: pricingVariant
+  });
+  const creditsBalanceAfter = creditsStateAfter.credits_remaining;
+
+  const amountEur = toAmountEur(session.amount_total);
+  const currency = normalizeString(metadata.currency ?? session.currency);
+  const utm: UtmParams = {
+    utm_source: metadata.utm_source,
+    utm_medium: metadata.utm_medium,
+    utm_campaign: metadata.utm_campaign,
+    utm_content: metadata.utm_content,
+    utm_term: metadata.utm_term
+  };
+  const clickIds: ClickIdParams = {
+    fbclid: metadata.fbclid,
+    gclid: metadata.gclid,
+    ttclid: metadata.ttclid
+  };
+
+  if (!grantAlreadyApplied && amountEur !== null && currency) {
+    const analyticsProperties = buildBaseEventProperties({
+      tenantId,
+      sessionId,
+      distinctId,
+      testId,
+      utm,
+      clickIds,
+      locale: metadata.locale,
+      deviceType: metadata.device_type
+    });
+
+    analyticsProperties.purchase_id = purchaseId;
+    analyticsProperties.amount_eur = amountEur;
+    analyticsProperties.product_type = productType;
+    analyticsProperties.payment_provider = "stripe";
+    analyticsProperties.is_upsell = metadata.is_upsell ?? false;
+    analyticsProperties.currency = currency.toUpperCase();
+    analyticsProperties.offer_key = metadata.offer_key;
+    analyticsProperties.credits_granted = creditsGranted;
+    analyticsProperties.credits_balance_after = creditsBalanceAfter;
+    analyticsProperties.pricing_variant = pricingVariant;
+    analyticsProperties.unit_price_eur = metadata.unit_price_eur;
+    analyticsProperties.event_id = `purchase_success:${purchaseId}`;
+
+    const validation = validateAnalyticsEventPayload(
+      "purchase_success",
+      analyticsProperties as Record<string, unknown>
+    );
+    if (validation.ok) {
+      void capturePosthogEvent("purchase_success", analyticsProperties).catch(() => null);
+    }
+  }
+
   const issuedAt = new Date();
   const expiresAt = new Date(issuedAt.getTime() + REPORT_TOKEN_TTL_SECONDS * 1000);
 
   const payload: ReportTokenPayload = {
-    purchase_id: required.purchase_id ?? "",
-    tenant_id: required.tenant_id ?? "",
-    test_id: required.test_id ?? "",
-    session_id: required.session_id ?? "",
-    distinct_id: required.distinct_id ?? "",
-    product_type: required.product_type ?? "",
-    pricing_variant: required.pricing_variant ?? "",
+    purchase_id: purchaseId,
+    tenant_id: tenantId,
+    test_id: testId,
+    session_id: sessionId,
+    distinct_id: distinctId,
+    product_type: productType,
+    pricing_variant: pricingVariant,
     issued_at_utc: issuedAt.toISOString(),
     expires_at_utc: expiresAt.toISOString()
   };
@@ -158,7 +255,9 @@ export const POST = async (request: Request): Promise<Response> => {
   const response = NextResponse.json({
     ok: true,
     purchase_id: payload.purchase_id,
-    test_id: payload.test_id
+    test_id: payload.test_id,
+    credits_granted: creditsGranted,
+    credits_balance_after: creditsBalanceAfter
   });
 
   response.cookies.set(REPORT_TOKEN, reportToken, {
@@ -168,6 +267,16 @@ export const POST = async (request: Request): Promise<Response> => {
     path: "/",
     secure: process.env.NODE_ENV === "production"
   });
+
+  if (creditsGranted > 0) {
+    response.cookies.set(CREDITS_COOKIE, serializeCreditsCookie(creditsStateAfter), {
+      httpOnly: true,
+      maxAge: CREDITS_COOKIE_TTL_SECONDS,
+      sameSite: "lax",
+      path: "/",
+      secure: process.env.NODE_ENV === "production"
+    });
+  }
 
   return response;
 };

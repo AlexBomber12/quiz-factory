@@ -2,12 +2,11 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 
 import { getTenantTestIds, resolveTestIdBySlug } from "../../../../lib/content/catalog";
-import { loadLocalizedTest } from "../../../../lib/content/load";
 import { REPORT_TOKEN, verifyReportToken } from "../../../../lib/product/report_token";
 import { RESULT_COOKIE, verifyResultCookie } from "../../../../lib/product/result_cookie";
 import { resolveTenantContext } from "../../../../lib/tenants/request";
-import PrintTrigger from "./print-trigger";
 import styles from "./print.module.css";
+import PrintClient from "./print-client";
 
 type PageProps = {
   params: {
@@ -84,59 +83,5 @@ export default async function ReportPrintPage({ params }: PageProps) {
     return renderBlocked(params.slug);
   }
 
-  const test = loadLocalizedTest(testId, context.locale);
-  const band = test.result_bands.find((candidate) => candidate.band_id === resultPayload.band_id);
-  const bandCopy = band?.copy[test.locale];
-
-  if (!band || !bandCopy) {
-    return renderBlocked(params.slug);
-  }
-
-  const scaleEntries = Object.entries(resultPayload.scale_scores).sort((left, right) =>
-    left[0].localeCompare(right[0])
-  );
-  const totalScore = scaleEntries.reduce((sum, [, value]) => sum + value, 0);
-
-  return (
-    <section className={`page ${styles.reportPrint}`}>
-      <header className="hero">
-        <p className="eyebrow">Quiz Factory</p>
-        <h1>{test.report_title}</h1>
-        <p>Print-friendly report.</p>
-      </header>
-
-      <div className={styles.printControls}>
-        <PrintTrigger />
-        <Link className="text-link" href={`/report/${test.slug}`}>
-          Back to report
-        </Link>
-      </div>
-
-      <div className="runner-card">
-        <h2 className="runner-question">{bandCopy.headline}</h2>
-        <p>{bandCopy.summary}</p>
-        <ul>
-          {bandCopy.bullets.map((bullet) => (
-            <li key={bullet}>{bullet}</li>
-          ))}
-        </ul>
-      </div>
-
-      {scaleEntries.length > 0 ? (
-        <div className="runner-card">
-          <h2 className="runner-question">Score breakdown</h2>
-          <div className="test-meta">
-            {scaleEntries.map(([scale, value]) => (
-              <div key={scale}>
-                <strong>{scale}:</strong> {value}
-              </div>
-            ))}
-            <div>
-              <strong>Total score:</strong> {totalScore}
-            </div>
-          </div>
-        </div>
-      ) : null}
-    </section>
-  );
+  return <PrintClient slug={params.slug} testId={testId} />;
 }

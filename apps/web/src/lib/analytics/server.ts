@@ -65,6 +65,8 @@ type AnalyticsRequestBody = {
   offer_key?: unknown;
   product_type?: unknown;
   credits_granted?: unknown;
+  credits_balance_after?: unknown;
+  consumed_credit?: unknown;
   is_upsell?: unknown;
   pricing_variant?: unknown;
   unit_price_eur?: unknown;

@@ -28,8 +28,13 @@ export type AnalyticsValidationResult =
 const contract = eventsContract as AnalyticsEventsContract;
 
 const EVENT_NAME_SET = new Set(ANALYTICS_EVENT_NAMES);
-const BOOLEAN_FIELDS = new Set(["is_upsell", "is_internal"]);
-const NUMBER_FIELDS = new Set(["amount_eur", "credits_granted", "unit_price_eur"]);
+const BOOLEAN_FIELDS = new Set(["is_upsell", "is_internal", "consumed_credit"]);
+const NUMBER_FIELDS = new Set([
+  "amount_eur",
+  "credits_granted",
+  "credits_balance_after",
+  "unit_price_eur"
+]);
 const NULLABLE_REQUIRED_FIELDS = new Set([
   "utm_source",
   "utm_medium",

@@ -41,6 +41,9 @@ with source as (
       else null
     end as referrer,
     json_value(properties, '$.purchase_id') as purchase_id,
+    safe_cast(json_value(properties, '$.credits_granted') as numeric) as credits_granted,
+    safe_cast(json_value(properties, '$.credits_balance_after') as numeric) as credits_balance_after,
+    safe_cast(json_value(properties, '$.consumed_credit') as bool) as consumed_credit,
     safe_cast(json_value(properties, '$.amount_eur') as numeric) as amount_eur,
     safe_cast(json_value(properties, '$.is_internal') as bool) as is_internal
   from {{ source('raw_posthog', 'events_clean') }}
