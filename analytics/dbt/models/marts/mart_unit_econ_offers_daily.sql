@@ -244,7 +244,7 @@ consumption_attribution as (
     coalesce(p.locale, e.locale) as locale,
     coalesce(p.channel_key, 'unknown') as channel_key,
     coalesce(
-      p.offer_key,
+      nullif(p.offer_key, 'unknown'),
       case
         when e.offer_key is null
           or nullif(trim(cast(e.offer_key as string)), '') is null then null
@@ -253,7 +253,7 @@ consumption_attribution as (
       'unknown'
     ) as offer_key,
     coalesce(
-      p.product_type,
+      nullif(p.product_type, 'unknown'),
       case
         when e.product_type is null
           or nullif(trim(cast(e.product_type as string)), '') is null then null
@@ -262,7 +262,7 @@ consumption_attribution as (
       'unknown'
     ) as product_type,
     coalesce(
-      p.pricing_variant,
+      nullif(p.pricing_variant, 'unknown'),
       case
         when e.pricing_variant is null
           or nullif(trim(cast(e.pricing_variant as string)), '') is null then null
