@@ -2,7 +2,7 @@ export const OFFER_KEYS = ["single_intro_149", "pack5", "pack10", "single_base_2
 
 export type OfferKey = (typeof OFFER_KEYS)[number];
 
-export type ProductType = "single" | "pack";
+export type ProductType = "single" | "pack_5" | "pack_10";
 export type PricingVariant = "intro" | "base";
 export type Currency = "EUR";
 
@@ -45,7 +45,7 @@ const OFFER_CONFIGS: Record<OfferKey, OfferConfig> = {
   },
   pack5: {
     offer_key: "pack5",
-    product_type: "pack",
+    product_type: "pack_5",
     credits_granted: 5,
     pricing_variant: "base",
     currency: "EUR",
@@ -57,7 +57,7 @@ const OFFER_CONFIGS: Record<OfferKey, OfferConfig> = {
   },
   pack10: {
     offer_key: "pack10",
-    product_type: "pack",
+    product_type: "pack_10",
     credits_granted: 10,
     pricing_variant: "base",
     currency: "EUR",
