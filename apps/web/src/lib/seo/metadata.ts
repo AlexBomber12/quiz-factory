@@ -33,6 +33,9 @@ const LASTMOD_DAY_RANGE = 365 * 20;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const SECOND_MS = 1000;
 const LOCALE_FALLBACK: LocaleTag = "en";
+// Capture a process-stable "now" so lastmod never claims a future date while
+// avoiding per-request drift.
+const LASTMOD_MAX_MS = Date.now();
 
 const normalizePath = (path: string): string => {
   return path.startsWith("/") ? path : `/${path}`;
@@ -68,10 +71,17 @@ const hashSeed = (seed: unknown): string => {
 
 const hashToLastmod = (hashHex: string): string => {
   const numericSeed = Number.parseInt(hashHex.slice(0, 12), 16);
-  const dayOffset = numericSeed % LASTMOD_DAY_RANGE;
-  const secondOffset = Math.floor(numericSeed / LASTMOD_DAY_RANGE) % (DAY_MS / SECOND_MS);
+  if (LASTMOD_MAX_MS <= LASTMOD_BASE_MS) {
+    return new Date(LASTMOD_MAX_MS).toISOString();
+  }
+
+  const availableDays = Math.max(1, Math.floor((LASTMOD_MAX_MS - LASTMOD_BASE_MS) / DAY_MS));
+  const dayRange = Math.max(1, Math.min(LASTMOD_DAY_RANGE, availableDays));
+  const dayOffset = numericSeed % dayRange;
+  const secondOffset = Math.floor(numericSeed / dayRange) % (DAY_MS / SECOND_MS);
   const timestamp = LASTMOD_BASE_MS + dayOffset * DAY_MS + secondOffset * SECOND_MS;
-  return new Date(timestamp).toISOString();
+  const clampedTimestamp = Math.min(timestamp, LASTMOD_MAX_MS);
+  return new Date(clampedTimestamp).toISOString();
 };
 
 const computeLastmod = (seed: unknown): LastmodResult => {

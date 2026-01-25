@@ -18,6 +18,13 @@ describe("seo metadata helpers", () => {
     expect(first.token).toBe(second.token);
   });
 
+  it("never returns future-dated lastmod values", () => {
+    const { lastmod } = resolveTenantSeoContext({ tenantId: TENANT_ID });
+    const lastmodMs = new Date(lastmod).getTime();
+
+    expect(lastmodMs).toBeLessThanOrEqual(Date.now());
+  });
+
   it("updates tenant lastmod when the catalog changes", () => {
     const base = resolveTenantSeoContext({ tenantId: TENANT_ID });
     const changed = resolveTenantSeoContext({
