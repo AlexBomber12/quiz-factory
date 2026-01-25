@@ -84,11 +84,13 @@ export const emitAttemptEntryPageView = async (
   }
 };
 
-export const emitReportPdfDownload = async (params: ReportPdfParams): Promise<void> => {
+export const emitReportPdfDownload = async (params: ReportPdfParams): Promise<Response> => {
   const response = await postJson("/api/report/pdf", params);
   if (!response.ok) {
     throw new Error("Failed to emit report pdf download.");
   }
+
+  return response;
 };
 
 export const emitShareClick = async (params: ShareClickParams): Promise<void> => {

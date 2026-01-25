@@ -241,7 +241,7 @@ Queue (in order)
 - Depends on: PR-PROD-01
 
 38) PR-REPORT-02: Server-side PDF Generation and Caching (Feature-flagged)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-REPORT-02.md
 - Depends on: PR-REPORT-01
 

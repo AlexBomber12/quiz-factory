@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import ReportAnalytics from "./report-analytics";
 import ReportPdfButton from "./report-pdf-button";
 import ReportShare from "./report-share";
+import type { ReportPdfMode } from "../../../lib/report/pdf_mode";
 import {
   DisclaimerSection,
   InterpretationSection,
@@ -47,6 +48,7 @@ type ReportClientProps = {
   sharePath: string;
   shareUrl: string | null;
   shareTitle: string;
+  pdfMode: ReportPdfMode;
 };
 
 type LoadState =
@@ -63,7 +65,8 @@ export default function ReportClient({
   testId,
   sharePath,
   shareUrl,
-  shareTitle
+  shareTitle,
+  pdfMode
 }: ReportClientProps) {
   const [state, setState] = useState<LoadState>({ status: "loading" });
 
@@ -225,7 +228,12 @@ export default function ReportClient({
         />
 
         <div className="flex flex-col items-start gap-3 print:hidden sm:flex-row sm:items-center">
-          <ReportPdfButton testId={report.test_id} purchaseId={purchaseId} slug={report.slug} />
+          <ReportPdfButton
+            testId={report.test_id}
+            purchaseId={purchaseId}
+            slug={report.slug}
+            pdfMode={pdfMode}
+          />
           <Link className="text-link" href={testHrefForSlug(report.slug)}>
             Back to the test
           </Link>
