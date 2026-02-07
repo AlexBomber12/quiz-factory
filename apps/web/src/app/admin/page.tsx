@@ -228,7 +228,7 @@ const renderPublishCard = (
               {testRecord.tenant_states.map((tenantState) => (
                 <label className="flex items-center gap-2" key={tenantState.tenant_id}>
                   <input
-                    defaultChecked={tenantState.published_version_id !== null || tenantState.is_enabled}
+                    defaultChecked={tenantState.is_enabled}
                     name="tenant_ids"
                     type="checkbox"
                     value={tenantState.tenant_id}
