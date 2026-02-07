@@ -9,6 +9,7 @@
 - slug: url-safe string
 - version: integer, starting at 1
 - category: string
+- estimated_minutes: optional integer (1..120); if omitted, runtime uses deterministic fallback from question count
 - locales: object keyed by locale tag (en, es, pt-BR)
   - title, short_description, intro, paywall_headline, report_title
 - questions: array of single_choice questions

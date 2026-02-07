@@ -119,6 +119,7 @@ describe("admin import helpers", () => {
     expect(metadata.format_id).toBe("universal_human_v1");
     expect(metadata.slug).toBe("focus-sprint");
     expect(metadata.test_id).toBe("test-focus-sprint");
+    expect(metadata.estimated_minutes).toBeUndefined();
   });
 
   it("preserves provided test_id and derives missing slug from it", () => {
@@ -163,6 +164,50 @@ describe("admin import helpers", () => {
 
     expect(metadata.slug).toBe("explicit-slug");
     expect(metadata.test_id).toBe("test-explicit-slug");
+  });
+
+  it("reads estimated_minutes from front matter metadata", () => {
+    const markdown = [
+      "---",
+      "format_id: universal_human_v1",
+      "test_id: test-explicit-id",
+      "estimated_minutes: 15",
+      "---",
+      "# Different Title",
+      "Intro"
+    ].join("\n");
+
+    const metadata = resolveConversionMetadata({
+      en: {
+        filename: "source.en.md",
+        md: markdown,
+        sha256: hashMarkdown(markdown)
+      }
+    });
+
+    expect(metadata.estimated_minutes).toBe(15);
+  });
+
+  it("fails when front matter estimated_minutes is outside supported range", () => {
+    const markdown = [
+      "---",
+      "format_id: universal_human_v1",
+      "test_id: test-explicit-id",
+      "estimated_minutes: 0",
+      "---",
+      "# Different Title",
+      "Intro"
+    ].join("\n");
+
+    expect(() =>
+      resolveConversionMetadata({
+        en: {
+          filename: "source.en.md",
+          md: markdown,
+          sha256: hashMarkdown(markdown)
+        }
+      })
+    ).toThrowError(ImportConversionError);
   });
 
   it("returns unsupported_format when source.en.md lacks universal format_id", () => {
@@ -252,6 +297,7 @@ describe("admin import helpers", () => {
       }
     ) as {
       test_id: string;
+      estimated_minutes: number;
       questions: Array<{ id: string; options: Array<{ id: string }> }>;
       scoring: { option_weights: Record<string, Record<string, number>> };
       result_bands: Array<{ band_id: string }>;
@@ -260,6 +306,7 @@ describe("admin import helpers", () => {
     expect(normalized.test_id).toBe("test-focus-sprint");
     expect(normalized.questions).toHaveLength(1);
     expect(normalized.questions[0]?.options).toHaveLength(5);
+    expect(normalized.estimated_minutes).toBe(2);
     expect(normalized.scoring.option_weights["q01-opt-1"]?.focus).toBe(1);
     expect(normalized.scoring.option_weights["q01-opt-5"]?.focus).toBe(5);
     expect(normalized.result_bands.map((band) => band.band_id)).toEqual([

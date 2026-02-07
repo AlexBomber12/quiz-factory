@@ -47,6 +47,7 @@ export type TestSpec = {
   slug: string;
   version: number;
   category: string;
+  estimated_minutes?: number;
   locales: LocaleRecord<LocaleStrings>;
   questions: TestQuestion[];
   scoring: TestScoring;

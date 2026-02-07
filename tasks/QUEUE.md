@@ -348,7 +348,7 @@ Queue (in order)
 
 
 58) PR-FIX-CATALOG-01: Catalog Metadata Resilience (estimated_minutes without content/test_index.json)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-FIX-CATALOG-01.md
 - Depends on: PR-HARDEN-ADMIN-01
 - Outcome:
