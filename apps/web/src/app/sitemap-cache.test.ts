@@ -43,6 +43,7 @@ describe("sitemap db cache", () => {
     resolveContentSourceMock.mockReturnValue("db");
 
     invalidateTenant(TENANT_ID);
+    invalidateTenant("tenant-localhost");
   });
 
   it("caches sitemap lookups per tenant when CONTENT_SOURCE=db", async () => {
@@ -59,6 +60,24 @@ describe("sitemap db cache", () => {
     await sitemap();
 
     expect(listCatalogForTenantMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("uses separate cache entries for different host/protocol contexts", async () => {
+    setHeaders({
+      host: "localhost:3000",
+      "x-forwarded-proto": "http"
+    });
+    await sitemap();
+
+    setHeaders({
+      host: "localhost:4000",
+      "x-forwarded-proto": "http"
+    });
+    await sitemap();
+
+    expect(listCatalogForTenantMock).toHaveBeenCalledTimes(2);
+    expect(listCatalogForTenantMock).toHaveBeenNthCalledWith(1, "tenant-localhost");
+    expect(listCatalogForTenantMock).toHaveBeenNthCalledWith(2, "tenant-localhost");
   });
 
   it("keeps filesystem behavior uncached", async () => {

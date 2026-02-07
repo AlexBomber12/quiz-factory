@@ -10,14 +10,34 @@ describe("sitemap cache", () => {
       now: () => currentTime
     });
 
-    cache.write("tenant-a", [{ url: "https://tenant.example.com/" }]);
+    cache.write(
+      {
+        tenantId: "tenant-a",
+        host: "tenant.example.com",
+        requestHost: "tenant.example.com",
+        protocol: "https"
+      },
+      [{ url: "https://tenant.example.com/" }]
+    );
 
-    expect(cache.read<{ url: string }[]>("tenant-a")).toEqual([
-      { url: "https://tenant.example.com/" }
-    ]);
+    expect(
+      cache.read<{ url: string }[]>({
+        tenantId: "tenant-a",
+        host: "tenant.example.com",
+        requestHost: "tenant.example.com",
+        protocol: "https"
+      })
+    ).toEqual([{ url: "https://tenant.example.com/" }]);
 
     currentTime += 1_001;
-    expect(cache.read("tenant-a")).toBeNull();
+    expect(
+      cache.read({
+        tenantId: "tenant-a",
+        host: "tenant.example.com",
+        requestHost: "tenant.example.com",
+        protocol: "https"
+      })
+    ).toBeNull();
   });
 
   it("invalidates tenant entries", () => {
@@ -26,14 +46,59 @@ describe("sitemap cache", () => {
       now: () => 100
     });
 
-    cache.write("tenant-a", [{ url: "https://tenant.example.com/" }]);
-    cache.write("tenant-b", [{ url: "https://other.example.com/" }]);
+    cache.write(
+      {
+        tenantId: "tenant-a",
+        host: "tenant.example.com",
+        requestHost: "tenant.example.com",
+        protocol: "https"
+      },
+      [{ url: "https://tenant.example.com/" }]
+    );
+    cache.write(
+      {
+        tenantId: "tenant-a",
+        host: "localhost",
+        requestHost: "localhost:3000",
+        protocol: "http"
+      },
+      [{ url: "http://localhost:3000/" }]
+    );
+    cache.write(
+      {
+        tenantId: "tenant-b",
+        host: "other.example.com",
+        requestHost: "other.example.com",
+        protocol: "https"
+      },
+      [{ url: "https://other.example.com/" }]
+    );
 
     cache.invalidateTenant("tenant-a");
 
-    expect(cache.read("tenant-a")).toBeNull();
-    expect(cache.read<{ url: string }[]>("tenant-b")).toEqual([
-      { url: "https://other.example.com/" }
-    ]);
+    expect(
+      cache.read({
+        tenantId: "tenant-a",
+        host: "tenant.example.com",
+        requestHost: "tenant.example.com",
+        protocol: "https"
+      })
+    ).toBeNull();
+    expect(
+      cache.read({
+        tenantId: "tenant-a",
+        host: "localhost",
+        requestHost: "localhost:3000",
+        protocol: "http"
+      })
+    ).toBeNull();
+    expect(
+      cache.read<{ url: string }[]>({
+        tenantId: "tenant-b",
+        host: "other.example.com",
+        requestHost: "other.example.com",
+        protocol: "https"
+      })
+    ).toEqual([{ url: "https://other.example.com/" }]);
   });
 });
