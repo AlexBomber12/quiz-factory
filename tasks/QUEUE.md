@@ -347,7 +347,7 @@ Queue (in order)
 - Depends on: PR-ADMIN-04
 
 59) PR-OPS-ARTIFACT-02: Timestamped Artifact Archive Names
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-OPS-ARTIFACT-02.md
 - Depends on: none
 - Outcome:
