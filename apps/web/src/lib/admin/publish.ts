@@ -3,6 +3,7 @@ import type { PoolClient } from "pg";
 
 import { invalidateTenant, invalidateTest } from "../content_db/repo";
 import { getContentDbPool } from "../content_db/pool";
+import { invalidateTenant as invalidateTenantSitemap } from "../seo/sitemap_cache";
 import { type AdminRole } from "./session";
 
 type TimestampValue = Date | string;
@@ -244,6 +245,7 @@ const insertAuditEvent = async (
 const invalidateCaches = (testId: string, tenantIds: string[]): void => {
   for (const tenantId of tenantIds) {
     invalidateTenant(tenantId);
+    invalidateTenantSitemap(tenantId);
   }
   invalidateTest(testId);
 };

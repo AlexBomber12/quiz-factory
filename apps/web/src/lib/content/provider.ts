@@ -27,7 +27,7 @@ export type PublishedTenantTest = {
 
 const DEFAULT_CONTENT_SOURCE: ContentSource = "fs";
 
-const resolveContentSource = (): ContentSource => {
+export const resolveContentSource = (): ContentSource => {
   const rawSource = process.env.CONTENT_SOURCE;
   if (!rawSource) {
     return DEFAULT_CONTENT_SOURCE;
@@ -202,4 +202,3 @@ export const loadPublishedTestById = async (
 
   return loadPublishedTestBySlug(tenantId, match.slug, locale);
 };
-
