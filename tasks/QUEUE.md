@@ -347,6 +347,14 @@ Queue (in order)
 - Depends on: PR-ADMIN-04
 
 
+58) PR-FIX-CATALOG-01: Catalog Metadata Resilience (estimated_minutes without content/test_index.json)
+- Status: TODO
+- Tasks file: tasks/PR-FIX-CATALOG-01.md
+- Depends on: PR-HARDEN-ADMIN-01
+- Outcome:
+  - homepage and test listing never crash when new DB-published tests are missing repo metadata
+  - estimated_minutes is derived from spec_json or computed fallback, with no hard dependency on content/test_index.json
+
 Execution rules (apply to every PR)
 - Work on exactly 1 PR at a time.
 - Create a new branch from main named as specified in the selected tasks file (single source of truth).
