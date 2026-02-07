@@ -98,6 +98,50 @@ describe("admin import helpers", () => {
     expect(metadata.test_id).toBe("test-focus-sprint");
   });
 
+  it("preserves provided test_id and derives missing slug from it", () => {
+    const markdown = [
+      "---",
+      "format_id: universal_human_v1",
+      "test_id: test-explicit-id",
+      "---",
+      "# Different Title",
+      "Intro"
+    ].join("\n");
+
+    const metadata = resolveConversionMetadata({
+      en: {
+        filename: "source.en.md",
+        md: markdown,
+        sha256: hashMarkdown(markdown)
+      }
+    });
+
+    expect(metadata.test_id).toBe("test-explicit-id");
+    expect(metadata.slug).toBe("explicit-id");
+  });
+
+  it("preserves provided slug and derives missing test_id from it", () => {
+    const markdown = [
+      "---",
+      "format_id: universal_human_v1",
+      "slug: explicit-slug",
+      "---",
+      "# Different Title",
+      "Intro"
+    ].join("\n");
+
+    const metadata = resolveConversionMetadata({
+      en: {
+        filename: "source.en.md",
+        md: markdown,
+        sha256: hashMarkdown(markdown)
+      }
+    });
+
+    expect(metadata.slug).toBe("explicit-slug");
+    expect(metadata.test_id).toBe("test-explicit-slug");
+  });
+
   it("returns unsupported_format when source.en.md lacks universal format_id", () => {
     const markdown = [
       "---",

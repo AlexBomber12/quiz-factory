@@ -840,7 +840,7 @@ export const resolveConversionMetadata = (
   let testId = fmTestId;
   let slug = fmSlug;
 
-  if (!testId || !slug) {
+  if (!testId && !slug) {
     const titleGuess = guessMarkdownTitle(frontMatter.body);
     if (titleGuess === EMPTY_MD_TITLE) {
       throw new ImportConversionError({
@@ -861,6 +861,10 @@ export const resolveConversionMetadata = (
 
     slug = derivedSlug;
     testId = `test-${derivedSlug}`;
+  } else if (testId && !slug) {
+    slug = testId.startsWith("test-") ? testId.slice("test-".length) : "";
+  } else if (!testId && slug) {
+    testId = `test-${slug}`;
   }
 
   if (!slug || !SLUG_RE.test(slug)) {
