@@ -2,11 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
 
-import { getTenantTestIds, resolveTestIdBySlug } from "../../../../lib/content/catalog";
-import { loadLocalizedTest } from "../../../../lib/content/load";
 import { REPORT_TOKEN, verifyReportToken } from "../../../../lib/product/report_token";
 import { RESULT_COOKIE, verifyResultCookie } from "../../../../lib/product/result_cookie";
 import type { LocaleTag } from "../../../../lib/content/types";
+import { loadPublishedTestBySlug } from "../../../../lib/content/provider";
 import {
   buildCanonical,
   buildLocaleAlternatesForPath,
@@ -27,18 +26,8 @@ type PageProps = {
   searchParams?: Record<string, string | string[] | undefined>;
 };
 
-const resolveReportTestId = (slug: string, tenantId: string): string | null => {
-  const testId = resolveTestIdBySlug(slug);
-  if (!testId) {
-    return null;
-  }
-
-  const allowedTests = getTenantTestIds(tenantId);
-  if (!allowedTests.includes(testId)) {
-    return null;
-  }
-
-  return testId;
+const loadReportTest = (tenantId: string, slug: string, locale: string) => {
+  return loadPublishedTestBySlug(tenantId, slug, locale);
 };
 
 const resolveTokenParam = (
@@ -75,7 +64,7 @@ export const generateMetadata = async ({ params }: PageProps): Promise<Metadata>
   const context = await resolveTenantContext();
   const tenantSeo = resolveTenantSeoContext({ tenantId: context.tenantId });
   const tenantLabel = buildTenantLabel(context);
-  const testId = resolveReportTestId(params.slug, context.tenantId);
+  const published = await loadReportTest(context.tenantId, params.slug, context.locale);
   const fallbackOgImage = buildCanonical(context, "/og.png");
 
   const buildMetadata = (
@@ -114,7 +103,7 @@ export const generateMetadata = async ({ params }: PageProps): Promise<Metadata>
   const path = `/report/${params.slug}/print`;
   const canonical = buildCanonical(context, path);
 
-  if (!testId) {
+  if (!published) {
     return buildMetadata(
       `${tenantLabel} | Quiz Factory`,
       "This test is not available for this tenant.",
@@ -125,8 +114,11 @@ export const generateMetadata = async ({ params }: PageProps): Promise<Metadata>
     );
   }
 
-  const test = loadLocalizedTest(testId, context.locale);
-  const seo = resolveSeoTestContext({ tenantId: context.tenantId, testId });
+  const test = published.test;
+  const seo = resolveSeoTestContext({
+    tenantId: context.tenantId,
+    testId: published.test_id
+  });
   const description = `${test.report_title} is ready to print.`;
   const ogPath = buildOgImagePath(`/report/${test.slug}/opengraph-image`, seo.token);
   const ogImage = buildCanonical(context, ogPath) ?? fallbackOgImage;
@@ -137,10 +129,10 @@ export const generateMetadata = async ({ params }: PageProps): Promise<Metadata>
 
 export default async function ReportPrintPage({ params, searchParams }: PageProps) {
   const context = await resolveTenantContext();
-  const testId = resolveReportTestId(params.slug, context.tenantId);
+  const published = await loadReportTest(context.tenantId, params.slug, context.locale);
   const queryReportToken = resolveTokenParam(searchParams?.t);
 
-  if (!testId) {
+  if (!published) {
     return (
       <section className={`page ${styles.reportPrint}`}>
         <header className="hero">
@@ -165,7 +157,7 @@ export default async function ReportPrintPage({ params, searchParams }: PageProp
     reportPayload &&
     resultPayload &&
     reportPayload.tenant_id === context.tenantId &&
-    reportPayload.test_id === testId &&
+    reportPayload.test_id === published.test_id &&
     resultPayload.tenant_id === reportPayload.tenant_id &&
     resultPayload.test_id === reportPayload.test_id &&
     resultPayload.session_id === reportPayload.session_id &&
@@ -176,10 +168,10 @@ export default async function ReportPrintPage({ params, searchParams }: PageProp
   }
 
   return (
-    <PrintClient
-      slug={params.slug}
-      testId={testId}
-      reportLinkToken={queryReportToken}
-    />
+      <PrintClient
+        slug={params.slug}
+        testId={published.test_id}
+        reportLinkToken={queryReportToken}
+      />
   );
 }

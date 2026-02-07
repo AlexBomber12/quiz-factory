@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { getDistinctIdFromRequest, parseCookies } from "../../../../lib/analytics/session";
-import { loadTestSpecById } from "../../../../lib/content/load";
+import { loadPublishedTestById } from "../../../../lib/content/provider";
 import { signResultCookie, RESULT_COOKIE } from "../../../../lib/product/result_cookie";
 import { scoreTest } from "../../../../lib/product/scoring";
 import {
@@ -99,7 +99,7 @@ export const POST = async (request: Request): Promise<Response> => {
     return NextResponse.json({ error: "Distinct id is required." }, { status: 401 });
   }
 
-  const { tenantId } = resolveTenant(request.headers, new URL(request.url).host);
+  const { tenantId, defaultLocale } = resolveTenant(request.headers, new URL(request.url).host);
 
   let verifiedToken: ReturnType<typeof verifyAttemptToken>;
   try {
@@ -121,12 +121,15 @@ export const POST = async (request: Request): Promise<Response> => {
     );
   }
 
-  let testSpec: ReturnType<typeof loadTestSpecById>;
-  try {
-    testSpec = loadTestSpecById(testId);
-  } catch {
+  const published = await loadPublishedTestById(
+    tenantId,
+    testId,
+    defaultLocale ?? "en"
+  );
+  if (!published) {
     return NextResponse.json({ error: "Unknown test_id." }, { status: 400 });
   }
+  const testSpec = published.spec;
 
   let scoring: ReturnType<typeof scoreTest>;
   try {

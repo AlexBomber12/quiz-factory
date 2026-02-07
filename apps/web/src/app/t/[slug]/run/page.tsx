@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { getTenantTestIds, resolveTestIdBySlug } from "../../../../lib/content/catalog";
-import { loadLocalizedTest } from "../../../../lib/content/load";
 import type { LocaleTag } from "../../../../lib/content/types";
+import { loadPublishedTestBySlug } from "../../../../lib/content/provider";
 import {
   buildCanonical,
   buildLocaleAlternatesForPath,
@@ -22,25 +21,15 @@ type PageProps = {
   };
 };
 
-const resolveRunTestId = (slug: string, tenantId: string): string | null => {
-  const testId = resolveTestIdBySlug(slug);
-  if (!testId) {
-    return null;
-  }
-
-  const allowedTests = getTenantTestIds(tenantId);
-  if (!allowedTests.includes(testId)) {
-    return null;
-  }
-
-  return testId;
+const loadRunTest = (tenantId: string, slug: string, locale: string) => {
+  return loadPublishedTestBySlug(tenantId, slug, locale);
 };
 
 export const generateMetadata = async ({ params }: PageProps): Promise<Metadata> => {
   const context = await resolveTenantContext();
   const tenantSeo = resolveTenantSeoContext({ tenantId: context.tenantId });
   const tenantLabel = buildTenantLabel(context);
-  const testId = resolveRunTestId(params.slug, context.tenantId);
+  const published = await loadRunTest(context.tenantId, params.slug, context.locale);
   const fallbackOgImage = buildCanonical(context, "/og.png");
 
   const buildMetadata = (
@@ -79,7 +68,7 @@ export const generateMetadata = async ({ params }: PageProps): Promise<Metadata>
   const path = `/t/${params.slug}/run`;
   const canonical = buildCanonical(context, path);
 
-  if (!testId) {
+  if (!published) {
     return buildMetadata(
       `${tenantLabel} | Quiz Factory`,
       "This test is not available for this tenant.",
@@ -90,8 +79,11 @@ export const generateMetadata = async ({ params }: PageProps): Promise<Metadata>
     );
   }
 
-  const test = loadLocalizedTest(testId, context.locale);
-  const seo = resolveSeoTestContext({ tenantId: context.tenantId, testId });
+  const test = published.test;
+  const seo = resolveSeoTestContext({
+    tenantId: context.tenantId,
+    testId: published.test_id
+  });
   const description = test.intro?.trim() || test.description;
   const ogPath = buildOgImagePath(`/t/${test.slug}/opengraph-image`, seo.token);
   const ogImage = buildCanonical(context, ogPath) ?? fallbackOgImage;
@@ -102,9 +94,9 @@ export const generateMetadata = async ({ params }: PageProps): Promise<Metadata>
 
 export default async function TestRunPage({ params }: PageProps) {
   const context = await resolveTenantContext();
-  const testId = resolveRunTestId(params.slug, context.tenantId);
+  const published = await loadRunTest(context.tenantId, params.slug, context.locale);
 
-  if (!testId) {
+  if (!published) {
     return (
       <section className="page">
         <header className="hero">
@@ -119,7 +111,7 @@ export default async function TestRunPage({ params }: PageProps) {
     );
   }
 
-  const test = loadLocalizedTest(testId, context.locale);
+  const test = published.test;
 
   return (
     <TestRunnerClient

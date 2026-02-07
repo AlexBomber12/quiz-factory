@@ -149,8 +149,8 @@ const expectLocalizedString = (
   return value;
 };
 
-export const loadLocalizedTest = (testId: string, locale: string): LocalizedTest => {
-  const spec = loadTestSpecById(testId);
+export const localizeTestSpec = (spec: TestSpec, locale: string): LocalizedTest => {
+  const testId = spec.test_id;
   const normalizedLocale = normalizeLocaleTag(locale);
   if (!normalizedLocale) {
     throw new Error(`Unsupported locale ${locale} for test ${testId}`);
@@ -198,4 +198,9 @@ export const loadLocalizedTest = (testId: string, locale: string): LocalizedTest
     result_bands: spec.result_bands,
     locale: normalizedLocale
   };
+};
+
+export const loadLocalizedTest = (testId: string, locale: string): LocalizedTest => {
+  const spec = loadTestSpecById(testId);
+  return localizeTestSpec(spec, locale);
 };

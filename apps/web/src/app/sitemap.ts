@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 
-import { loadTenantCatalog } from "../lib/content/catalog";
+import { listCatalogForTenant } from "../lib/content/provider";
 import { resolveSeoTestContext, resolveTenantSeoContext } from "../lib/seo/metadata";
 import { buildCanonicalUrl, resolveTenantContext } from "../lib/tenants/request";
 
@@ -10,7 +10,7 @@ const isDefined = <T>(value: T | null): value is T => {
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const context = await resolveTenantContext();
-  const tests = loadTenantCatalog(context.tenantId, context.locale);
+  const tests = await listCatalogForTenant(context.tenantId);
   const tenantSeo = resolveTenantSeoContext({ tenantId: context.tenantId });
   const homeUrl = buildCanonicalUrl(context, "/");
   const homeEntry = homeUrl

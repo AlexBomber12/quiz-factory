@@ -54,7 +54,7 @@ const descriptionStyle: CSSProperties = {
 export default async function OpenGraphImage({ params }: PageProps) {
   const context = await resolveTenantContext();
   const tenantLabel = buildTenantLabel(context);
-  const test = resolveTenantTestBySlug(context.tenantId, context.locale, params.slug);
+  const test = await resolveTenantTestBySlug(context.tenantId, context.locale, params.slug);
 
   const title = test?.title ?? "Quiz Factory";
   const description =

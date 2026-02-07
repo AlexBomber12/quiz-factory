@@ -1,12 +1,6 @@
-import catalogConfig from "../../../../../config/catalog.json";
 import testIndexData from "../../../../../content/test_index.json";
 
-import { loadValuesCompassSpecById } from "../content/load";
-import { LocaleStrings, TestSpec, normalizeLocaleTag } from "../content/types";
-
-type CatalogConfig = {
-  tenants?: Record<string, string[]>;
-};
+import { listCatalogForTenant, loadPublishedTestBySlug } from "../content/provider";
 
 type TestIndexEntry = {
   test_id: string;
@@ -26,31 +20,10 @@ export type CatalogTest = {
 };
 
 type LoaderOptions = {
-  catalog?: CatalogConfig;
   testIndex?: TestIndex;
 };
 
-const FALLBACK_LOCALE = "en";
-const DEFAULT_CATALOG = catalogConfig as CatalogConfig;
 const DEFAULT_TEST_INDEX = testIndexData as TestIndex;
-
-const resolveLocaleStrings = (spec: TestSpec, locale: string): LocaleStrings => {
-  const normalized = normalizeLocaleTag(locale);
-  if (normalized && spec.locales[normalized]) {
-    return spec.locales[normalized];
-  }
-
-  if (spec.locales[FALLBACK_LOCALE]) {
-    return spec.locales[FALLBACK_LOCALE];
-  }
-
-  const [first] = Object.values(spec.locales);
-  if (first) {
-    return first;
-  }
-
-  throw new Error(`No locale strings available for test ${spec.test_id}`);
-};
 
 const loadTestMetadata = (
   testId: string,
@@ -77,44 +50,62 @@ export const loadTenantCatalog = (
   tenantId: string,
   locale: string,
   options: LoaderOptions = {}
-): CatalogTest[] => {
-  const catalog = options.catalog ?? DEFAULT_CATALOG;
+): Promise<CatalogTest[]> => {
   const testIndex = options.testIndex ?? DEFAULT_TEST_INDEX;
-  const testIds = catalog.tenants?.[tenantId] ?? [];
-  if (testIds.length === 0) {
+  return loadTenantCatalogWithIndex(tenantId, locale, testIndex);
+};
+
+const loadTenantCatalogWithIndex = async (
+  tenantId: string,
+  locale: string,
+  testIndex: TestIndex
+): Promise<CatalogTest[]> => {
+  const catalog = await listCatalogForTenant(tenantId);
+  if (catalog.length === 0) {
     return [];
   }
 
   const entries = testIndex.tests ?? [];
+  const tests: CatalogTest[] = [];
 
-  return testIds.map((testId) => {
-    const metadata = loadTestMetadata(testId, entries, tenantId);
-    const spec = loadValuesCompassSpecById(testId);
-    if (!spec) {
-      return null;
+  for (const entry of catalog) {
+    const metadata = loadTestMetadata(entry.test_id, entries, tenantId);
+    const published = await loadPublishedTestBySlug(tenantId, entry.slug, locale);
+    if (!published) {
+      continue;
     }
-    const strings = resolveLocaleStrings(spec, locale);
 
-    return {
-      test_id: spec.test_id,
-      slug: spec.slug,
-      title: strings.title,
-      short_description: strings.short_description,
+    tests.push({
+      test_id: published.test_id,
+      slug: published.slug,
+      title: published.test.title,
+      short_description: published.test.description,
       estimated_minutes: metadata.estimated_minutes
-    };
-  }).filter((entry): entry is CatalogTest => entry !== null);
+    });
+  }
+
+  return tests;
 };
 
 export const resolveTenantTestBySlug = (
   tenantId: string,
   locale: string,
   slug: string
-): CatalogTest | null => {
+): Promise<CatalogTest | null> => {
+  return resolveTenantTestBySlugWithIndex(tenantId, locale, slug, DEFAULT_TEST_INDEX);
+};
+
+const resolveTenantTestBySlugWithIndex = async (
+  tenantId: string,
+  locale: string,
+  slug: string,
+  testIndex: TestIndex
+): Promise<CatalogTest | null> => {
   const normalizedSlug = slug.trim().toLowerCase();
   if (!normalizedSlug) {
     return null;
   }
 
-  const tests = loadTenantCatalog(tenantId, locale);
+  const tests = await loadTenantCatalogWithIndex(tenantId, locale, testIndex);
   return tests.find((test) => test.slug === normalizedSlug) ?? null;
 };
