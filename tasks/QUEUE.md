@@ -327,7 +327,7 @@ Queue (in order)
 - Depends on: PR-ADMIN-04
 
 54) PR-MIGRATION-01: One-time Migration from Filesystem Content to DB (Idempotent)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-MIGRATION-01.md
 - Depends on: PR-WEB-CONTENT-01
 

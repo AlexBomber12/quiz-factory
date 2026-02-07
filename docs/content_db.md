@@ -54,3 +54,35 @@ docker compose -f infra/content-db/docker-compose.yml down
 
 In CI, run the same migration command after setting `CONTENT_DATABASE_URL` to
 the CI Postgres service URL.
+
+## One-time filesystem content migration
+
+Use this once to seed `tests`, `test_versions`, and `tenant_tests` from:
+- `content/tests/*/spec.json`
+- `config/catalog.json`
+
+Run:
+
+```bash
+node apps/web/scripts/content-db-import-fs.js
+```
+
+Expected behavior:
+- Inserts missing `tests`.
+- Inserts one `test_versions` row per spec checksum (idempotent on re-run).
+- Upserts tenant published mappings from catalog.
+
+Verify counts:
+
+```bash
+find content/tests -mindepth 2 -maxdepth 2 -name spec.json | wc -l
+python3 - <<'PY'
+import json
+from pathlib import Path
+catalog = json.loads(Path("config/catalog.json").read_text())
+print(sum(len(test_ids) for test_ids in catalog.get("tenants", {}).values()))
+PY
+docker compose -f infra/content-db/docker-compose.yml exec postgres \
+  psql -U content -d content_db -c \
+  "SELECT (SELECT COUNT(*) FROM tests) AS tests, (SELECT COUNT(*) FROM test_versions) AS versions, (SELECT COUNT(*) FROM tenant_tests) AS tenant_mappings;"
+```
