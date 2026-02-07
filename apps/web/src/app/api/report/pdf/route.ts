@@ -3,8 +3,7 @@ import { NextResponse } from "next/server";
 import { handleAnalyticsEvent } from "../../../../lib/analytics/server";
 import { parseCookies } from "../../../../lib/analytics/session";
 import { createReportKey } from "../../../../lib/credits";
-import { getTenantTestIds } from "../../../../lib/content/catalog";
-import { loadValuesCompassSpecById } from "../../../../lib/content/load";
+import { loadPublishedTestById } from "../../../../lib/content/provider";
 import { REPORT_TOKEN, verifyReportToken } from "../../../../lib/product/report_token";
 import { RESULT_COOKIE, verifyResultCookie } from "../../../../lib/product/result_cookie";
 import {
@@ -141,15 +140,11 @@ export const POST = async (request: Request): Promise<Response> => {
   }
 
   const context = await resolveTenantContext();
-  const allowedTests = getTenantTestIds(context.tenantId);
-  if (!allowedTests.includes(body.testId)) {
+  const published = await loadPublishedTestById(context.tenantId, body.testId, context.locale);
+  if (!published) {
     return buildErrorResponse(404, "Test not available.", analyticsResponse);
   }
-
-  const spec = loadValuesCompassSpecById(body.testId);
-  if (!spec) {
-    return buildErrorResponse(404, "Test not available.", analyticsResponse);
-  }
+  const spec = published.spec;
 
   const cookieRecord = parseCookies(request.headers.get("cookie"));
   const reportTokenValue = cookieRecord[REPORT_TOKEN] ?? null;

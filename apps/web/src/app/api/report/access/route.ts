@@ -9,8 +9,7 @@ import {
   parseCreditsCookie,
   serializeCreditsCookie
 } from "../../../../lib/credits";
-import { getTenantTestIds, resolveTestIdBySlug } from "../../../../lib/content/catalog";
-import { loadLocalizedTest } from "../../../../lib/content/load";
+import { loadPublishedTestBySlug } from "../../../../lib/content/provider";
 import { REPORT_TOKEN, verifyReportToken } from "../../../../lib/product/report_token";
 import { RESULT_COOKIE, verifyResultCookie } from "../../../../lib/product/result_cookie";
 import { verifyReportLinkToken } from "../../../../lib/report_link_token";
@@ -40,20 +39,6 @@ const requireRecord = (value: unknown): Record<string, unknown> | null => {
   }
 
   return value as Record<string, unknown>;
-};
-
-const resolveReportTestId = (slug: string, tenantId: string): string | null => {
-  const testId = resolveTestIdBySlug(slug);
-  if (!testId) {
-    return null;
-  }
-
-  const allowedTests = getTenantTestIds(tenantId);
-  if (!allowedTests.includes(testId)) {
-    return null;
-  }
-
-  return testId;
 };
 
 export const POST = async (request: Request): Promise<Response> => {
@@ -99,10 +84,11 @@ export const POST = async (request: Request): Promise<Response> => {
   }
 
   const context = await resolveTenantContext();
-  const testId = resolveReportTestId(slug, context.tenantId);
-  if (!testId) {
+  const published = await loadPublishedTestBySlug(context.tenantId, slug, context.locale);
+  if (!published) {
     return NextResponse.json({ error: "Test not available." }, { status: 404 });
   }
+  const testId = published.test_id;
 
   const url = new URL(request.url);
   const reportLinkTokenValue =
@@ -143,7 +129,15 @@ export const POST = async (request: Request): Promise<Response> => {
       return NextResponse.json({ error: "Report access is invalid." }, { status: 403 });
     }
 
-    const test = loadLocalizedTest(testId, reportLinkPayload.locale);
+    const reportTest = await loadPublishedTestBySlug(
+      context.tenantId,
+      slug,
+      reportLinkPayload.locale
+    );
+    if (!reportTest) {
+      return NextResponse.json({ error: "Report content unavailable." }, { status: 404 });
+    }
+    const test = reportTest.test;
     const band = test.result_bands.find(
       (candidate) => candidate.band_id === reportLinkPayload.band_id
     );
@@ -219,7 +213,7 @@ export const POST = async (request: Request): Promise<Response> => {
       consumedCredit = true;
     }
 
-    const test = loadLocalizedTest(testId, context.locale);
+    const test = published.test;
     const band = test.result_bands.find(
       (candidate) => candidate.band_id === resultPayload.band_id
     );

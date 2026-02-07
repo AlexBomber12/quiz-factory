@@ -2,9 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
 
-import { getTenantTestIds, resolveTestIdBySlug } from "../../../../lib/content/catalog";
-import { loadLocalizedTest } from "../../../../lib/content/load";
 import type { LocaleTag } from "../../../../lib/content/types";
+import { loadPublishedTestBySlug } from "../../../../lib/content/provider";
 import {
   RESULT_COOKIE,
   verifyResultCookie
@@ -33,18 +32,8 @@ type PageProps = {
   };
 };
 
-const resolvePaywallTestId = (slug: string, tenantId: string): string | null => {
-  const testId = resolveTestIdBySlug(slug);
-  if (!testId) {
-    return null;
-  }
-
-  const allowedTests = getTenantTestIds(tenantId);
-  if (!allowedTests.includes(testId)) {
-    return null;
-  }
-
-  return testId;
+const loadPaywallTest = (tenantId: string, slug: string, locale: string) => {
+  return loadPublishedTestBySlug(tenantId, slug, locale);
 };
 
 const parseIsUpsellParam = (value: string | string[] | undefined): boolean => {
@@ -61,7 +50,7 @@ export const generateMetadata = async ({ params }: PageProps): Promise<Metadata>
   const context = await resolveTenantContext();
   const tenantSeo = resolveTenantSeoContext({ tenantId: context.tenantId });
   const tenantLabel = buildTenantLabel(context);
-  const testId = resolvePaywallTestId(params.slug, context.tenantId);
+  const published = await loadPaywallTest(context.tenantId, params.slug, context.locale);
   const fallbackOgImage = buildCanonical(context, "/og.png");
 
   const buildMetadata = (
@@ -100,7 +89,7 @@ export const generateMetadata = async ({ params }: PageProps): Promise<Metadata>
   const path = `/t/${params.slug}/pay`;
   const canonical = buildCanonical(context, path);
 
-  if (!testId) {
+  if (!published) {
     return buildMetadata(
       `${tenantLabel} | Quiz Factory`,
       "This test is not available for this tenant.",
@@ -111,8 +100,11 @@ export const generateMetadata = async ({ params }: PageProps): Promise<Metadata>
     );
   }
 
-  const test = loadLocalizedTest(testId, context.locale);
-  const seo = resolveSeoTestContext({ tenantId: context.tenantId, testId });
+  const test = published.test;
+  const seo = resolveSeoTestContext({
+    tenantId: context.tenantId,
+    testId: published.test_id
+  });
   const description = test.description;
   const ogPath = buildOgImagePath(`/t/${test.slug}/opengraph-image`, seo.token);
   const ogImage = buildCanonical(context, ogPath) ?? fallbackOgImage;
@@ -123,9 +115,9 @@ export const generateMetadata = async ({ params }: PageProps): Promise<Metadata>
 
 export default async function PaywallPage({ params, searchParams }: PageProps) {
   const context = await resolveTenantContext();
-  const testId = resolvePaywallTestId(params.slug, context.tenantId);
+  const published = await loadPaywallTest(context.tenantId, params.slug, context.locale);
 
-  if (!testId) {
+  if (!published) {
     return (
       <section className="page">
         <header className="hero">
@@ -140,11 +132,16 @@ export default async function PaywallPage({ params, searchParams }: PageProps) {
     );
   }
 
+  const test = published.test;
   const cookieStore = await cookies();
   const resultCookieValue = cookieStore.get(RESULT_COOKIE)?.value ?? null;
   const resultPayload = resultCookieValue ? verifyResultCookie(resultCookieValue) : null;
 
-  if (!resultPayload || resultPayload.test_id !== testId || resultPayload.tenant_id !== context.tenantId) {
+  if (
+    !resultPayload ||
+    resultPayload.test_id !== published.test_id ||
+    resultPayload.tenant_id !== context.tenantId
+  ) {
     return (
       <section className="page">
         <header className="hero">
@@ -159,9 +156,8 @@ export default async function PaywallPage({ params, searchParams }: PageProps) {
     );
   }
 
-  const test = loadLocalizedTest(testId, context.locale);
   const creditsState = parseCreditsCookie(cookieStore, context.tenantId);
-  const reportKey = createReportKey(context.tenantId, testId, resultPayload.session_id);
+  const reportKey = createReportKey(context.tenantId, published.test_id, resultPayload.session_id);
   const creditsRemaining = creditsState.credits_remaining;
   const hasGrantReference =
     creditsState.last_grant !== null || creditsState.grant_ids.length > 0;

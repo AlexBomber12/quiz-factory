@@ -10,7 +10,7 @@ import {
   setLastGrantMetadata,
   type CreditsGrantMetadata
 } from "../../../../lib/credits";
-import { getTenantTestIds, resolveTestIdBySlug } from "../../../../lib/content/catalog";
+import { loadPublishedTestBySlug } from "../../../../lib/content/provider";
 import {
   REPORT_TOKEN,
   type ReportTokenPayload,
@@ -45,20 +45,6 @@ const requireRecord = (value: unknown): Record<string, unknown> | null => {
   }
 
   return value as Record<string, unknown>;
-};
-
-const resolveReportTestId = (slug: string, tenantId: string): string | null => {
-  const testId = resolveTestIdBySlug(slug);
-  if (!testId) {
-    return null;
-  }
-
-  const allowedTests = getTenantTestIds(tenantId);
-  if (!allowedTests.includes(testId)) {
-    return null;
-  }
-
-  return testId;
 };
 
 export const POST = async (request: Request): Promise<Response> => {
@@ -104,10 +90,11 @@ export const POST = async (request: Request): Promise<Response> => {
   }
 
   const context = await resolveTenantContext();
-  const testId = resolveReportTestId(slug, context.tenantId);
-  if (!testId) {
+  const published = await loadPublishedTestBySlug(context.tenantId, slug, context.locale);
+  if (!published) {
     return NextResponse.json({ error: "Test not available." }, { status: 404 });
   }
+  const testId = published.test_id;
 
   const cookieRecord = parseCookies(request.headers.get("cookie"));
   const resultCookieValue = cookieRecord[RESULT_COOKIE] ?? null;

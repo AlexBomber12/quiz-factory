@@ -322,7 +322,7 @@ Queue (in order)
 - Depends on: PR-ADMIN-03 and PR-CONTENT-DB-02
 
 53) PR-WEB-CONTENT-01: Public Site Loads Content from DB (Feature-flagged FS Fallback)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-WEB-CONTENT-01.md
 - Depends on: PR-ADMIN-04
 

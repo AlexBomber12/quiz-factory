@@ -1,8 +1,7 @@
 import { ImageResponse } from "next/og";
 import type { CSSProperties } from "react";
 
-import { getTenantTestIds, resolveTestIdBySlug } from "../../../lib/content/catalog";
-import { loadLocalizedTest } from "../../../lib/content/load";
+import { loadPublishedTestBySlug } from "../../../lib/content/provider";
 import { buildTenantLabel } from "../../../lib/seo/metadata";
 import { resolveTenantContext } from "../../../lib/tenants/request";
 
@@ -52,21 +51,11 @@ const descriptionStyle: CSSProperties = {
   maxWidth: 980
 };
 
-const resolveReportTestId = (slug: string, tenantId: string): string | null => {
-  const testId = resolveTestIdBySlug(slug);
-  if (!testId) {
-    return null;
-  }
-
-  const allowedTests = getTenantTestIds(tenantId);
-  return allowedTests.includes(testId) ? testId : null;
-};
-
 export default async function OpenGraphImage({ params }: PageProps) {
   const context = await resolveTenantContext();
   const tenantLabel = buildTenantLabel(context);
-  const testId = resolveReportTestId(params.slug, context.tenantId);
-  const test = testId ? loadLocalizedTest(testId, context.locale) : null;
+  const published = await loadPublishedTestBySlug(context.tenantId, params.slug, context.locale);
+  const test = published?.test ?? null;
 
   const title = test?.report_title ?? "Quiz Factory report";
   const description = test?.description ?? "Your paid report is ready.";
@@ -84,4 +73,3 @@ export default async function OpenGraphImage({ params }: PageProps) {
     size
   );
 }
-

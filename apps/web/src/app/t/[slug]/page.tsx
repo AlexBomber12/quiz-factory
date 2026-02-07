@@ -12,7 +12,7 @@ import {
 } from "../../../components/ui/card";
 import { Separator } from "../../../components/ui/separator";
 import { resolveTenantTestBySlug } from "../../../lib/catalog/catalog";
-import { loadTestSpecById } from "../../../lib/content/load";
+import { loadPublishedTestBySlug } from "../../../lib/content/provider";
 import {
   buildCanonical,
   buildLocaleAlternatesForPath,
@@ -30,32 +30,11 @@ type PageProps = {
   };
 };
 
-const FALLBACK_LOCALE: TenantRequestContext["locale"] = "en";
-
-const resolveIntroCopy = (
-  testId: string,
-  locale: TenantRequestContext["locale"]
-): { intro: string | null; category: string | null } => {
-  const spec = loadTestSpecById(testId);
-  const localeStrings =
-    spec.locales[locale] ??
-    spec.locales[FALLBACK_LOCALE] ??
-    Object.values(spec.locales)[0];
-
-  const intro = localeStrings?.intro?.trim() ?? "";
-  const category = spec.category.trim();
-
-  return {
-    intro: intro.length > 0 ? intro : null,
-    category: category.length > 0 ? category : null
-  };
-};
-
 const HAS_RUN_ROUTE = true;
 
 export const generateMetadata = async ({ params }: PageProps): Promise<Metadata> => {
   const context = await resolveTenantContext();
-  const test = resolveTenantTestBySlug(context.tenantId, context.locale, params.slug);
+  const test = await resolveTenantTestBySlug(context.tenantId, context.locale, params.slug);
   const tenantSeo = resolveTenantSeoContext({ tenantId: context.tenantId });
   const tenantLabel = buildTenantLabel(context);
   const fallbackOgImage = buildCanonical(context, "/og.png");
@@ -128,7 +107,7 @@ export const generateMetadata = async ({ params }: PageProps): Promise<Metadata>
 
 export default async function TestLandingPage({ params }: PageProps) {
   const context = await resolveTenantContext();
-  const test = resolveTenantTestBySlug(context.tenantId, context.locale, params.slug);
+  const test = await resolveTenantTestBySlug(context.tenantId, context.locale, params.slug);
 
   if (!test) {
     return (
@@ -150,7 +129,10 @@ export default async function TestLandingPage({ params }: PageProps) {
     );
   }
 
-  const { intro, category } = resolveIntroCopy(test.test_id, context.locale);
+  const published = await loadPublishedTestBySlug(context.tenantId, test.slug, context.locale);
+  const intro = published?.test.intro?.trim() ? published.test.intro : null;
+  const categoryValue = published?.test.category?.trim() ?? "";
+  const category = categoryValue.length > 0 ? categoryValue : null;
   const introText = intro ?? test.short_description;
   const minutesLabel = test.estimated_minutes === 1 ? "minute" : "minutes";
 

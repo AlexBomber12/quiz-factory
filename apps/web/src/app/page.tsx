@@ -57,7 +57,7 @@ export const generateMetadata = async (): Promise<Metadata> => {
 
 export default async function HomePage() {
   const context = await resolveTenantContext();
-  const tests = loadTenantCatalog(context.tenantId, context.locale);
+  const tests = await loadTenantCatalog(context.tenantId, context.locale);
   const tenantLabel = context.requestHost ?? context.host ?? context.tenantId;
 
   return (

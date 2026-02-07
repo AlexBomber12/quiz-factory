@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { getTrackingContextFromRequest, parseCookies } from "../../../../lib/analytics/session";
-import { loadTestSpecById } from "../../../../lib/content/load";
+import { loadPublishedTestById } from "../../../../lib/content/provider";
 import { RESULT_COOKIE, verifyResultCookie } from "../../../../lib/product/result_cookie";
 import {
   DEFAULT_EVENT_BODY_BYTES,
@@ -193,13 +193,6 @@ export const POST = async (request: Request): Promise<Response> => {
     return NextResponse.json({ error: "Result cookie is required." }, { status: 401 });
   }
 
-  let testSpec: ReturnType<typeof loadTestSpecById>;
-  try {
-    testSpec = loadTestSpecById(resultPayload.test_id);
-  } catch {
-    return NextResponse.json({ error: "Unknown test_id." }, { status: 400 });
-  }
-
   const host = resolveRequestHost(request);
   if (!host) {
     return NextResponse.json({ error: "Host is required." }, { status: 400 });
@@ -212,6 +205,16 @@ export const POST = async (request: Request): Promise<Response> => {
       { status: 400 }
     );
   }
+
+  const published = await loadPublishedTestById(
+    tenantResolution.tenantId,
+    resultPayload.test_id,
+    tenantResolution.defaultLocale ?? "en"
+  );
+  if (!published) {
+    return NextResponse.json({ error: "Unknown test_id." }, { status: 400 });
+  }
+  const testSpec = published.spec;
 
   const locale = resolveLocale({
     defaultLocale: tenantResolution.defaultLocale,
