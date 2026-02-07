@@ -302,7 +302,7 @@ Queue (in order)
 - Depends on: PR-CONTENT-DB-01
 
 49) PR-ADMIN-01: Admin Auth, RBAC Tokens, and Audit Base
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-ADMIN-01.md
 - Depends on: PR-CONTENT-DB-01
 
