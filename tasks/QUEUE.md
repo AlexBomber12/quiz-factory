@@ -346,14 +346,13 @@ Queue (in order)
 - Tasks file: tasks/PR-HARDEN-ADMIN-01.md
 - Depends on: PR-ADMIN-04
 
-
-58) PR-FIX-CATALOG-01: Catalog Metadata Resilience (estimated_minutes without content/test_index.json)
-- Status: DONE
-- Tasks file: tasks/PR-FIX-CATALOG-01.md
-- Depends on: PR-HARDEN-ADMIN-01
+59) PR-OPS-ARTIFACT-02: Timestamped Artifact Archive Names
+- Status: TODO
+- Tasks file: tasks/PR-OPS-ARTIFACT-02.md
+- Depends on: none
 - Outcome:
-  - homepage and test listing never crash when new DB-published tests are missing repo metadata
-  - estimated_minutes is derived from spec_json or computed fallback, with no hard dependency on content/test_index.json
+  - snapshot/archive filenames include date and time (and optionally short commit) to avoid ambiguity and overwrite confusion
+
 
 Execution rules (apply to every PR)
 - Work on exactly 1 PR at a time.
