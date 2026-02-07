@@ -297,7 +297,7 @@ Queue (in order)
 - Depends on: PR-CONTENT-04
 
 48) PR-CONTENT-DB-02: Content Repository API, Caching, and Invalidation Hooks
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-CONTENT-DB-02.md
 - Depends on: PR-CONTENT-DB-01
 
