@@ -1,7 +1,6 @@
 import { createHash } from "node:crypto";
 
 import catalogConfig from "../../../../../config/catalog.json";
-import testIndexData from "../../../../../content/test_index.json";
 
 import { loadValuesCompassSpecById } from "../content/load";
 import type { LocaleTag, TestSpec } from "../content/types";
@@ -11,22 +10,12 @@ type CatalogConfig = {
   tenants?: Record<string, string[]>;
 };
 
-type TestIndexEntry = {
-  test_id: string;
-  estimated_minutes: number;
-};
-
-type TestIndex = {
-  tests?: TestIndexEntry[];
-};
-
 type LastmodResult = {
   lastmod: string;
   token: string;
 };
 
 const DEFAULT_CATALOG = catalogConfig as CatalogConfig;
-const DEFAULT_TEST_INDEX = testIndexData as TestIndex;
 
 const LASTMOD_BASE_MS = Date.UTC(2024, 0, 1, 0, 0, 0);
 const LASTMOD_DAY_RANGE = 365 * 20;
@@ -95,15 +84,6 @@ const computeLastmod = (seed: unknown): LastmodResult => {
 const resolveTenantTestIds = (tenantId: string, catalog: CatalogConfig = DEFAULT_CATALOG): string[] => {
   const ids = catalog.tenants?.[tenantId] ?? [];
   return [...ids];
-};
-
-const resolveTestIndexMap = (testIndex: TestIndex = DEFAULT_TEST_INDEX): Map<string, TestIndexEntry> => {
-  const entries = testIndex.tests ?? [];
-  const index = new Map<string, TestIndexEntry>();
-  for (const entry of entries) {
-    index.set(entry.test_id, entry);
-  }
-  return index;
 };
 
 const resolveSpec = (testId: string): TestSpec | null => {
@@ -180,21 +160,16 @@ export const resolveSeoTestContext = (options: {
   tenantId: string;
   testId: string;
   catalog?: CatalogConfig;
-  testIndex?: TestIndex;
 }) => {
   const catalog = options.catalog ?? DEFAULT_CATALOG;
-  const testIndex = options.testIndex ?? DEFAULT_TEST_INDEX;
   const testIds = resolveTenantTestIds(options.tenantId, catalog);
   const spec = resolveSpec(options.testId);
   const locales = extractSpecLocales(spec);
-  const testIndexMap = resolveTestIndexMap(testIndex);
-  const indexEntry = testIndexMap.get(options.testId) ?? null;
 
   const seed = {
     tenant_id: options.tenantId,
     catalog: testIds,
     test_id: options.testId,
-    test_index_entry: indexEntry,
     spec
   };
 
@@ -211,20 +186,15 @@ export const resolveSeoTestContext = (options: {
 export const resolveTenantSeoContext = (options: {
   tenantId: string;
   catalog?: CatalogConfig;
-  testIndex?: TestIndex;
 }) => {
   const catalog = options.catalog ?? DEFAULT_CATALOG;
-  const testIndex = options.testIndex ?? DEFAULT_TEST_INDEX;
   const testIds = resolveTenantTestIds(options.tenantId, catalog);
-  const testIndexMap = resolveTestIndexMap(testIndex);
   const specs = testIds.map((testId) => resolveSpec(testId));
-  const indexEntries = testIds.map((testId) => testIndexMap.get(testId) ?? null);
   const locales = buildTenantLocales(testIds);
 
   const seed = {
     tenant_id: options.tenantId,
     catalog: testIds,
-    test_index_entries: indexEntries,
     specs
   };
 
@@ -273,4 +243,3 @@ export const buildOpenGraphLocales = (
     alternateLocale: alternateLocale.length > 0 ? alternateLocale : undefined
   };
 };
-

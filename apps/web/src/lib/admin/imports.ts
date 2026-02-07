@@ -8,6 +8,12 @@ import { promisify } from "node:util";
 
 import type { PoolClient } from "pg";
 
+import {
+  SPEC_ESTIMATED_MINUTES_MAX,
+  SPEC_ESTIMATED_MINUTES_MIN,
+  getEstimatedMinutes,
+  isValidSpecEstimatedMinutes
+} from "../content/estimated_minutes";
 import { validateTestSpec } from "../content/validate";
 import { getContentDbPool } from "../content_db/pool";
 
@@ -145,6 +151,7 @@ type ConversionMetadata = {
   test_id: string;
   slug: string;
   en_title: string;
+  estimated_minutes?: number;
 };
 
 type ConverterError = Error & {
@@ -547,6 +554,36 @@ const requireInteger = (value: unknown, pathLabel: string): number => {
   return value as number;
 };
 
+const parseFrontMatterEstimatedMinutes = (value: string | undefined): number | undefined => {
+  const normalized = normalizeNonEmptyString(value);
+  if (!normalized) {
+    return undefined;
+  }
+
+  if (!/^-?\d+$/.test(normalized)) {
+    throw new ImportConversionError({
+      code: "validation_failed",
+      status: 422,
+      detail:
+        "source.en.md front matter estimated_minutes must be an integer between " +
+        `${SPEC_ESTIMATED_MINUTES_MIN} and ${SPEC_ESTIMATED_MINUTES_MAX}.`
+    });
+  }
+
+  const parsed = Number.parseInt(normalized, 10);
+  if (!isValidSpecEstimatedMinutes(parsed)) {
+    throw new ImportConversionError({
+      code: "validation_failed",
+      status: 422,
+      detail:
+        "source.en.md front matter estimated_minutes must be an integer between " +
+        `${SPEC_ESTIMATED_MINUTES_MIN} and ${SPEC_ESTIMATED_MINUTES_MAX}.`
+    });
+  }
+
+  return parsed;
+};
+
 const canonicalizeJsonValue = (value: unknown): unknown => {
   if (Array.isArray(value)) {
     return value.map((item) => canonicalizeJsonValue(item));
@@ -857,6 +894,7 @@ export const resolveConversionMetadata = (
 
   const fmTestId = normalizeNonEmptyString(frontMatter.meta.test_id);
   const fmSlug = normalizeNonEmptyString(frontMatter.meta.slug);
+  const estimatedMinutes = parseFrontMatterEstimatedMinutes(frontMatter.meta.estimated_minutes);
 
   let testId = fmTestId;
   let slug = fmSlug;
@@ -916,7 +954,8 @@ export const resolveConversionMetadata = (
     format_id: UNIVERSAL_FORMAT_ID,
     test_id: testId,
     slug,
-    en_title: guessMarkdownTitle(frontMatter.body)
+    en_title: guessMarkdownTitle(frontMatter.body),
+    estimated_minutes: estimatedMinutes
   };
 };
 
@@ -1190,6 +1229,10 @@ export const normalizeUniversalSpecForValidation = (
     slug: metadata.slug,
     version,
     category,
+    estimated_minutes: getEstimatedMinutes({
+      estimated_minutes: metadata.estimated_minutes,
+      questions
+    }),
     locales,
     questions,
     scoring: {

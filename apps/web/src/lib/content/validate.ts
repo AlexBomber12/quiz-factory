@@ -9,6 +9,11 @@ import {
   TestSpec,
   normalizeLocaleTag
 } from "./types";
+import {
+  SPEC_ESTIMATED_MINUTES_MAX,
+  SPEC_ESTIMATED_MINUTES_MIN,
+  isValidSpecEstimatedMinutes
+} from "./estimated_minutes";
 
 const TEST_ID_PATTERN = /^test-[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -267,6 +272,18 @@ export const validateTestSpec = (raw: unknown, sourceId: string): TestSpec => {
     fail(testIdValue, "version", "must be >= 1");
   }
   const category = expectString(record.category, testIdValue, "category");
+  let estimatedMinutes: number | undefined;
+  if (record.estimated_minutes !== undefined) {
+    const candidate = expectInteger(record.estimated_minutes, testIdValue, "estimated_minutes");
+    if (!isValidSpecEstimatedMinutes(candidate)) {
+      fail(
+        testIdValue,
+        "estimated_minutes",
+        `must be between ${SPEC_ESTIMATED_MINUTES_MIN} and ${SPEC_ESTIMATED_MINUTES_MAX}`
+      );
+    }
+    estimatedMinutes = candidate;
+  }
 
   const localesRaw = expectRecord(record.locales, testIdValue, "locales");
   const localeKeys = collectLocaleKeys(localesRaw, testIdValue, "locales");
@@ -296,6 +313,7 @@ export const validateTestSpec = (raw: unknown, sourceId: string): TestSpec => {
     slug,
     version,
     category,
+    ...(estimatedMinutes === undefined ? {} : { estimated_minutes: estimatedMinutes }),
     locales,
     questions,
     scoring,
