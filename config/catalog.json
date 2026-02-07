@@ -1,6 +1,5 @@
 {
   "tenants": {
-    "tenant-tenant-example-com": ["test-focus-rhythm"],
-    "tenant-localhost-3000": ["test-focus-rhythm"]
+    "tenant-tenant-example-com": ["test-focus-rhythm"]
   }
 }

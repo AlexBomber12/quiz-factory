@@ -1,13 +1,6 @@
 {
   "tenants": [
     {
-      "tenant_id": "tenant-localhost-3000",
-      "domains": [
-        "localhost"
-      ],
-      "default_locale": "en"
-    },
-    {
       "tenant_id": "tenant-tenant-example-com",
       "domains": [
         "tenant.example.com"
