@@ -317,7 +317,7 @@ Queue (in order)
 - Depends on: PR-ADMIN-02
 
 52) PR-ADMIN-04: Publish Workflow (Tenant Mapping) and One-click Rollback
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-ADMIN-04.md
 - Depends on: PR-ADMIN-03 and PR-CONTENT-DB-02
 
