@@ -11,6 +11,11 @@ const ROOT_DIR = path.resolve(__dirname, "../../..");
 const TESTS_ROOT = path.join(ROOT_DIR, "content/tests");
 const CATALOG_PATH = path.join(ROOT_DIR, "config/catalog.json");
 const MIGRATION_ACTOR = "migration-fs-to-db";
+const LOCALE_CANONICAL = {
+  en: "en",
+  es: "es",
+  "pt-br": "pt-BR"
+};
 
 const usage = () => {
   console.log(
@@ -40,6 +45,15 @@ const normalizeNonEmptyString = (value) => {
   }
   const trimmed = value.trim();
   return trimmed ? trimmed : null;
+};
+
+const normalizeLocaleTag = (value) => {
+  const normalized = normalizeNonEmptyString(value);
+  if (!normalized) {
+    return null;
+  }
+
+  return LOCALE_CANONICAL[normalized.toLowerCase()] ?? null;
 };
 
 const isObjectRecord = (value) =>
@@ -86,16 +100,17 @@ const resolveDefaultLocale = (locales, testId) => {
     return "en";
   }
 
-  const candidates = Object.keys(locales)
-    .map((locale) => normalizeNonEmptyString(locale))
-    .filter((locale) => Boolean(locale))
-    .sort((left, right) => left.localeCompare(right));
-
-  if (candidates.length === 0) {
-    throw new Error(`Skipping ${testId}: locales has no keys.`);
+  for (const localeKey of Object.keys(locales)) {
+    const canonicalLocale = normalizeLocaleTag(localeKey);
+    if (!canonicalLocale) {
+      continue;
+    }
+    if (isObjectRecord(locales[canonicalLocale])) {
+      return canonicalLocale;
+    }
   }
 
-  return candidates[0];
+  throw new Error(`Skipping ${testId}: locales has no supported keys.`);
 };
 
 const loadSpecRecords = () => {
