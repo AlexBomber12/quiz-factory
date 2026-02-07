@@ -307,7 +307,7 @@ Queue (in order)
 - Depends on: PR-CONTENT-DB-01
 
 50) PR-ADMIN-02: Upload Bundle (Multi-locale MD) to Imports + Preview
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-ADMIN-02.md
 - Depends on: PR-ADMIN-01
 
