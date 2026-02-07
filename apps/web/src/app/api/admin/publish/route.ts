@@ -2,6 +2,18 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 import {
+  ADMIN_CSRF_COOKIE,
+  isAdminCsrfTokenValid,
+  normalizeAdminCsrfToken,
+  readAdminCsrfTokenFromFormData,
+  readAdminCsrfTokenFromHeader,
+  readAdminCsrfTokenFromJson
+} from "../../../../lib/admin/csrf";
+import {
+  ADMIN_PUBLISH_RATE_LIMIT,
+  consumeAdminRateLimit
+} from "../../../../lib/admin/rate_limit";
+import {
   isPublishWorkflowError,
   publishVersionToTenants
 } from "../../../../lib/admin/publish";
@@ -14,7 +26,18 @@ type PublishPayload = {
   is_enabled: boolean;
 };
 
-type RequestErrorCode = "unauthorized" | "forbidden" | "invalid_payload" | "publish_failed";
+type ParsedRequest = {
+  payload: PublishPayload;
+  csrfToken: string | null;
+};
+
+type RequestErrorCode =
+  | "unauthorized"
+  | "forbidden"
+  | "invalid_csrf"
+  | "rate_limited"
+  | "invalid_payload"
+  | "publish_failed";
 
 const normalizeString = (value: unknown): string | null => {
   if (typeof value !== "string") {
@@ -108,8 +131,9 @@ const buildSuccessResponse = (request: Request, payload: Record<string, unknown>
   return successRedirect(request);
 };
 
-const parsePayload = async (request: Request): Promise<PublishPayload> => {
+const parsePayload = async (request: Request): Promise<ParsedRequest> => {
   const contentType = request.headers.get("content-type") ?? "";
+  const headerCsrfToken = readAdminCsrfTokenFromHeader(request);
 
   if (contentType.includes("application/json")) {
     const body = (await request.json()) as Record<string, unknown>;
@@ -123,10 +147,13 @@ const parsePayload = async (request: Request): Promise<PublishPayload> => {
     }
 
     return {
-      test_id: testId,
-      version_id: versionId,
-      tenant_ids: tenantIds,
-      is_enabled: isEnabled
+      payload: {
+        test_id: testId,
+        version_id: versionId,
+        tenant_ids: tenantIds,
+        is_enabled: isEnabled
+      },
+      csrfToken: headerCsrfToken ?? readAdminCsrfTokenFromJson(body)
     };
   }
 
@@ -141,10 +168,13 @@ const parsePayload = async (request: Request): Promise<PublishPayload> => {
   }
 
   return {
-    test_id: testId,
-    version_id: versionId,
-    tenant_ids: tenantIds,
-    is_enabled: isEnabled
+    payload: {
+      test_id: testId,
+      version_id: versionId,
+      tenant_ids: tenantIds,
+      is_enabled: isEnabled
+    },
+    csrfToken: headerCsrfToken ?? readAdminCsrfTokenFromFormData(formData)
   };
 };
 
@@ -168,20 +198,37 @@ export const POST = async (request: Request): Promise<Response> => {
     return handleRequestError(request, "forbidden", 403, "Only admin can publish.");
   }
 
-  let payload: PublishPayload;
+  let parsedRequest: ParsedRequest;
   try {
-    payload = await parsePayload(request);
+    parsedRequest = await parsePayload(request);
   } catch {
     return handleRequestError(request, "invalid_payload", 400);
+  }
+
+  const csrfCookieToken = normalizeAdminCsrfToken(
+    cookieStore.get(ADMIN_CSRF_COOKIE)?.value
+  );
+  if (!isAdminCsrfTokenValid(csrfCookieToken, parsedRequest.csrfToken)) {
+    return handleRequestError(request, "invalid_csrf", 403);
+  }
+
+  const rateLimitResult = consumeAdminRateLimit(request, "admin-publish", ADMIN_PUBLISH_RATE_LIMIT);
+  if (rateLimitResult.limited) {
+    return handleRequestError(
+      request,
+      "rate_limited",
+      429,
+      rateLimitResult.retryAfterSeconds ? String(rateLimitResult.retryAfterSeconds) : null
+    );
   }
 
   try {
     const updated = await publishVersionToTenants({
       actor_role: session.role,
-      test_id: payload.test_id,
-      version_id: payload.version_id,
-      tenant_ids: payload.tenant_ids,
-      is_enabled: payload.is_enabled
+      test_id: parsedRequest.payload.test_id,
+      version_id: parsedRequest.payload.version_id,
+      tenant_ids: parsedRequest.payload.tenant_ids,
+      is_enabled: parsedRequest.payload.is_enabled
     });
 
     return buildSuccessResponse(request, {

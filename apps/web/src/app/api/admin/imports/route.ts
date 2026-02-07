@@ -7,16 +7,32 @@ import {
   type ImportFilesJson,
   createUploadedImport,
   hashMarkdown,
+  isImportLocaleAllowed,
   parseImportLocaleFromFilename
 } from "../../../../lib/admin/imports";
+import {
+  ADMIN_CSRF_COOKIE,
+  isAdminCsrfTokenValid,
+  normalizeAdminCsrfToken,
+  readAdminCsrfTokenFromFormData,
+  readAdminCsrfTokenFromHeader
+} from "../../../../lib/admin/csrf";
+import {
+  ADMIN_UPLOAD_RATE_LIMIT,
+  consumeAdminRateLimit
+} from "../../../../lib/admin/rate_limit";
 import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "../../../../lib/admin/session";
 
 type UploadErrorCode =
   | "unauthorized"
+  | "invalid_csrf"
+  | "rate_limited"
   | "invalid_form_data"
   | "missing_files"
   | "too_many_files"
+  | "invalid_file_type"
   | "invalid_filename"
+  | "locale_not_allowed"
   | "duplicate_locale"
   | "total_bytes_exceeded"
   | "db_error";
@@ -57,7 +73,9 @@ const buildErrorResponse = (
   return NextResponse.redirect(redirectUrl, 303);
 };
 
-const parseUploadFiles = async (request: Request): Promise<ImportFilesJson> => {
+const parseUploadForm = async (
+  request: Request
+): Promise<{ csrfToken: string | null; uploadFiles: File[] }> => {
   let formData: FormData;
   try {
     formData = await request.formData();
@@ -80,12 +98,28 @@ const parseUploadFiles = async (request: Request): Promise<ImportFilesJson> => {
     throw new ImportUploadError("too_many_files", 400, `${MAX_IMPORT_FILES}`);
   }
 
+  return {
+    csrfToken: readAdminCsrfTokenFromHeader(request) ?? readAdminCsrfTokenFromFormData(formData),
+    uploadFiles
+  };
+};
+
+const buildUploadFilesJson = async (uploadFiles: File[]): Promise<ImportFilesJson> => {
   let totalBytes = 0;
   const filesJson: ImportFilesJson = {};
+
   for (const file of uploadFiles) {
+    if (!file.name.toLowerCase().endsWith(".md")) {
+      throw new ImportUploadError("invalid_file_type", 400, file.name);
+    }
+
     const locale = parseImportLocaleFromFilename(file.name);
     if (!locale) {
       throw new ImportUploadError("invalid_filename", 400, file.name);
+    }
+
+    if (!isImportLocaleAllowed(locale)) {
+      throw new ImportUploadError("locale_not_allowed", 400, locale);
     }
 
     if (filesJson[locale]) {
@@ -115,9 +149,37 @@ export const POST = async (request: Request): Promise<Response> => {
     return buildErrorResponse(request, "unauthorized", 401);
   }
 
+  let parsedUpload: { csrfToken: string | null; uploadFiles: File[] };
+  try {
+    parsedUpload = await parseUploadForm(request);
+  } catch (error) {
+    if (error instanceof ImportUploadError) {
+      return buildErrorResponse(request, error.code, error.status, error.detail);
+    }
+
+    return buildErrorResponse(request, "invalid_form_data", 400);
+  }
+
+  const csrfCookieToken = normalizeAdminCsrfToken(
+    cookieStore.get(ADMIN_CSRF_COOKIE)?.value
+  );
+  if (!isAdminCsrfTokenValid(csrfCookieToken, parsedUpload.csrfToken)) {
+    return buildErrorResponse(request, "invalid_csrf", 403);
+  }
+
+  const rateLimitResult = consumeAdminRateLimit(request, "admin-upload", ADMIN_UPLOAD_RATE_LIMIT);
+  if (rateLimitResult.limited) {
+    return buildErrorResponse(
+      request,
+      "rate_limited",
+      429,
+      rateLimitResult.retryAfterSeconds ? String(rateLimitResult.retryAfterSeconds) : null
+    );
+  }
+
   let filesJson: ImportFilesJson;
   try {
-    filesJson = await parseUploadFiles(request);
+    filesJson = await buildUploadFilesJson(parsedUpload.uploadFiles);
   } catch (error) {
     if (error instanceof ImportUploadError) {
       return buildErrorResponse(request, error.code, error.status, error.detail);

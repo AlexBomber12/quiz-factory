@@ -2,6 +2,18 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 import {
+  ADMIN_CSRF_COOKIE,
+  isAdminCsrfTokenValid,
+  normalizeAdminCsrfToken,
+  readAdminCsrfTokenFromFormData,
+  readAdminCsrfTokenFromHeader,
+  readAdminCsrfTokenFromJson
+} from "../../../../lib/admin/csrf";
+import {
+  ADMIN_PUBLISH_RATE_LIMIT,
+  consumeAdminRateLimit
+} from "../../../../lib/admin/rate_limit";
+import {
   isPublishWorkflowError,
   rollbackVersionForTenant
 } from "../../../../lib/admin/publish";
@@ -13,7 +25,18 @@ type RollbackPayload = {
   version_id: string;
 };
 
-type RequestErrorCode = "unauthorized" | "forbidden" | "invalid_payload" | "rollback_failed";
+type ParsedRequest = {
+  payload: RollbackPayload;
+  csrfToken: string | null;
+};
+
+type RequestErrorCode =
+  | "unauthorized"
+  | "forbidden"
+  | "invalid_csrf"
+  | "rate_limited"
+  | "invalid_payload"
+  | "rollback_failed";
 
 const normalizeString = (value: unknown): string | null => {
   if (typeof value !== "string") {
@@ -75,8 +98,9 @@ const buildSuccessResponse = (request: Request, payload: Record<string, unknown>
   return successRedirect(request);
 };
 
-const parsePayload = async (request: Request): Promise<RollbackPayload> => {
+const parsePayload = async (request: Request): Promise<ParsedRequest> => {
   const contentType = request.headers.get("content-type") ?? "";
+  const headerCsrfToken = readAdminCsrfTokenFromHeader(request);
 
   if (contentType.includes("application/json")) {
     const body = (await request.json()) as Record<string, unknown>;
@@ -89,9 +113,12 @@ const parsePayload = async (request: Request): Promise<RollbackPayload> => {
     }
 
     return {
-      test_id: testId,
-      tenant_id: tenantId,
-      version_id: versionId
+      payload: {
+        test_id: testId,
+        tenant_id: tenantId,
+        version_id: versionId
+      },
+      csrfToken: headerCsrfToken ?? readAdminCsrfTokenFromJson(body)
     };
   }
 
@@ -105,9 +132,12 @@ const parsePayload = async (request: Request): Promise<RollbackPayload> => {
   }
 
   return {
-    test_id: testId,
-    tenant_id: tenantId,
-    version_id: versionId
+    payload: {
+      test_id: testId,
+      tenant_id: tenantId,
+      version_id: versionId
+    },
+    csrfToken: headerCsrfToken ?? readAdminCsrfTokenFromFormData(formData)
   };
 };
 
@@ -131,19 +161,36 @@ export const POST = async (request: Request): Promise<Response> => {
     return handleRequestError(request, "forbidden", 403, "Only admin can rollback.");
   }
 
-  let payload: RollbackPayload;
+  let parsedRequest: ParsedRequest;
   try {
-    payload = await parsePayload(request);
+    parsedRequest = await parsePayload(request);
   } catch {
     return handleRequestError(request, "invalid_payload", 400);
+  }
+
+  const csrfCookieToken = normalizeAdminCsrfToken(
+    cookieStore.get(ADMIN_CSRF_COOKIE)?.value
+  );
+  if (!isAdminCsrfTokenValid(csrfCookieToken, parsedRequest.csrfToken)) {
+    return handleRequestError(request, "invalid_csrf", 403);
+  }
+
+  const rateLimitResult = consumeAdminRateLimit(request, "admin-rollback", ADMIN_PUBLISH_RATE_LIMIT);
+  if (rateLimitResult.limited) {
+    return handleRequestError(
+      request,
+      "rate_limited",
+      429,
+      rateLimitResult.retryAfterSeconds ? String(rateLimitResult.retryAfterSeconds) : null
+    );
   }
 
   try {
     const updated = await rollbackVersionForTenant({
       actor_role: session.role,
-      test_id: payload.test_id,
-      tenant_id: payload.tenant_id,
-      version_id: payload.version_id
+      test_id: parsedRequest.payload.test_id,
+      tenant_id: parsedRequest.payload.tenant_id,
+      version_id: parsedRequest.payload.version_id
     });
 
     return buildSuccessResponse(request, {

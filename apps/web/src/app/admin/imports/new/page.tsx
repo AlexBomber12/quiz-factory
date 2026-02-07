@@ -14,6 +14,8 @@ import {
   MAX_IMPORT_FILES,
   MAX_IMPORT_TOTAL_BYTES
 } from "../../../../lib/admin/imports";
+import { ADMIN_CSRF_FORM_FIELD } from "../../../../lib/admin/csrf";
+import { getAdminCsrfTokenForRender } from "../../../../lib/admin/csrf_server";
 import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "../../../../lib/admin/session";
 
 type SearchParams = {
@@ -50,12 +52,20 @@ const errorMessage = (code: string | null, detail: string | null): string | null
   switch (code) {
     case "invalid_form_data":
       return "Upload request is invalid. Submit files using multipart form data.";
+    case "invalid_csrf":
+      return "Upload was rejected by CSRF protection. Refresh and try again.";
+    case "rate_limited":
+      return `Too many upload attempts. Retry in ${detail ?? "a few"} seconds.`;
     case "missing_files":
       return "No files were uploaded. Choose one or more markdown files.";
     case "too_many_files":
       return `Too many files. Maximum allowed is ${MAX_IMPORT_FILES}.`;
+    case "invalid_file_type":
+      return `Only .md files are allowed${detail ? `: ${detail}` : ""}.`;
     case "invalid_filename":
       return `Invalid file name${detail ? `: ${detail}` : ""}. Expected source.<locale>.md.`;
+    case "locale_not_allowed":
+      return `Locale is not allowed${detail ? `: ${detail}` : ""}.`;
     case "duplicate_locale":
       return `Duplicate locale uploaded${detail ? `: ${detail}` : ""}.`;
     case "total_bytes_exceeded":
@@ -78,6 +88,7 @@ export default async function AdminImportsNewPage({ searchParams }: PageProps) {
 
   const { code, detail } = await readErrorState(searchParams);
   const message = errorMessage(code, detail);
+  const csrfToken = await getAdminCsrfTokenForRender();
 
   return (
     <section className="mx-auto flex w-full max-w-3xl flex-col gap-6 py-12">
@@ -96,6 +107,7 @@ export default async function AdminImportsNewPage({ searchParams }: PageProps) {
             encType="multipart/form-data"
             className="space-y-4"
           >
+            <input type="hidden" name={ADMIN_CSRF_FORM_FIELD} value={csrfToken} />
             <div className="space-y-2">
               <label className="text-sm font-medium" htmlFor="files">
                 Source files

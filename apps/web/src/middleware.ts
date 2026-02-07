@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import {
+  ADMIN_CSRF_BOOTSTRAP_HEADER,
+  ADMIN_CSRF_COOKIE,
+  createAdminCsrfToken,
+  normalizeAdminCsrfToken
+} from "./lib/admin/csrf";
 import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "./lib/admin/session";
 
 const ADMIN_LOGIN_PATH = "/admin/login";
@@ -38,23 +44,81 @@ const unauthorizedAdminPageResponse = (request: NextRequest): NextResponse => {
   return NextResponse.redirect(url);
 };
 
+const resolveAdminCsrfToken = (
+  request: NextRequest
+): { token: string; shouldSetCookie: boolean } => {
+  const existing = normalizeAdminCsrfToken(
+    request.cookies.get(ADMIN_CSRF_COOKIE)?.value
+  );
+  if (existing) {
+    return { token: existing, shouldSetCookie: false };
+  }
+
+  return { token: createAdminCsrfToken(), shouldSetCookie: true };
+};
+
+const withAdminCsrfCookie = (
+  response: NextResponse,
+  token: string,
+  shouldSetCookie: boolean
+): NextResponse => {
+  if (!shouldSetCookie) {
+    return response;
+  }
+
+  response.cookies.set({
+    name: ADMIN_CSRF_COOKIE,
+    value: token,
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/"
+  });
+
+  return response;
+};
+
+const nextWithAdminCsrf = (
+  request: NextRequest,
+  token: string,
+  shouldSetCookie: boolean
+): NextResponse => {
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set(ADMIN_CSRF_BOOTSTRAP_HEADER, token);
+  const response = NextResponse.next({
+    request: {
+      headers: requestHeaders
+    }
+  });
+  return withAdminCsrfCookie(response, token, shouldSetCookie);
+};
+
 export const middleware = async (request: NextRequest): Promise<Response> => {
+  const csrf = resolveAdminCsrfToken(request);
   const pathname = request.nextUrl.pathname;
   const protectAdminPage = isProtectedAdminPagePath(pathname);
   const protectAdminApi = isProtectedAdminApiPath(pathname);
   if (!protectAdminPage && !protectAdminApi) {
-    return NextResponse.next();
+    return nextWithAdminCsrf(request, csrf.token, csrf.shouldSetCookie);
   }
 
   if (await isAuthenticated(request)) {
-    return NextResponse.next();
+    return nextWithAdminCsrf(request, csrf.token, csrf.shouldSetCookie);
   }
 
   if (protectAdminApi) {
-    return unauthorizedApiResponse();
+    return withAdminCsrfCookie(
+      unauthorizedApiResponse(),
+      csrf.token,
+      csrf.shouldSetCookie
+    );
   }
 
-  return unauthorizedAdminPageResponse(request);
+  return withAdminCsrfCookie(
+    unauthorizedAdminPageResponse(request),
+    csrf.token,
+    csrf.shouldSetCookie
+  );
 };
 
 export const config = {

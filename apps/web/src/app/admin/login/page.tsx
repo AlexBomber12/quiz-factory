@@ -9,6 +9,8 @@ import {
   CardHeader,
   CardTitle
 } from "../../../components/ui/card";
+import { ADMIN_CSRF_FORM_FIELD } from "../../../lib/admin/csrf";
+import { getAdminCsrfTokenForRender } from "../../../lib/admin/csrf_server";
 import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "../../../lib/admin/session";
 
 type SearchParams = {
@@ -40,6 +42,8 @@ const getErrorMessage = (code: string | null): string | null => {
       return "A token is required.";
     case "invalid_token":
       return "Token is invalid.";
+    case "invalid_csrf":
+      return "Login request was rejected by CSRF protection. Refresh and try again.";
     case "server_misconfigured":
       return "Server is missing admin auth configuration.";
     default:
@@ -58,6 +62,7 @@ export default async function AdminLoginPage({ searchParams }: LoginPageProps) {
 
   const errorCode = await getErrorCode(searchParams);
   const errorMessage = getErrorMessage(errorCode);
+  const csrfToken = await getAdminCsrfTokenForRender();
 
   return (
     <section className="mx-auto flex w-full max-w-xl flex-col gap-6 py-12">
@@ -70,6 +75,7 @@ export default async function AdminLoginPage({ searchParams }: LoginPageProps) {
         </CardHeader>
         <CardContent>
           <form className="space-y-4" method="post" action="/api/admin/login">
+            <input type="hidden" name={ADMIN_CSRF_FORM_FIELD} value={csrfToken} />
             <div className="space-y-2">
               <label className="text-sm font-medium" htmlFor="token">
                 Access token

@@ -17,6 +17,8 @@ import {
   type AdminTenantPublishState,
   type AdminTestVersion
 } from "../../lib/admin/publish";
+import { ADMIN_CSRF_FORM_FIELD } from "../../lib/admin/csrf";
+import { getAdminCsrfTokenForRender } from "../../lib/admin/csrf_server";
 import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "../../lib/admin/session";
 
 type SearchParams = {
@@ -80,6 +82,10 @@ const buildErrorMessage = (errorCode: string | null, detail: string | null): str
       return "You are not authorized for this action.";
     case "forbidden":
       return "Only admin can publish and rollback.";
+    case "invalid_csrf":
+      return "Request blocked by CSRF protection. Refresh the page and retry.";
+    case "rate_limited":
+      return `Too many publish requests${suffix}.`;
     case "invalid_payload":
       return "Publish payload is invalid.";
     case "invalid_test_id":
@@ -92,6 +98,8 @@ const buildErrorMessage = (errorCode: string | null, detail: string | null): str
       return `Unknown tenant_id${suffix}.`;
     case "test_version_not_found":
       return `Selected version does not belong to the selected test${suffix}.`;
+    case "staging_publish_required":
+      return `Publish blocked: staging publish is required first${suffix}.`;
     case "publish_failed":
       return "Publish failed due to a server error.";
     case "rollback_failed":
@@ -140,7 +148,8 @@ const tenantCurrentVersionLabel = (
 
 const renderPublishCard = (
   testRecord: AdminPublishTest,
-  tenantCount: number
+  tenantCount: number,
+  csrfToken: string
 ) => {
   const hasVersions = testRecord.versions.length > 0;
   const latestVersionId = testRecord.versions[0]?.id ?? "";
@@ -190,6 +199,7 @@ const renderPublishCard = (
         </div>
 
         <form action="/api/admin/publish" className="space-y-3 rounded border p-3" method="post">
+          <input name={ADMIN_CSRF_FORM_FIELD} type="hidden" value={csrfToken} />
           <input name="test_id" type="hidden" value={testRecord.test_id} />
           <div className="grid gap-3 md:grid-cols-2">
             <label className="space-y-1">
@@ -273,6 +283,7 @@ const renderPublishCard = (
                     <td className="px-2 py-2">{tenantState.published_by ?? "-"}</td>
                     <td className="px-2 py-2">
                       <form action="/api/admin/rollback" className="flex items-center gap-2" method="post">
+                        <input name={ADMIN_CSRF_FORM_FIELD} type="hidden" value={csrfToken} />
                         <input name="test_id" type="hidden" value={testRecord.test_id} />
                         <input name="tenant_id" type="hidden" value={tenantState.tenant_id} />
                         <select
@@ -293,6 +304,7 @@ const renderPublishCard = (
                     </td>
                     <td className="px-2 py-2">
                       <form action="/api/admin/publish" className="flex items-center gap-2" method="post">
+                        <input name={ADMIN_CSRF_FORM_FIELD} type="hidden" value={csrfToken} />
                         <input name="test_id" type="hidden" value={testRecord.test_id} />
                         <input name="version_id" type="hidden" value={toggleVersionId} />
                         <input name="tenant_ids" type="hidden" value={tenantState.tenant_id} />
@@ -348,6 +360,7 @@ export default async function AdminPage({ searchParams }: PageProps) {
   }
 
   const tenantRegistry = listTenantRegistry();
+  const csrfToken = await getAdminCsrfTokenForRender();
 
   return (
     <section className="mx-auto flex w-full max-w-7xl flex-col gap-6 py-12">
@@ -370,6 +383,7 @@ export default async function AdminPage({ searchParams }: PageProps) {
         </CardHeader>
         <CardContent>
           <form action="/api/admin/logout" method="post">
+            <input name={ADMIN_CSRF_FORM_FIELD} type="hidden" value={csrfToken} />
             <Button type="submit" variant="outline">
               Log out
             </Button>
@@ -437,7 +451,11 @@ export default async function AdminPage({ searchParams }: PageProps) {
         </Card>
       ) : null}
 
-      {!loadError ? publishTests.map((testRecord) => renderPublishCard(testRecord, tenantRegistry.length)) : null}
+      {!loadError
+        ? publishTests.map((testRecord) =>
+            renderPublishCard(testRecord, tenantRegistry.length, csrfToken)
+          )
+        : null}
     </section>
   );
 }

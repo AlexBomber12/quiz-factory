@@ -342,7 +342,7 @@ Queue (in order)
 - Depends on: PR-MIGRATION-01
 
 57) PR-HARDEN-ADMIN-01: Admin Hardening (CSRF, Upload Limits, Staging Publish Safety Rails)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-HARDEN-ADMIN-01.md
 - Depends on: PR-ADMIN-04
 
