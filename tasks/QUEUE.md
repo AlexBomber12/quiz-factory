@@ -292,7 +292,7 @@ Queue (in order)
 - Depends on: PR-CONTENT-03
 
 47) PR-CONTENT-DB-01: Content DB Schema, Migrations, Local Dev Bootstrap
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-CONTENT-DB-01.md
 - Depends on: PR-CONTENT-04
 
