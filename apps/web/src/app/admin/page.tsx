@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { Button } from "../../components/ui/button";
@@ -44,6 +45,20 @@ export default async function AdminPage() {
               Log out
             </Button>
           </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Imports</CardTitle>
+          <CardDescription>
+            Upload multi-locale markdown bundles and preview source metadata before conversion.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button type="button" asChild>
+            <Link href="/admin/imports/new">Create import bundle</Link>
+          </Button>
         </CardContent>
       </Card>
     </section>
