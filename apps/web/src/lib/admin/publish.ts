@@ -90,7 +90,8 @@ export type PublishWorkflowErrorCode =
   | "invalid_tenant_id"
   | "invalid_is_enabled"
   | "unknown_tenant"
-  | "test_version_not_found";
+  | "test_version_not_found"
+  | "staging_publish_required";
 
 export class PublishWorkflowError extends Error {
   code: PublishWorkflowErrorCode;
@@ -163,6 +164,44 @@ const normalizeTenantIds = (tenantIds: string[]): string[] => {
   return Array.from(unique.values());
 };
 
+const parseBooleanEnv = (value: string | undefined): boolean => {
+  if (!value) {
+    return false;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  return ["1", "true", "yes", "on"].includes(normalized);
+};
+
+const listStagingTenantAllowlist = (): Set<string> => {
+  const allowlist = new Set<string>();
+  const raw = normalizeString(process.env.ADMIN_STAGING_TENANT_ALLOWLIST);
+  if (!raw) {
+    return allowlist;
+  }
+
+  for (const token of raw.split(",")) {
+    const normalized = normalizeString(token);
+    if (normalized) {
+      allowlist.add(normalized);
+    }
+  }
+
+  return allowlist;
+};
+
+const isStagingTenantId = (tenantId: string): boolean => {
+  if (tenantId.startsWith("staging-")) {
+    return true;
+  }
+
+  return listStagingTenantAllowlist().has(tenantId);
+};
+
+const shouldRequireStagingPublish = (): boolean => {
+  return parseBooleanEnv(process.env.ADMIN_REQUIRE_STAGING_PUBLISH);
+};
+
 const assertKnownTenantIds = (tenantIds: string[]): void => {
   for (const tenantId of tenantIds) {
     if (!tenantIdSet.has(tenantId)) {
@@ -208,6 +247,61 @@ const resolveTestVersion = async (
   }
 
   return row;
+};
+
+const assertStagingPublishPrerequisite = async (
+  client: PoolClient,
+  params: {
+    testRowId: string;
+    versionId: string;
+    targetTenantIds: string[];
+  }
+): Promise<void> => {
+  if (!shouldRequireStagingPublish()) {
+    return;
+  }
+
+  const prodTenantIds = params.targetTenantIds.filter(
+    (tenantId) => !isStagingTenantId(tenantId)
+  );
+  if (prodTenantIds.length === 0) {
+    return;
+  }
+
+  const stagingTenantIds = tenantRegistry
+    .map((entry) => entry.tenant_id)
+    .filter((tenantId) => isStagingTenantId(tenantId));
+  if (stagingTenantIds.length === 0) {
+    throw new PublishWorkflowError(
+      "staging_publish_required",
+      409,
+      "No staging tenants are configured for staging-first publish checks."
+    );
+  }
+
+  const { rows } = await client.query<{ tenant_id: string }>(
+    `
+      SELECT tenant_id
+      FROM tenant_tests
+      WHERE test_id = $1::uuid
+        AND published_version_id = $2::uuid
+        AND tenant_id = ANY($3::text[])
+      LIMIT 1
+    `,
+    [params.testRowId, params.versionId, stagingTenantIds]
+  );
+
+  if (rows.length > 0) {
+    return;
+  }
+
+  throw new PublishWorkflowError(
+    "staging_publish_required",
+    409,
+    `Publish to production tenants requires prior staging publish for this version. Target production tenants: ${prodTenantIds.join(
+      ", "
+    )}.`
+  );
 };
 
 const insertAuditEvent = async (
@@ -411,6 +505,11 @@ export const publishVersionToTenants = async (input: {
   try {
     await client.query("BEGIN");
     resolvedVersion = await resolveTestVersion(client, testId, versionId);
+    await assertStagingPublishPrerequisite(client, {
+      testRowId: resolvedVersion.test_row_id,
+      versionId: resolvedVersion.version_id,
+      targetTenantIds: tenantIds
+    });
 
     await client.query(
       `

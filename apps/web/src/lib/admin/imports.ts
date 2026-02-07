@@ -172,6 +172,7 @@ const MAX_CONVERTER_STDERR_CHARS = 1_200;
 const CONVERTER_TIMEOUT_MS = 15_000;
 const MAX_IMPORT_ERROR_CHARS = 1_500;
 const MAX_CONVERTED_SPEC_BYTES = 2_000_000;
+const DEFAULT_IMPORT_LOCALE_ALLOWLIST_REGEX = "^(en|es|pt-BR)$";
 const LIKERT_LEVELS = 5;
 const execFileAsync = promisify(execFile);
 
@@ -221,6 +222,19 @@ const normalizeNonEmptyString = (value: unknown): string | null => {
 
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
+};
+
+const resolveImportLocaleAllowlistRegex = (): RegExp => {
+  const fromEnv = normalizeNonEmptyString(
+    process.env.ADMIN_IMPORT_LOCALE_ALLOWLIST_REGEX
+  );
+  const pattern = fromEnv ?? DEFAULT_IMPORT_LOCALE_ALLOWLIST_REGEX;
+
+  try {
+    return new RegExp(pattern);
+  } catch {
+    return new RegExp(DEFAULT_IMPORT_LOCALE_ALLOWLIST_REGEX);
+  }
 };
 
 const toIsoString = (value: TimestampValue): string => {
@@ -289,6 +303,9 @@ const normalizeImportFilesJson = (value: unknown): ImportFilesJson => {
     const normalizedLocale = normalizeImportLocale(locale);
     if (!normalizedLocale) {
       throw new Error(`Invalid locale in files_json: ${locale}`);
+    }
+    if (!isImportLocaleAllowed(normalizedLocale)) {
+      throw new Error(`Locale is not allowed in files_json: ${normalizedLocale}`);
     }
 
     normalized[normalizedLocale] = normalizeImportFileRecord(normalizedLocale, file);
@@ -585,6 +602,10 @@ export const parseImportLocaleFromFilename = (value: string): string | null => {
   }
 
   return normalizeImportLocale(match[1] ?? "");
+};
+
+export const isImportLocaleAllowed = (locale: string): boolean => {
+  return resolveImportLocaleAllowlistRegex().test(locale);
 };
 
 export const hashMarkdown = (md: string): string => {

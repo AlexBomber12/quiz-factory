@@ -1,5 +1,14 @@
+import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
+import {
+  ADMIN_CSRF_COOKIE,
+  isAdminCsrfTokenValid,
+  normalizeAdminCsrfToken,
+  readAdminCsrfTokenFromHeader,
+  readAdminCsrfTokenFromJson,
+  readAdminCsrfTokenFromFormData
+} from "../../../../lib/admin/csrf";
 import {
   ADMIN_SESSION_COOKIE,
   issueAdminSession,
@@ -23,36 +32,61 @@ const buildLoginRedirect = (request: Request, error?: string): URL => {
   return loginUrl;
 };
 
-const parseToken = async (request: Request): Promise<string | null> => {
+const parseTokenAndCsrf = async (
+  request: Request
+): Promise<{ token: string | null; csrfToken: string | null }> => {
+  const headerCsrfToken = readAdminCsrfTokenFromHeader(request);
   const contentType = request.headers.get("content-type") ?? "";
   if (contentType.includes("application/json")) {
     let body: unknown;
     try {
       body = await request.json();
     } catch {
-      return null;
+      return { token: null, csrfToken: headerCsrfToken };
     }
     if (!body || typeof body !== "object") {
-      return null;
+      return { token: null, csrfToken: headerCsrfToken };
     }
-    const token = (body as Record<string, unknown>).token;
-    return normalizeString(token);
+    const record = body as Record<string, unknown>;
+    const token = normalizeString(record.token);
+    const bodyCsrfToken = readAdminCsrfTokenFromJson(record);
+    return {
+      token,
+      csrfToken: headerCsrfToken ?? bodyCsrfToken
+    };
   }
 
   let formData: FormData;
   try {
     formData = await request.formData();
   } catch {
-    return null;
+    return {
+      token: null,
+      csrfToken: headerCsrfToken
+    };
   }
 
-  return normalizeString(formData.get("token"));
+  const token = normalizeString(formData.get("token"));
+  const bodyCsrfToken = readAdminCsrfTokenFromFormData(formData);
+  return {
+    token,
+    csrfToken: headerCsrfToken ?? bodyCsrfToken
+  };
 };
 
 export const POST = async (request: Request): Promise<Response> => {
-  const token = await parseToken(request);
+  const parsed = await parseTokenAndCsrf(request);
+  const token = parsed.token;
   if (!token) {
     return NextResponse.redirect(buildLoginRedirect(request, "missing_token"), 303);
+  }
+
+  const cookieStore = await cookies();
+  const csrfCookieToken = normalizeAdminCsrfToken(
+    cookieStore.get(ADMIN_CSRF_COOKIE)?.value
+  );
+  if (!isAdminCsrfTokenValid(csrfCookieToken, parsed.csrfToken)) {
+    return NextResponse.redirect(buildLoginRedirect(request, "invalid_csrf"), 303);
   }
 
   const role = resolveAdminRoleFromToken(token);

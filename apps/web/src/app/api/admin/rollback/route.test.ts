@@ -1,12 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 let sessionRole: "admin" | "editor" | null = "admin";
+const csrfToken = "csrf-token-01234567890123456789";
 
 const rollbackVersionForTenant = vi.fn();
 
 vi.mock("next/headers", () => ({
   cookies: async () => ({
-    get: () => ({ value: "admin-cookie" })
+    get: () => ({ value: csrfToken })
   })
 }));
 
@@ -43,7 +44,8 @@ const buildJsonRequest = (body: Record<string, unknown>) => {
     method: "POST",
     headers: {
       accept: "application/json",
-      "content-type": "application/json"
+      "content-type": "application/json",
+      "x-admin-csrf-token": csrfToken
     },
     body: JSON.stringify(body)
   });
@@ -94,6 +96,27 @@ describe("POST /api/admin/rollback", () => {
     expect(payload.error).toBe("forbidden");
   });
 
+  it("returns 403 when csrf token is missing", async () => {
+    const response = await POST(
+      new Request("https://tenant.example.com/api/admin/rollback", {
+        method: "POST",
+        headers: {
+          accept: "application/json",
+          "content-type": "application/json"
+        },
+        body: JSON.stringify({
+          test_id: "test-focus-rhythm",
+          tenant_id: "tenant-tenant-example-com",
+          version_id: "version-1"
+        })
+      })
+    );
+
+    expect(response.status).toBe(403);
+    const payload = await response.json();
+    expect(payload.error).toBe("invalid_csrf");
+  });
+
   it("rolls back when payload is valid", async () => {
     const response = await POST(
       buildJsonRequest({
@@ -139,6 +162,7 @@ describe("POST /api/admin/rollback", () => {
 
   it("redirects HTML form submissions back to /admin", async () => {
     const body = new URLSearchParams([
+      ["csrf_token", csrfToken],
       ["test_id", "test-focus-rhythm"],
       ["tenant_id", "tenant-tenant-example-com"],
       ["version_id", "version-1"]

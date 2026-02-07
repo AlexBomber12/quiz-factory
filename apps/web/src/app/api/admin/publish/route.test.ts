@@ -1,12 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 let sessionRole: "admin" | "editor" | null = "admin";
+const csrfToken = "csrf-token-01234567890123456789";
 
 const publishVersionToTenants = vi.fn();
 
 vi.mock("next/headers", () => ({
   cookies: async () => ({
-    get: () => ({ value: "admin-cookie" })
+    get: () => ({ value: csrfToken })
   })
 }));
 
@@ -43,7 +44,8 @@ const buildJsonRequest = (body: Record<string, unknown>) => {
     method: "POST",
     headers: {
       accept: "application/json",
-      "content-type": "application/json"
+      "content-type": "application/json",
+      "x-admin-csrf-token": csrfToken
     },
     body: JSON.stringify(body)
   });
@@ -96,6 +98,28 @@ describe("POST /api/admin/publish", () => {
     expect(payload.error).toBe("forbidden");
   });
 
+  it("returns 403 when csrf token is missing", async () => {
+    const response = await POST(
+      new Request("https://tenant.example.com/api/admin/publish", {
+        method: "POST",
+        headers: {
+          accept: "application/json",
+          "content-type": "application/json"
+        },
+        body: JSON.stringify({
+          test_id: "test-focus-rhythm",
+          version_id: "version-1",
+          tenant_ids: ["tenant-tenant-example-com"],
+          is_enabled: true
+        })
+      })
+    );
+
+    expect(response.status).toBe(403);
+    const payload = await response.json();
+    expect(payload.error).toBe("invalid_csrf");
+  });
+
   it("publishes when payload is valid", async () => {
     const response = await POST(
       buildJsonRequest({
@@ -144,6 +168,7 @@ describe("POST /api/admin/publish", () => {
 
   it("redirects HTML form submissions back to /admin", async () => {
     const body = new URLSearchParams([
+      ["csrf_token", csrfToken],
       ["test_id", "test-focus-rhythm"],
       ["version_id", "version-1"],
       ["tenant_ids", "tenant-tenant-example-com"],

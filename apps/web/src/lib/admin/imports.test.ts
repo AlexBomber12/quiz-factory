@@ -8,6 +8,7 @@ import {
   computeCanonicalJsonSha256,
   guessMarkdownTitle,
   hashMarkdown,
+  isImportLocaleAllowed,
   normalizeImportLocale,
   normalizeUniversalSpecForValidation,
   parseImportLocaleFromFilename,
@@ -30,6 +31,28 @@ describe("admin import helpers", () => {
     expect(normalizeImportLocale("en-US")).toBe("en-US");
     expect(normalizeImportLocale("")).toBeNull();
     expect(normalizeImportLocale("$$$")).toBeNull();
+  });
+
+  it("enforces import locale allowlist regex with safe defaults", () => {
+    const previous = process.env.ADMIN_IMPORT_LOCALE_ALLOWLIST_REGEX;
+
+    delete process.env.ADMIN_IMPORT_LOCALE_ALLOWLIST_REGEX;
+    expect(isImportLocaleAllowed("en")).toBe(true);
+    expect(isImportLocaleAllowed("fr")).toBe(false);
+
+    process.env.ADMIN_IMPORT_LOCALE_ALLOWLIST_REGEX = "^(en|fr)$";
+    expect(isImportLocaleAllowed("fr")).toBe(true);
+    expect(isImportLocaleAllowed("pt-BR")).toBe(false);
+
+    process.env.ADMIN_IMPORT_LOCALE_ALLOWLIST_REGEX = "[";
+    expect(isImportLocaleAllowed("en")).toBe(true);
+    expect(isImportLocaleAllowed("fr")).toBe(false);
+
+    if (previous === undefined) {
+      delete process.env.ADMIN_IMPORT_LOCALE_ALLOWLIST_REGEX;
+    } else {
+      process.env.ADMIN_IMPORT_LOCALE_ALLOWLIST_REGEX = previous;
+    }
   });
 
   it("extracts markdown title with h1 fallback to first non-empty line", () => {

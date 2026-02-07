@@ -18,6 +18,8 @@ import {
   isValidImportId,
   type ImportDraftRecord
 } from "../../../../lib/admin/imports";
+import { ADMIN_CSRF_FORM_FIELD } from "../../../../lib/admin/csrf";
+import { getAdminCsrfTokenForRender } from "../../../../lib/admin/csrf_server";
 import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "../../../../lib/admin/session";
 import { validateTestSpec } from "../../../../lib/content/validate";
 
@@ -77,6 +79,8 @@ const errorMessage = (errorCode: string | null, detail: string | null): string |
   switch (errorCode) {
     case "unauthorized":
       return "You are not authorized to convert imports.";
+    case "invalid_csrf":
+      return "Request blocked by CSRF protection. Refresh and retry.";
     case "invalid_import_id":
       return "Import ID is invalid.";
     case "import_not_found":
@@ -193,6 +197,7 @@ export default async function AdminImportPreviewPage({ params, searchParams }: P
   const preview = buildImportPreview(record.files_json);
   const draft = await getDraftByImportId(record.id);
   const draftPreview = draft ? buildDraftPreview(draft) : null;
+  const csrfToken = await getAdminCsrfTokenForRender();
 
   const conversionError = errorMessage(pageState.errorCode, pageState.detail);
   const conversionSuccess = convertMessage(pageState.convert, pageState.version);
@@ -224,6 +229,7 @@ export default async function AdminImportPreviewPage({ params, searchParams }: P
 
           <div className="flex flex-wrap gap-2">
             <form method="post" action={`/api/admin/imports/${record.id}`}>
+              <input type="hidden" name={ADMIN_CSRF_FORM_FIELD} value={csrfToken} />
               <Button type="submit">Convert to draft version</Button>
             </form>
             <Button type="button" variant="outline" asChild>
