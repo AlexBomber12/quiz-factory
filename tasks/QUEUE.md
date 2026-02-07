@@ -353,6 +353,56 @@ Queue (in order)
 - Outcome:
   - snapshot/archive filenames include date and time (and optionally short commit) to avoid ambiguity and overwrite confusion
 
+60) PR-HUB-01: Hub Tenant IA (Tests, Categories, Search, Trust Pages, Sitemap)
+- Status: TODO
+- Tasks file: tasks/PR-HUB-01.md
+- Depends on: PR-SEO-DB-01
+
+61) PR-LANDING-01: Selling Test Landing Page (/t/[slug]) Using Studio Blocks
+- Status: TODO
+- Tasks file: tasks/PR-LANDING-01.md
+- Depends on: PR-UI-GOLDEN-01 and PR-UI-03
+
+62) PR-RUNNER-01: Runner Production UX (Likert 5, Progress, Resume, Accessibility)
+- Status: TODO
+- Tasks file: tasks/PR-RUNNER-01.md
+- Depends on: PR-PRODUCT-03 and PR-UI-01
+
+63) PR-LLM-REPORT-01: Report Job Pipeline (Attempt Summary, Jobs Table, Enqueue, Internal Runner)
+- Status: TODO
+- Tasks file: tasks/PR-LLM-REPORT-01.md
+- Depends on: PR-CONTENT-DB-01 and PR-PRODUCT-06
+
+64) PR-LLM-REPORT-02: Report Brief Builder (Deterministic Aggregates for LLM Input)
+- Status: TODO
+- Tasks file: tasks/PR-LLM-REPORT-02.md
+- Depends on: PR-LLM-REPORT-01
+
+65) PR-LLM-REPORT-03: LLM Generator (OpenAI Responses API + Structured Outputs) and Job Processing
+- Status: TODO
+- Tasks file: tasks/PR-LLM-REPORT-03.md
+- Depends on: PR-LLM-REPORT-02
+
+66) PR-LLM-REPORT-04: Auto-Style Mapping (Style Cards + Deterministic Selection)
+- Status: TODO
+- Tasks file: tasks/PR-LLM-REPORT-04.md
+- Depends on: PR-LLM-REPORT-03
+
+67) PR-LLM-REPORT-05: Render LLM Report (API Access, Client Polling, Print Support)
+- Status: TODO
+- Tasks file: tasks/PR-LLM-REPORT-05.md
+- Depends on: PR-LLM-REPORT-04
+
+68) PR-TENANT-FACTORY-01: Tenant Profiles and Niche Presets (Hybrid Hub + Niche)
+- Status: TODO
+- Tasks file: tasks/PR-TENANT-FACTORY-01.md
+- Depends on: PR-HUB-01
+
+69) PR-GROWTH-AB-01: Hub vs Niche Measurement (tenant_kind in events + dbt comparison marts)
+- Status: TODO
+- Tasks file: tasks/PR-GROWTH-AB-01.md
+- Depends on: PR-TENANT-FACTORY-01
+
 
 Execution rules (apply to every PR)
 - Work on exactly 1 PR at a time.
