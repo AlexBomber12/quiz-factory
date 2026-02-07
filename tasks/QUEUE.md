@@ -332,7 +332,7 @@ Queue (in order)
 - Depends on: PR-WEB-CONTENT-01
 
 55) PR-SEO-DB-01: Sitemap and Robots Read from DB (With Caching)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-SEO-DB-01.md
 - Depends on: PR-WEB-CONTENT-01
 
