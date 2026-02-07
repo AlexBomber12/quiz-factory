@@ -1,13 +1,17 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  ImportConversionError,
   buildImportPreview,
   buildImportWarnings,
   buildMarkdownExcerpt,
+  computeCanonicalJsonSha256,
   guessMarkdownTitle,
   hashMarkdown,
   normalizeImportLocale,
-  parseImportLocaleFromFilename
+  normalizeUniversalSpecForValidation,
+  parseImportLocaleFromFilename,
+  resolveConversionMetadata
 } from "./imports";
 
 describe("admin import helpers", () => {
@@ -69,5 +73,165 @@ describe("admin import helpers", () => {
     expect(preview.files[0]?.title_guess).toBe("English title");
     expect(preview.files[0]?.size_bytes).toBeGreaterThan(0);
     expect(preview.warnings[0]).toContain("Missing required locales");
+  });
+
+  it("resolves conversion metadata from universal front matter and derives slug when needed", () => {
+    const markdown = [
+      "---",
+      "format_id: universal_human_v1",
+      "version: 1",
+      "---",
+      "# Focus Sprint",
+      "Intro"
+    ].join("\n");
+
+    const metadata = resolveConversionMetadata({
+      en: {
+        filename: "source.en.md",
+        md: markdown,
+        sha256: hashMarkdown(markdown)
+      }
+    });
+
+    expect(metadata.format_id).toBe("universal_human_v1");
+    expect(metadata.slug).toBe("focus-sprint");
+    expect(metadata.test_id).toBe("test-focus-sprint");
+  });
+
+  it("returns unsupported_format when source.en.md lacks universal format_id", () => {
+    const markdown = [
+      "---",
+      "test_id: test-focus-sprint",
+      "slug: focus-sprint",
+      "---",
+      "# Focus Sprint"
+    ].join("\n");
+
+    expect(() =>
+      resolveConversionMetadata({
+        en: {
+          filename: "source.en.md",
+          md: markdown,
+          sha256: hashMarkdown(markdown)
+        }
+      })
+    ).toThrowError(ImportConversionError);
+
+    try {
+      resolveConversionMetadata({
+        en: {
+          filename: "source.en.md",
+          md: markdown,
+          sha256: hashMarkdown(markdown)
+        }
+      });
+      throw new Error("Expected unsupported_format error");
+    } catch (error) {
+      expect(error).toBeInstanceOf(ImportConversionError);
+      const typed = error as ImportConversionError;
+      expect(typed.code).toBe("unsupported_format");
+      expect(typed.preserve_import_status).toBe(true);
+    }
+  });
+
+  it("normalizes universal converted spec into validateTestSpec-compatible JSON", () => {
+    const normalized = normalizeUniversalSpecForValidation(
+      {
+        test_id: "test-focus-sprint",
+        slug: "focus-sprint",
+        version: 1,
+        category: "focus",
+        locales: {
+          en: {
+            title: "Focus Sprint",
+            short_description: "EN short",
+            intro: "EN intro",
+            paywall_hook: "EN paywall",
+            paid_report_structure: "EN report"
+          },
+          es: {
+            title: "Focus Sprint",
+            short_description: "ES short",
+            intro: "ES intro",
+            paywall_hook: "ES paywall",
+            paid_report_structure: "ES report"
+          },
+          "pt-BR": {
+            title: "Focus Sprint",
+            short_description: "PT short",
+            intro: "PT intro",
+            paywall_hook: "PT paywall",
+            paid_report_structure: "PT report"
+          }
+        },
+        scales: ["focus"],
+        questions: [
+          {
+            question_id: "q01",
+            scale_id: "focus",
+            prompt: {
+              en: "I stay focused.",
+              es: "Mantengo foco.",
+              "pt-BR": "Mantenho foco."
+            }
+          }
+        ]
+      },
+      {
+        format_id: "universal_human_v1",
+        test_id: "test-focus-sprint",
+        slug: "focus-sprint",
+        en_title: "Focus Sprint"
+      }
+    ) as {
+      test_id: string;
+      questions: Array<{ id: string; options: Array<{ id: string }> }>;
+      scoring: { option_weights: Record<string, Record<string, number>> };
+      result_bands: Array<{ band_id: string }>;
+    };
+
+    expect(normalized.test_id).toBe("test-focus-sprint");
+    expect(normalized.questions).toHaveLength(1);
+    expect(normalized.questions[0]?.options).toHaveLength(5);
+    expect(normalized.scoring.option_weights["q01-opt-1"]?.focus).toBe(1);
+    expect(normalized.scoring.option_weights["q01-opt-5"]?.focus).toBe(5);
+    expect(normalized.result_bands.map((band) => band.band_id)).toEqual([
+      "low",
+      "mid",
+      "high"
+    ]);
+  });
+
+  it("computes stable checksum for semantically equal JSON with different key order", () => {
+    const left = {
+      b: 1,
+      a: {
+        y: 2,
+        x: [
+          {
+            m: "z",
+            a: "b"
+          }
+        ]
+      }
+    };
+
+    const right = {
+      a: {
+        x: [
+          {
+            a: "b",
+            m: "z"
+          }
+        ],
+        y: 2
+      },
+      b: 1
+    };
+
+    const leftHash = computeCanonicalJsonSha256(left).checksum;
+    const rightHash = computeCanonicalJsonSha256(right).checksum;
+
+    expect(leftHash).toBe(rightHash);
   });
 });

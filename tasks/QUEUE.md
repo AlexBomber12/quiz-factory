@@ -312,7 +312,7 @@ Queue (in order)
 - Depends on: PR-ADMIN-01
 
 51) PR-ADMIN-03: Convert Import -> spec_json -> Draft Test Version
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-ADMIN-03.md
 - Depends on: PR-ADMIN-02
 
