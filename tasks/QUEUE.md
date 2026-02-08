@@ -379,7 +379,7 @@ Queue (in order)
 - Depends on: PR-LLM-REPORT-01
 
 65) PR-LLM-REPORT-03: LLM Generator (OpenAI Responses API + Structured Outputs) and Job Processing
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-LLM-REPORT-03.md
 - Depends on: PR-LLM-REPORT-02
 
