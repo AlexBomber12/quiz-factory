@@ -170,8 +170,13 @@ const buildReadyResponse = (
   payload: AccessPayload,
   creditsState: CreditsState | null
 ): NextResponse<AccessPayload> => {
-  const response = NextResponse.json(payload);
+  return withCreditsCookie(NextResponse.json(payload), creditsState);
+};
 
+const withCreditsCookie = <T>(
+  response: NextResponse<T>,
+  creditsState: CreditsState | null
+): NextResponse<T> => {
   if (creditsState) {
     response.cookies.set(CREDITS_COOKIE, serializeCreditsCookie(creditsState), {
       httpOnly: true,
@@ -279,11 +284,17 @@ const respondWithGenerated = async (context: AccessContext): Promise<Response> =
   const generatedResolution = await resolveGeneratedContent(context);
 
   if (generatedResolution.kind === "generating") {
-    return NextResponse.json({ status: "generating" }, { status: 202 });
+    return withCreditsCookie(
+      NextResponse.json({ status: "generating" }, { status: 202 }),
+      context.credits_state
+    );
   }
 
   if (generatedResolution.kind === "blocked") {
-    return NextResponse.json({ error: generatedResolution.error }, { status: 409 });
+    return withCreditsCookie(
+      NextResponse.json({ error: generatedResolution.error }, { status: 409 }),
+      context.credits_state
+    );
   }
 
   return buildReadyResponse(

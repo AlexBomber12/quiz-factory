@@ -348,5 +348,13 @@ describe("POST /api/report/access", () => {
     expect(response.status).toBe(202);
     const payload = await response.json();
     expect(payload).toEqual({ status: "generating" });
+
+    const setCookie = response.headers.get("set-cookie") ?? "";
+    const creditsCookieValue = extractCookieValue(setCookie, CREDITS_COOKIE);
+    expect(creditsCookieValue).toBeTruthy();
+
+    const parsed = parseCreditsCookie({ [CREDITS_COOKIE]: creditsCookieValue ?? "" }, TENANT_ID);
+    expect(parsed.credits_remaining).toBe(0);
+    expect(parsed.consumed_report_keys).toContain(REPORT_KEY);
   });
 });
