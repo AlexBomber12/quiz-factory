@@ -413,6 +413,21 @@ Queue (in order)
 - Tasks file: tasks/PR-GHCR-01.md
 - Depends on: PR-DOCKER-EXAMPLES-01
 
+72) PR-UI-04: Calm Premium Theme Contract (Navy + Teal) + Stitch References
+- Status: TODO
+- Tasks file: tasks/PR-UI-04.md
+- Depends on: PR-UI-03 and PR-UI-GOLDEN-01
+
+73) PR-UI-05: Tenant Homepage Calm Premium Refresh (Search + Category Tags)
+- Status: TODO
+- Tasks file: tasks/PR-UI-05.md
+- Depends on: PR-UI-04
+
+74) PR-UI-06: Test Landing Calm Premium Refresh (Sticky CTA + Conversion Layout)
+- Status: TODO
+- Tasks file: tasks/PR-UI-06.md
+- Depends on: PR-UI-04
+
 Execution rules (apply to every PR)
 - Work on exactly 1 PR at a time.
 - Create a new branch from main named as specified in the selected tasks file (single source of truth).
