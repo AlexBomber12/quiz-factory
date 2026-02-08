@@ -364,7 +364,7 @@ Queue (in order)
 - Depends on: PR-UI-GOLDEN-01 and PR-UI-03
 
 62) PR-RUNNER-01: Runner Production UX (Likert 5, Progress, Resume, Accessibility)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-RUNNER-01.md
 - Depends on: PR-PRODUCT-03 and PR-UI-01
 
