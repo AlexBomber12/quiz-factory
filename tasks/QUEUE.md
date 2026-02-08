@@ -409,7 +409,7 @@ Queue (in order)
 - Depends on: none
 
 71) PR-GHCR-01: Publish Web Image to GHCR + Deploy Compose Template
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-GHCR-01.md
 - Depends on: PR-DOCKER-EXAMPLES-01
 
