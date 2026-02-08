@@ -26,6 +26,14 @@ describe("metadata routes", () => {
     const urls = entries.map((entry) => entry.url);
 
     expect(urls).toContain("https://tenant.example.com/");
+    expect(urls).toContain("https://tenant.example.com/tests");
+    expect(urls).toContain("https://tenant.example.com/categories");
+    expect(urls).toContain("https://tenant.example.com/about");
+    expect(urls).toContain("https://tenant.example.com/privacy");
+    expect(urls).toContain("https://tenant.example.com/terms");
+    expect(urls).toContain("https://tenant.example.com/cookies");
+    expect(urls).toContain("https://tenant.example.com/contact");
+    expect(urls).toContain("https://tenant.example.com/c/daily-habits");
     expect(urls).toContain("https://tenant.example.com/t/focus-rhythm");
   });
 

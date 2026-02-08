@@ -354,7 +354,7 @@ Queue (in order)
   - snapshot/archive filenames include date and time (and optionally short commit) to avoid ambiguity and overwrite confusion
 
 60) PR-HUB-01: Hub Tenant IA (Tests, Categories, Search, Trust Pages, Sitemap)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-HUB-01.md
 - Depends on: PR-SEO-DB-01
 

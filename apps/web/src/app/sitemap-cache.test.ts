@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 let headerValues: Record<string, string> = {};
 const listCatalogForTenantMock = vi.fn();
+const loadPublishedTestBySlugMock = vi.fn();
 const resolveContentSourceMock = vi.fn();
 
 vi.mock("next/headers", () => ({
@@ -10,6 +11,7 @@ vi.mock("next/headers", () => ({
 
 vi.mock("../lib/content/provider", () => ({
   listCatalogForTenant: (...args: unknown[]) => listCatalogForTenantMock(...args),
+  loadPublishedTestBySlug: (...args: unknown[]) => loadPublishedTestBySlugMock(...args),
   resolveContentSource: () => resolveContentSourceMock()
 }));
 
@@ -38,6 +40,53 @@ describe("sitemap db cache", () => {
         default_locale: "en"
       }
     ]);
+
+    loadPublishedTestBySlugMock.mockReset();
+    loadPublishedTestBySlugMock.mockResolvedValue({
+      tenant_id: TENANT_ID,
+      test_id: "test-focus-rhythm",
+      slug: "focus-rhythm",
+      default_locale: "en",
+      locale: "en",
+      spec: {
+        test_id: "test-focus-rhythm",
+        slug: "focus-rhythm",
+        version: 1,
+        category: "daily habits",
+        locales: {
+          en: {
+            title: "Focus Rhythm",
+            short_description: "Stay focused",
+            intro: "Intro",
+            paywall_headline: "Unlock",
+            report_title: "Focus Rhythm Report"
+          }
+        },
+        questions: [],
+        scoring: {
+          scales: [],
+          option_weights: {}
+        },
+        result_bands: []
+      },
+      test: {
+        test_id: "test-focus-rhythm",
+        slug: "focus-rhythm",
+        category: "daily habits",
+        title: "Focus Rhythm",
+        description: "Stay focused",
+        intro: "Intro",
+        paywall_headline: "Unlock",
+        report_title: "Focus Rhythm Report",
+        questions: [],
+        scoring: {
+          scales: [],
+          option_weights: {}
+        },
+        result_bands: [],
+        locale: "en"
+      }
+    });
 
     resolveContentSourceMock.mockReset();
     resolveContentSourceMock.mockReturnValue("db");
