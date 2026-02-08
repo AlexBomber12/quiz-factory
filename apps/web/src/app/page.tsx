@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { PublicNav } from "../components/public/PublicNav";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import {
@@ -12,7 +13,7 @@ import {
   CardTitle
 } from "../components/ui/card";
 import { Separator } from "../components/ui/separator";
-import { loadTenantCatalog } from "../lib/catalog/catalog";
+import { loadTenantCatalog, type CatalogTest } from "../lib/catalog/catalog";
 import {
   buildCanonical,
   buildLocaleAlternatesForPath,
@@ -20,6 +21,11 @@ import {
   buildTenantLabel,
   resolveTenantSeoContext
 } from "../lib/seo/metadata";
+import {
+  getTenantProfile,
+  resolveHomepageCopy,
+  resolveTenantKind
+} from "../lib/tenants/profiles";
 import { resolveTenantContext } from "../lib/tenants/request";
 
 export const generateMetadata = async (): Promise<Metadata> => {
@@ -55,30 +61,72 @@ export const generateMetadata = async (): Promise<Metadata> => {
   return metadata;
 };
 
+const orderTestsByFeaturedSlugs = (
+  tests: ReadonlyArray<CatalogTest>,
+  featuredSlugs: ReadonlyArray<string>
+): CatalogTest[] => {
+  const bySlug = new Map(tests.map((test) => [test.slug, test]));
+  const ordered: CatalogTest[] = [];
+  const seen = new Set<string>();
+
+  for (const rawSlug of featuredSlugs) {
+    const slug = rawSlug.trim().toLowerCase();
+    if (!slug || seen.has(slug)) {
+      continue;
+    }
+
+    const test = bySlug.get(slug);
+    if (!test) {
+      continue;
+    }
+
+    seen.add(slug);
+    ordered.push(test);
+  }
+
+  return ordered;
+};
+
 export default async function HomePage() {
   const context = await resolveTenantContext();
   const tests = await loadTenantCatalog(context.tenantId, context.locale);
+  const tenantProfile = getTenantProfile(context.tenantId);
+  const tenantKind = resolveTenantKind(context.tenantId);
+  const homepageCopy = resolveHomepageCopy(context.tenantId);
   const tenantLabel = context.requestHost ?? context.host ?? context.tenantId;
+  const featuredSlugs = tenantProfile?.featured_test_slugs ?? [];
+  const featuredTests =
+    tenantKind === "niche" ? orderTestsByFeaturedSlugs(tests, featuredSlugs) : [];
+  const useFocusedNicheHomepage =
+    tenantKind === "niche" &&
+    featuredSlugs.length > 0 &&
+    featuredTests.length > 0;
+  const visibleTests = useFocusedNicheHomepage ? featuredTests : tests;
+  const heroHeadline = homepageCopy.headline || tenantLabel;
+  const heroSubheadline = homepageCopy.subheadline;
 
   return (
     <section className="flex flex-col gap-8">
+      <PublicNav />
+
       <Card>
         <CardHeader className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                Tenant homepage
+                {useFocusedNicheHomepage ? "Niche homepage" : "Tenant homepage"}
               </p>
               <h1 className="mt-2 text-3xl font-semibold tracking-tight">
-                {tenantLabel}
+                {heroHeadline}
               </h1>
+              <p className="mt-2 text-sm text-muted-foreground">{tenantLabel}</p>
             </div>
             <Badge variant="secondary" className="uppercase">
               {context.locale}
             </Badge>
           </div>
           <CardDescription className="text-base text-muted-foreground">
-            Browse the available tests and start when ready.
+            {heroSubheadline}
           </CardDescription>
         </CardHeader>
       </Card>
@@ -87,14 +135,16 @@ export default async function HomePage() {
 
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-semibold tracking-tight">Available tests</h2>
+          <h2 className="text-2xl font-semibold tracking-tight">
+            {useFocusedNicheHomepage ? "Featured tests" : "Available tests"}
+          </h2>
           <p className="text-sm text-muted-foreground">
-            {tests.length} {tests.length === 1 ? "test" : "tests"} ready to run.
+            {visibleTests.length} {visibleTests.length === 1 ? "test" : "tests"} ready to run.
           </p>
         </div>
       </div>
 
-      {tests.length === 0 ? (
+      {visibleTests.length === 0 ? (
         <Card className="border-dashed">
           <CardHeader className="space-y-2">
             <CardTitle>No tests yet</CardTitle>
@@ -111,7 +161,7 @@ export default async function HomePage() {
         </Card>
       ) : (
         <div className="grid gap-6 md:grid-cols-2">
-          {tests.map((test) => {
+          {visibleTests.map((test) => {
             const minutesLabel =
               test.estimated_minutes === 1 ? "minute" : "minutes";
             return (

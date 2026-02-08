@@ -1,0 +1,14 @@
+{
+  "profiles": [
+    {
+      "tenant_id": "tenant-tenant-example-com",
+      "tenant_kind": "hub",
+      "label": "Tenant Example",
+      "home_headline": "Discover your next self-assessment",
+      "home_subheadline": "Browse the available tests and start when you are ready.",
+      "featured_test_slugs": [
+        "focus-rhythm"
+      ]
+    }
+  ]
+}
