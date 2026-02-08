@@ -1,4 +1,5 @@
 import type { ClickIdParams, UtmParams } from "./session";
+import { resolveTenantKind } from "../tenants/profiles";
 
 export const ANALYTICS_EVENT_NAMES = [
   "page_view",
@@ -22,6 +23,7 @@ export type AnalyticsEventName = (typeof ANALYTICS_EVENT_NAMES)[number];
 
 export type AnalyticsEventProperties = {
   tenant_id: string;
+  tenant_kind: string | null;
   session_id: string;
   distinct_id: string;
   test_id: string | null;
@@ -79,6 +81,7 @@ export const buildBaseEventProperties = (input: {
 
   return {
     tenant_id: input.tenantId,
+    tenant_kind: resolveTenantKind(input.tenantId),
     session_id: input.sessionId,
     distinct_id: input.distinctId,
     test_id: input.testId,

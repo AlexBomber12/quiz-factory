@@ -399,7 +399,7 @@ Queue (in order)
 - Depends on: PR-HUB-01
 
 69) PR-GROWTH-AB-01: Hub vs Niche Measurement (tenant_kind in events + dbt comparison marts)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-GROWTH-AB-01.md
 - Depends on: PR-TENANT-FACTORY-01
 

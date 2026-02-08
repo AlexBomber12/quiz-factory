@@ -17,6 +17,7 @@ with source as (
       timestamp
     ) as timestamp_utc,
     json_value(properties, '$.tenant_id') as tenant_id,
+    json_value(properties, '$.tenant_kind') as tenant_kind,
     json_value(properties, '$.test_id') as test_id,
     json_value(properties, '$.session_id') as session_id,
     json_value(properties, '$.locale') as locale,
