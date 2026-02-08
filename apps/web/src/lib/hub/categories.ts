@@ -2,8 +2,10 @@ import { getEstimatedMinutes } from "../content/estimated_minutes";
 import {
   listCatalogForTenant,
   loadPublishedTestBySlug,
+  type PublishedTenantTest,
   type TenantCatalogRecord
 } from "../content/provider";
+import { normalizeLocaleTag } from "../content/types";
 
 export type HubTest = {
   test_id: string;
@@ -57,6 +59,38 @@ export const normalizeCategoryParam = (value: string): string => {
   return toCategorySlug(decodeCategoryParam(value));
 };
 
+const isLocaleResolutionError = (error: unknown): boolean => {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  return (
+    error.message.startsWith("Missing locale ") ||
+    error.message.startsWith("Unsupported locale ")
+  );
+};
+
+const tryLoadPublishedForLocale = async (
+  tenantId: string,
+  slug: string,
+  locale: string
+): Promise<PublishedTenantTest | null> => {
+  try {
+    return await loadPublishedTestBySlug(tenantId, slug, locale);
+  } catch (error) {
+    if (isLocaleResolutionError(error)) {
+      return null;
+    }
+    throw error;
+  }
+};
+
+const localesMatch = (left: string, right: string): boolean => {
+  const normalizedLeft = normalizeLocaleTag(left) ?? left.trim().toLowerCase();
+  const normalizedRight = normalizeLocaleTag(right) ?? right.trim().toLowerCase();
+  return normalizedLeft === normalizedRight;
+};
+
 const buildHubTestsFromCatalog = async (
   tenantId: string,
   locale: string,
@@ -69,7 +103,12 @@ const buildHubTestsFromCatalog = async (
   const tests: HubTest[] = [];
 
   for (const entry of catalog) {
-    const published = await loadPublishedTestBySlug(tenantId, entry.slug, locale);
+    const requestedLocaleResult = await tryLoadPublishedForLocale(tenantId, entry.slug, locale);
+    const shouldTryFallback =
+      requestedLocaleResult === null && !localesMatch(locale, entry.default_locale);
+    const published = shouldTryFallback
+      ? await tryLoadPublishedForLocale(tenantId, entry.slug, entry.default_locale)
+      : requestedLocaleResult;
     if (!published) {
       continue;
     }
