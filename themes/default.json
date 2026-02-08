@@ -1,8 +1,8 @@
 {
-  "id": "golden-default",
-  "font_sans": "\"Avenir Next\", \"Avenir\", \"Futura\", \"Gill Sans\", \"Trebuchet MS\", sans-serif",
-  "radius": "16px",
+  "id": "calm-premium-default",
+  "font_sans": "\"Inter\", system-ui, -apple-system, \"Segoe UI\", Roboto, Helvetica, Arial, \"Apple Color Emoji\", \"Segoe UI Emoji\"",
+  "radius": "12px",
   "colors": {
-    "primary_hsl": "24 92% 52%"
+    "primary_hsl": "174.67 83.85% 31.57%"
   }
 }

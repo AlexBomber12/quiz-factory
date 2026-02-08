@@ -414,7 +414,7 @@ Queue (in order)
 - Depends on: PR-DOCKER-EXAMPLES-01
 
 72) PR-UI-04: Calm Premium Theme Contract (Navy + Teal) + Stitch References
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-UI-04.md
 - Depends on: PR-UI-03 and PR-UI-GOLDEN-01
 
