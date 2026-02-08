@@ -399,10 +399,14 @@ Queue (in order)
 - Depends on: PR-HUB-01
 
 69) PR-GROWTH-AB-01: Hub vs Niche Measurement (tenant_kind in events + dbt comparison marts)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-GROWTH-AB-01.md
 - Depends on: PR-TENANT-FACTORY-01
 
+70) PR-DOCKER-EXAMPLES-01: Docker Example Templates + Bootstrap Script
+- Status: TODO
+- Tasks file: tasks/PR-DOCKER-EXAMPLES-01.md
+- Depends on: none
 
 Execution rules (apply to every PR)
 - Work on exactly 1 PR at a time.
