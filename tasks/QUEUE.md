@@ -394,7 +394,7 @@ Queue (in order)
 - Depends on: PR-LLM-REPORT-04
 
 68) PR-TENANT-FACTORY-01: Tenant Profiles and Niche Presets (Hybrid Hub + Niche)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-TENANT-FACTORY-01.md
 - Depends on: PR-HUB-01
 

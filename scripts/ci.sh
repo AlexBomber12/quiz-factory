@@ -83,6 +83,8 @@ run_app() {
   pnpm build
   echo "==> Tenants validation"
   python3 "$ROOT_DIR/scripts/tenants/validate_tenants.py"
+  echo "==> Tenant profiles validation"
+  python3 "$ROOT_DIR/scripts/tenants/validate_tenant_profiles.py"
   echo "==> Content catalog validation"
   python3 "$ROOT_DIR/scripts/content/validate_catalog.py"
   echo "==> Locale quality lint"
