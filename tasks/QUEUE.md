@@ -408,6 +408,11 @@ Queue (in order)
 - Tasks file: tasks/PR-DOCKER-EXAMPLES-01.md
 - Depends on: none
 
+71) PR-GHCR-01: Publish Web Image to GHCR + Deploy Compose Template
+- Status: TODO
+- Tasks file: tasks/PR-GHCR-01.md
+- Depends on: PR-DOCKER-EXAMPLES-01
+
 Execution rules (apply to every PR)
 - Work on exactly 1 PR at a time.
 - Create a new branch from main named as specified in the selected tasks file (single source of truth).
