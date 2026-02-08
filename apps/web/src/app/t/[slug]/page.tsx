@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Badge } from "../../../components/ui/badge";
+
+import { PublicPage } from "../../../components/public/PublicPage";
+import { buildTestLandingProps } from "../../../components/public/test_landing_props";
 import { Button } from "../../../components/ui/button";
 import {
   Card,
@@ -10,7 +12,6 @@ import {
   CardHeader,
   CardTitle
 } from "../../../components/ui/card";
-import { Separator } from "../../../components/ui/separator";
 import { resolveTenantTestBySlug } from "../../../lib/catalog/catalog";
 import { loadPublishedTestBySlug } from "../../../lib/content/provider";
 import {
@@ -23,14 +24,18 @@ import {
   resolveTenantSeoContext
 } from "../../../lib/seo/metadata";
 import { resolveTenantContext, type TenantRequestContext } from "../../../lib/tenants/request";
+import { FaqBlock } from "../../../studio/blocks/FaqBlock";
+import { FooterBlock } from "../../../studio/blocks/FooterBlock";
+import { HeroBlock } from "../../../studio/blocks/HeroBlock";
+import { HowItWorksBlock } from "../../../studio/blocks/HowItWorksBlock";
+import { NavbarBlock } from "../../../studio/blocks/NavbarBlock";
+import { SocialProofBlock } from "../../../studio/blocks/SocialProofBlock";
 
 type PageProps = {
   params: {
     slug: string;
   };
 };
-
-const HAS_RUN_ROUTE = true;
 
 export const generateMetadata = async ({ params }: PageProps): Promise<Metadata> => {
   const context = await resolveTenantContext();
@@ -111,7 +116,7 @@ export default async function TestLandingPage({ params }: PageProps) {
 
   if (!test) {
     return (
-      <section className="flex flex-col gap-6">
+      <PublicPage>
         <Card>
           <CardHeader className="space-y-2">
             <CardTitle>Test not available</CardTitle>
@@ -121,70 +126,61 @@ export default async function TestLandingPage({ params }: PageProps) {
           </CardHeader>
           <CardFooter>
             <Button asChild variant="outline">
-              <Link href="/">Back to tests</Link>
+              <Link href="/tests">Back to tests</Link>
             </Button>
           </CardFooter>
         </Card>
-      </section>
+      </PublicPage>
     );
   }
 
   const published = await loadPublishedTestBySlug(context.tenantId, test.slug, context.locale);
-  const intro = published?.test.intro?.trim() ? published.test.intro : null;
-  const categoryValue = published?.test.category?.trim() ?? "";
-  const category = categoryValue.length > 0 ? categoryValue : null;
-  const introText = intro ?? test.short_description;
-  const minutesLabel = test.estimated_minutes === 1 ? "minute" : "minutes";
+  const landing = buildTestLandingProps(test, published);
 
   return (
-    <section className="flex flex-col gap-8">
-      <Card>
-        <CardHeader className="space-y-3">
-          <CardTitle className="text-3xl">{test.title}</CardTitle>
-          <CardDescription className="text-base text-muted-foreground">
-            {test.short_description}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-wrap gap-2">
-          <Badge variant="outline">
-            {test.estimated_minutes} {minutesLabel}
-          </Badge>
-          {category ? <Badge variant="secondary">{category}</Badge> : null}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="space-y-2">
-          <CardTitle className="text-xl">Introduction</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">{introText}</p>
-        </CardContent>
-      </Card>
-
-      <Card className="border-dashed">
-        <CardHeader className="space-y-2">
-          <CardTitle className="text-lg">Not medical advice</CardTitle>
-          <CardDescription>
-            This quiz is for informational purposes only and is not medical advice.
-          </CardDescription>
-        </CardHeader>
-      </Card>
-
-      <Separator />
-
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        {HAS_RUN_ROUTE ? (
-          <Button asChild>
-            <Link href={`/t/${test.slug}/run`}>Start</Link>
-          </Button>
-        ) : (
-          <Button disabled>Coming soon</Button>
-        )}
-        <Button asChild variant="outline">
-          <Link href="/">Back to tests</Link>
-        </Button>
-      </div>
-    </section>
+    <PublicPage>
+      <NavbarBlock {...landing.navbar} />
+      <HeroBlock {...landing.hero} />
+      <HowItWorksBlock {...landing.howItWorks} />
+      <section id={landing.whatYouGet.id} className="studio-block">
+        <div className="studio-section__header">
+          <p className="studio-eyebrow">What you get</p>
+          <h2 className="studio-section-title">{landing.whatYouGet.title}</h2>
+          <p className="studio-section-lede">{landing.whatYouGet.subtitle}</p>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          <Card className="border-border/60 bg-white/90">
+            <CardHeader className="space-y-1">
+              <CardTitle className="text-xl">{landing.whatYouGet.freePreview.title}</CardTitle>
+              <CardDescription>Immediate value before any payment.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ul className="list-disc space-y-2 pl-5 text-sm text-muted-foreground">
+                {landing.whatYouGet.freePreview.items.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+          <Card className="border-border/60 bg-white/90">
+            <CardHeader className="space-y-1">
+              <CardTitle className="text-xl">{landing.whatYouGet.fullReport.title}</CardTitle>
+              <CardDescription>More depth once you unlock the complete report.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ul className="list-disc space-y-2 pl-5 text-sm text-muted-foreground">
+                {landing.whatYouGet.fullReport.items.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        </div>
+        <p className="mt-4 text-sm text-muted-foreground">{landing.whatYouGet.disclaimer}</p>
+      </section>
+      <SocialProofBlock {...landing.socialProof} />
+      <FaqBlock {...landing.faq} />
+      <FooterBlock {...landing.footer} />
+    </PublicPage>
   );
 }

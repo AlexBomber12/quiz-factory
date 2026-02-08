@@ -359,7 +359,7 @@ Queue (in order)
 - Depends on: PR-SEO-DB-01
 
 61) PR-LANDING-01: Selling Test Landing Page (/t/[slug]) Using Studio Blocks
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-LANDING-01.md
 - Depends on: PR-UI-GOLDEN-01 and PR-UI-03
 
