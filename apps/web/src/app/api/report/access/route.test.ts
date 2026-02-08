@@ -6,6 +6,17 @@ vi.mock("next/headers", () => ({
   headers: () => new Headers(headerValues)
 }));
 
+vi.mock("../../../../lib/report/report_artifact_repo", () => ({
+  getReportArtifactByPurchaseId: vi.fn(async () => null),
+  upsertReportArtifact: vi.fn(async () => null)
+}));
+
+vi.mock("../../../../lib/report/report_job_repo", () => ({
+  enqueueReportJob: vi.fn(async () => null),
+  getReportJobByPurchaseId: vi.fn(async () => null),
+  markJobReady: vi.fn(async () => null)
+}));
+
 import { POST } from "./route";
 import { resetRateLimitState } from "../../../../lib/security/request_guards";
 import { resolveTestIdBySlug } from "../../../../lib/content/catalog";
@@ -26,6 +37,8 @@ import {
 } from "../../../../lib/product/report_token";
 import { RESULT_COOKIE, signResultCookie } from "../../../../lib/product/result_cookie";
 import { issueReportLinkToken } from "../../../../lib/report_link_token";
+import { getReportArtifactByPurchaseId } from "../../../../lib/report/report_artifact_repo";
+import { getReportJobByPurchaseId } from "../../../../lib/report/report_job_repo";
 
 const HOST = "tenant.example.com";
 const TENANT_ID = "tenant-tenant-example-com";
@@ -46,10 +59,48 @@ if (!BAND_ID) {
 }
 const SCALE_ID = localizedTest.scoring.scales[0] ?? "scale";
 const REPORT_KEY = createReportKey(TENANT_ID, TEST_ID, SESSION_ID);
+const GENERATED_REPORT_JSON = {
+  report_title: "Generated report",
+  summary: {
+    headline: "You show steady priorities.",
+    bullets: ["You value practical consistency."]
+  },
+  sections: [
+    {
+      id: "sec-1",
+      title: "Patterns",
+      body: "You make clear and stable decisions.",
+      bullets: ["Keep your routines simple."]
+    }
+  ],
+  action_plan: [
+    {
+      title: "Try this",
+      steps: ["Define one weekly focus area."]
+    }
+  ],
+  disclaimers: ["Educational use only."]
+};
+const GENERATED_ARTIFACT = {
+  purchase_id: PURCHASE_ID,
+  tenant_id: TENANT_ID,
+  test_id: TEST_ID,
+  session_id: SESSION_ID,
+  locale: "en",
+  style_id: "balanced",
+  model: "gpt-4o",
+  prompt_version: "v1",
+  scoring_version: "v1",
+  report_json: GENERATED_REPORT_JSON,
+  created_at: new Date().toISOString()
+};
 
 const setHeaders = (values: Record<string, string>) => {
   headerValues = values;
 };
+
+const getReportArtifactByPurchaseIdMock = vi.mocked(getReportArtifactByPurchaseId);
+const getReportJobByPurchaseIdMock = vi.mocked(getReportJobByPurchaseId);
 
 const buildRequest = (cookieHeader: string, reportLinkToken?: string) => {
   const url = reportLinkToken
@@ -146,11 +197,17 @@ describe("POST /api/report/access", () => {
     });
     process.env.REPORT_TOKEN_SECRET = "test-report-token-secret";
     process.env.RESULT_COOKIE_SECRET = "test-result-cookie-secret";
+    process.env.OPENAI_API_KEY = "test-openai-api-key";
+    getReportArtifactByPurchaseIdMock.mockReset();
+    getReportArtifactByPurchaseIdMock.mockResolvedValue(GENERATED_ARTIFACT);
+    getReportJobByPurchaseIdMock.mockReset();
+    getReportJobByPurchaseIdMock.mockResolvedValue(null);
   });
 
   afterEach(() => {
     delete process.env.REPORT_TOKEN_SECRET;
     delete process.env.RESULT_COOKIE_SECRET;
+    delete process.env.OPENAI_API_KEY;
   });
 
   it("consumes one credit for a new report", async () => {
@@ -168,6 +225,10 @@ describe("POST /api/report/access", () => {
     expect(payload.ok).toBe(true);
     expect(payload.consumed_credit).toBe(true);
     expect(payload.credits_balance_after).toBe(1);
+    expect(payload.generated?.style_id).toBe("balanced");
+    expect(payload.generated?.report_json?.summary?.headline).toBe(
+      "You show steady priorities."
+    );
 
     const setCookie = response.headers.get("set-cookie") ?? "";
     const creditsCookieValue = extractCookieValue(setCookie, CREDITS_COOKIE);
@@ -237,5 +298,63 @@ describe("POST /api/report/access", () => {
     expect(response.status).toBe(403);
     const payload = await response.json();
     expect(payload.error).toBe("Report access is invalid.");
+  });
+
+  it("returns 409 when generated artifact is missing and OPENAI_API_KEY is not set", async () => {
+    delete process.env.OPENAI_API_KEY;
+    getReportArtifactByPurchaseIdMock.mockResolvedValueOnce(null);
+
+    const creditsState = createCreditsState(1);
+    const cookieHeader = [
+      `${REPORT_TOKEN}=${createReportToken()}`,
+      `${RESULT_COOKIE}=${createResultCookie()}`,
+      `${CREDITS_COOKIE}=${serializeCreditsCookie(creditsState)}`
+    ].join("; ");
+
+    const response = await POST(buildRequest(cookieHeader));
+
+    expect(response.status).toBe(409);
+    const payload = await response.json();
+    expect(payload.error).toBe("report not generated");
+  });
+
+  it("returns 202 when generated artifact is missing and a job is already running", async () => {
+    getReportArtifactByPurchaseIdMock.mockResolvedValueOnce(null);
+    getReportJobByPurchaseIdMock.mockResolvedValueOnce({
+      id: "job-1",
+      purchase_id: PURCHASE_ID,
+      tenant_id: TENANT_ID,
+      test_id: TEST_ID,
+      session_id: SESSION_ID,
+      locale: "en",
+      status: "running",
+      attempts: 1,
+      last_error: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      started_at: new Date().toISOString(),
+      completed_at: null
+    });
+
+    const creditsState = createCreditsState(1);
+    const cookieHeader = [
+      `${REPORT_TOKEN}=${createReportToken()}`,
+      `${RESULT_COOKIE}=${createResultCookie()}`,
+      `${CREDITS_COOKIE}=${serializeCreditsCookie(creditsState)}`
+    ].join("; ");
+
+    const response = await POST(buildRequest(cookieHeader));
+
+    expect(response.status).toBe(202);
+    const payload = await response.json();
+    expect(payload).toEqual({ status: "generating" });
+
+    const setCookie = response.headers.get("set-cookie") ?? "";
+    const creditsCookieValue = extractCookieValue(setCookie, CREDITS_COOKIE);
+    expect(creditsCookieValue).toBeTruthy();
+
+    const parsed = parseCreditsCookie({ [CREDITS_COOKIE]: creditsCookieValue ?? "" }, TENANT_ID);
+    expect(parsed.credits_remaining).toBe(0);
+    expect(parsed.consumed_report_keys).toContain(REPORT_KEY);
   });
 });

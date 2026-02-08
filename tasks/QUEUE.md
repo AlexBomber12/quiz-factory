@@ -389,7 +389,7 @@ Queue (in order)
 - Depends on: PR-LLM-REPORT-03
 
 67) PR-LLM-REPORT-05: Render LLM Report (API Access, Client Polling, Print Support)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-LLM-REPORT-05.md
 - Depends on: PR-LLM-REPORT-04
 

@@ -44,6 +44,7 @@
   }
 
   .reportPrint :global(.runner-card),
+  .reportPrint :global(.generated-report-card),
   .reportPrint :global(ul),
   .reportPrint :global(li) {
     break-inside: avoid;

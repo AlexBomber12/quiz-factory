@@ -7,11 +7,24 @@ import {
   consumeCreditForReport,
   createReportKey,
   parseCreditsCookie,
-  serializeCreditsCookie
+  serializeCreditsCookie,
+  type CreditsState
 } from "../../../../lib/credits";
 import { loadPublishedTestBySlug } from "../../../../lib/content/provider";
+import type { LocalizedTest, TestSpec } from "../../../../lib/content/types";
 import { REPORT_TOKEN, verifyReportToken } from "../../../../lib/product/report_token";
 import { RESULT_COOKIE, verifyResultCookie } from "../../../../lib/product/result_cookie";
+import { getAttemptSummary } from "../../../../lib/report/attempt_summary_repo";
+import { generateLlmReport } from "../../../../lib/report/llm_report_generator";
+import { PROMPT_VERSION } from "../../../../lib/report/llm_report_schema";
+import { buildReportBrief, SCORING_VERSION } from "../../../../lib/report/report_brief";
+import {
+  getReportArtifactByPurchaseId,
+  type ReportArtifactRecord,
+  upsertReportArtifact
+} from "../../../../lib/report/report_artifact_repo";
+import { enqueueReportJob, getReportJobByPurchaseId, markJobReady } from "../../../../lib/report/report_job_repo";
+import { inferStyleIdFromBrief } from "../../../../lib/report/style_inference";
 import { verifyReportLinkToken } from "../../../../lib/report_link_token";
 import {
   DEFAULT_EVENT_BODY_BYTES,
@@ -23,6 +36,60 @@ import {
   rateLimit
 } from "../../../../lib/security/request_guards";
 import { resolveTenantContext } from "../../../../lib/tenants/request";
+
+const DEFAULT_OPENAI_MODEL = "gpt-4o";
+
+type ScaleEntry = {
+  scale: string;
+  value: number;
+};
+
+type ReportPayload = {
+  test_id: string;
+  slug: string;
+  report_title: string;
+  band: {
+    headline: string;
+    summary: string;
+    bullets: string[];
+  };
+  scale_entries: ScaleEntry[];
+  total_score: number;
+};
+
+type GeneratedPayload = {
+  report_json: unknown;
+  style_id: string;
+  model: string;
+  prompt_version: string;
+  scoring_version: string;
+};
+
+type AccessPayload = {
+  ok: true;
+  report: ReportPayload;
+  purchase_id: string;
+  session_id: string;
+  credits_balance_after: number;
+  consumed_credit: boolean;
+  generated?: GeneratedPayload;
+};
+
+type AccessContext = {
+  purchase_id: string;
+  tenant_id: string;
+  test_id: string;
+  session_id: string;
+  locale: string;
+  spec: TestSpec;
+  payload: AccessPayload;
+  credits_state: CreditsState | null;
+};
+
+type GeneratedResolution =
+  | { kind: "ready"; generated: GeneratedPayload }
+  | { kind: "generating" }
+  | { kind: "blocked"; error: "report not generated" | "result summary missing" };
 
 const requireString = (value: unknown): string | null => {
   if (typeof value !== "string") {
@@ -39,6 +106,201 @@ const requireRecord = (value: unknown): Record<string, unknown> | null => {
   }
 
   return value as Record<string, unknown>;
+};
+
+const hasOpenAiApiKey = (): boolean => Boolean(requireString(process.env.OPENAI_API_KEY));
+
+const resolveModel = (): string => requireString(process.env.OPENAI_MODEL) ?? DEFAULT_OPENAI_MODEL;
+
+const buildScaleEntries = (scaleScores: Record<string, number>): ScaleEntry[] => {
+  return Object.entries(scaleScores)
+    .sort((left, right) => left[0].localeCompare(right[0]))
+    .map(([scale, value]) => ({ scale, value }));
+};
+
+const buildReportPayload = (
+  test: LocalizedTest,
+  bandId: string,
+  scaleScores: Record<string, number>
+): ReportPayload | null => {
+  const band = test.result_bands.find((candidate) => candidate.band_id === bandId);
+  const bandCopy = band?.copy[test.locale];
+  if (!band || !bandCopy) {
+    return null;
+  }
+
+  const scaleEntries = buildScaleEntries(scaleScores);
+  const totalScore = scaleEntries.reduce((sum, entry) => sum + entry.value, 0);
+
+  return {
+    test_id: test.test_id,
+    slug: test.slug,
+    report_title: test.report_title,
+    band: {
+      headline: bandCopy.headline,
+      summary: bandCopy.summary,
+      bullets: bandCopy.bullets
+    },
+    scale_entries: scaleEntries,
+    total_score: totalScore
+  };
+};
+
+const toGeneratedPayload = (artifact: ReportArtifactRecord): GeneratedPayload => {
+  return {
+    report_json: artifact.report_json,
+    style_id: artifact.style_id,
+    model: artifact.model,
+    prompt_version: artifact.prompt_version,
+    scoring_version: artifact.scoring_version
+  };
+};
+
+const withGeneratedPayload = (
+  payload: AccessPayload,
+  generated: GeneratedPayload
+): AccessPayload => {
+  return {
+    ...payload,
+    generated
+  };
+};
+
+const buildReadyResponse = (
+  payload: AccessPayload,
+  creditsState: CreditsState | null
+): NextResponse<AccessPayload> => {
+  return withCreditsCookie(NextResponse.json(payload), creditsState);
+};
+
+const withCreditsCookie = <T>(
+  response: NextResponse<T>,
+  creditsState: CreditsState | null
+): NextResponse<T> => {
+  if (creditsState) {
+    response.cookies.set(CREDITS_COOKIE, serializeCreditsCookie(creditsState), {
+      httpOnly: true,
+      maxAge: CREDITS_COOKIE_TTL_SECONDS,
+      sameSite: "lax",
+      path: "/",
+      secure: process.env.NODE_ENV === "production"
+    });
+  }
+
+  return response;
+};
+
+const resolveGeneratedContent = async (
+  context: AccessContext
+): Promise<GeneratedResolution> => {
+  const artifact = await getReportArtifactByPurchaseId(context.purchase_id, {
+    tenant_id: context.tenant_id,
+    test_id: context.test_id,
+    session_id: context.session_id
+  });
+
+  if (artifact) {
+    return {
+      kind: "ready",
+      generated: toGeneratedPayload(artifact)
+    };
+  }
+
+  if (!hasOpenAiApiKey()) {
+    return {
+      kind: "blocked",
+      error: "report not generated"
+    };
+  }
+
+  let job = await getReportJobByPurchaseId(context.purchase_id);
+  if (!job) {
+    job = await enqueueReportJob({
+      purchase_id: context.purchase_id,
+      tenant_id: context.tenant_id,
+      test_id: context.test_id,
+      session_id: context.session_id,
+      locale: context.locale
+    });
+
+    if (!job) {
+      job = await getReportJobByPurchaseId(context.purchase_id);
+    }
+  }
+
+  if (job?.status === "running") {
+    return {
+      kind: "generating"
+    };
+  }
+
+  const summary = await getAttemptSummary(
+    context.tenant_id,
+    context.test_id,
+    context.session_id
+  );
+  if (!summary) {
+    return {
+      kind: "blocked",
+      error: "result summary missing"
+    };
+  }
+
+  const brief = buildReportBrief({
+    spec: context.spec,
+    attemptSummary: summary
+  });
+  const styleId = inferStyleIdFromBrief(brief);
+  const model = resolveModel();
+
+  const reportJson = await generateLlmReport({
+    brief,
+    styleId,
+    model
+  });
+
+  const generated = await upsertReportArtifact({
+    purchase_id: context.purchase_id,
+    tenant_id: context.tenant_id,
+    test_id: context.test_id,
+    session_id: context.session_id,
+    locale: context.locale,
+    style_id: styleId,
+    model,
+    prompt_version: PROMPT_VERSION,
+    scoring_version: SCORING_VERSION,
+    report_json: reportJson
+  });
+
+  await markJobReady(context.purchase_id);
+
+  return {
+    kind: "ready",
+    generated: toGeneratedPayload(generated)
+  };
+};
+
+const respondWithGenerated = async (context: AccessContext): Promise<Response> => {
+  const generatedResolution = await resolveGeneratedContent(context);
+
+  if (generatedResolution.kind === "generating") {
+    return withCreditsCookie(
+      NextResponse.json({ status: "generating" }, { status: 202 }),
+      context.credits_state
+    );
+  }
+
+  if (generatedResolution.kind === "blocked") {
+    return withCreditsCookie(
+      NextResponse.json({ error: generatedResolution.error }, { status: 409 }),
+      context.credits_state
+    );
+  }
+
+  return buildReadyResponse(
+    withGeneratedPayload(context.payload, generatedResolution.generated),
+    context.credits_state
+  );
 };
 
 export const POST = async (request: Request): Promise<Response> => {
@@ -137,40 +399,34 @@ export const POST = async (request: Request): Promise<Response> => {
     if (!reportTest) {
       return NextResponse.json({ error: "Report content unavailable." }, { status: 404 });
     }
-    const test = reportTest.test;
-    const band = test.result_bands.find(
-      (candidate) => candidate.band_id === reportLinkPayload.band_id
-    );
-    const bandCopy = band?.copy[test.locale];
 
-    if (!band || !bandCopy) {
+    const report = buildReportPayload(
+      reportTest.test,
+      reportLinkPayload.band_id,
+      reportLinkPayload.scale_scores
+    );
+    if (!report) {
       return NextResponse.json({ error: "Report content unavailable." }, { status: 404 });
     }
 
-    const scaleEntries = Object.entries(reportLinkPayload.scale_scores)
-      .sort((left, right) => left[0].localeCompare(right[0]))
-      .map(([scale, value]) => ({ scale, value }));
-    const totalScore = scaleEntries.reduce((sum, entry) => sum + entry.value, 0);
     const creditsState = parseCreditsCookie(cookieRecord, context.tenantId);
 
-    return NextResponse.json({
-      ok: true,
-      report: {
-        test_id: test.test_id,
-        slug: test.slug,
-        report_title: test.report_title,
-        band: {
-          headline: bandCopy.headline,
-          summary: bandCopy.summary,
-          bullets: bandCopy.bullets
-        },
-        scale_entries: scaleEntries,
-        total_score: totalScore
-      },
+    return respondWithGenerated({
       purchase_id: reportLinkPayload.purchase_id,
+      tenant_id: context.tenantId,
+      test_id: testId,
       session_id: reportLinkPayload.session_id,
-      credits_balance_after: creditsState.credits_remaining,
-      consumed_credit: false
+      locale: reportTest.locale,
+      spec: reportTest.spec,
+      payload: {
+        ok: true,
+        report,
+        purchase_id: reportLinkPayload.purchase_id,
+        session_id: reportLinkPayload.session_id,
+        credits_balance_after: creditsState.credits_remaining,
+        consumed_credit: false
+      },
+      credits_state: null
     });
   }
 
@@ -185,7 +441,7 @@ export const POST = async (request: Request): Promise<Response> => {
     resultPayload.session_id === reportPayload.session_id &&
     resultPayload.distinct_id === reportPayload.distinct_id;
 
-  if (matchesContext) {
+  if (matchesContext && reportPayload && resultPayload) {
     const reportKey = createReportKey(
       context.tenantId,
       testId,
@@ -213,50 +469,32 @@ export const POST = async (request: Request): Promise<Response> => {
       consumedCredit = true;
     }
 
-    const test = published.test;
-    const band = test.result_bands.find(
-      (candidate) => candidate.band_id === resultPayload.band_id
+    const report = buildReportPayload(
+      published.test,
+      resultPayload.band_id,
+      resultPayload.scale_scores
     );
-    const bandCopy = band?.copy[test.locale];
-
-    if (!band || !bandCopy) {
+    if (!report) {
       return NextResponse.json({ error: "Report content unavailable." }, { status: 404 });
     }
 
-    const scaleEntries = Object.entries(resultPayload.scale_scores)
-      .sort((left, right) => left[0].localeCompare(right[0]))
-      .map(([scale, value]) => ({ scale, value }));
-    const totalScore = scaleEntries.reduce((sum, entry) => sum + entry.value, 0);
-
-    const response = NextResponse.json({
-      ok: true,
-      report: {
-        test_id: test.test_id,
-        slug: test.slug,
-        report_title: test.report_title,
-        band: {
-          headline: bandCopy.headline,
-          summary: bandCopy.summary,
-          bullets: bandCopy.bullets
-        },
-        scale_entries: scaleEntries,
-        total_score: totalScore
-      },
+    return respondWithGenerated({
       purchase_id: reportPayload.purchase_id,
+      tenant_id: context.tenantId,
+      test_id: testId,
       session_id: reportPayload.session_id,
-      credits_balance_after: nextCreditsState.credits_remaining,
-      consumed_credit: consumedCredit
+      locale: published.locale,
+      spec: published.spec,
+      payload: {
+        ok: true,
+        report,
+        purchase_id: reportPayload.purchase_id,
+        session_id: reportPayload.session_id,
+        credits_balance_after: nextCreditsState.credits_remaining,
+        consumed_credit: consumedCredit
+      },
+      credits_state: nextCreditsState
     });
-
-    response.cookies.set(CREDITS_COOKIE, serializeCreditsCookie(nextCreditsState), {
-      httpOnly: true,
-      maxAge: CREDITS_COOKIE_TTL_SECONDS,
-      sameSite: "lax",
-      path: "/",
-      secure: process.env.NODE_ENV === "production"
-    });
-
-    return response;
   }
 
   if (!hasCookiePayloads) {
