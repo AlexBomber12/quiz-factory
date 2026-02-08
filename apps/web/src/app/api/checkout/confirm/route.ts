@@ -189,21 +189,20 @@ export const POST = async (request: Request): Promise<Response> => {
   const creditsStateBefore = parseCreditsCookie(requestCookies, tenantId);
   const grantAlreadyApplied = hasGrantId(creditsStateBefore, purchaseId);
 
-  if (!grantAlreadyApplied) {
-    const enqueueInput = sanitizeEnqueueReportJobInput({
-      purchase_id: purchaseId,
-      tenant_id: tenantId,
-      test_id: testId,
-      session_id: sessionId,
-      locale
-    });
+  const enqueueInput = sanitizeEnqueueReportJobInput({
+    purchase_id: purchaseId,
+    tenant_id: tenantId,
+    test_id: testId,
+    session_id: sessionId,
+    locale
+  });
 
-    if (enqueueInput) {
-      try {
-        await enqueueReportJob(enqueueInput);
-      } catch {
-        // Best-effort enqueue; checkout confirm must still succeed.
-      }
+  if (enqueueInput) {
+    try {
+      // Safe to attempt on every confirmation retry because enqueue is idempotent by purchase_id.
+      await enqueueReportJob(enqueueInput);
+    } catch {
+      // Best-effort enqueue; checkout confirm must still succeed.
     }
   }
 
