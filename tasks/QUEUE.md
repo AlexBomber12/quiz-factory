@@ -369,7 +369,7 @@ Queue (in order)
 - Depends on: PR-PRODUCT-03 and PR-UI-01
 
 63) PR-LLM-REPORT-01: Report Job Pipeline (Attempt Summary, Jobs Table, Enqueue, Internal Runner)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-LLM-REPORT-01.md
 - Depends on: PR-CONTENT-DB-01 and PR-PRODUCT-06
 

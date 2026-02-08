@@ -2,22 +2,37 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { POST } from "./route";
 import { resetRateLimitState } from "../../../../lib/security/request_guards";
-import { CREDITS_COOKIE } from "../../../../lib/credits";
+import {
+  CREDITS_COOKIE,
+  grantCredits,
+  parseCreditsCookie,
+  serializeCreditsCookie
+} from "../../../../lib/credits";
 import { REPORT_TOKEN } from "../../../../lib/product/report_token";
 import { createStripeClient } from "../../../../lib/stripe/client";
+import { enqueueReportJob } from "../../../../lib/report/report_job_repo";
 
 vi.mock("../../../../lib/stripe/client", () => ({
   createStripeClient: vi.fn()
 }));
 
-const createStripeClientMock = vi.mocked(createStripeClient);
+vi.mock("../../../../lib/report/report_job_repo", () => ({
+  enqueueReportJob: vi.fn(async () => null)
+}));
 
-const buildRequest = (body: Record<string, unknown>) =>
+const createStripeClientMock = vi.mocked(createStripeClient);
+const enqueueReportJobMock = vi.mocked(enqueueReportJob);
+
+const buildRequest = (
+  body: Record<string, unknown>,
+  headers?: Record<string, string>
+) =>
   new Request("https://tenant.example.com/api/checkout/confirm", {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      host: "tenant.example.com"
+      host: "tenant.example.com",
+      ...headers
     },
     body: JSON.stringify(body)
   });
@@ -26,6 +41,8 @@ describe("POST /api/checkout/confirm", () => {
   beforeEach(() => {
     resetRateLimitState();
     process.env.REPORT_TOKEN_SECRET = "test-report-token-secret";
+    enqueueReportJobMock.mockReset();
+    enqueueReportJobMock.mockResolvedValue(null);
   });
 
   afterEach(() => {
@@ -115,5 +132,61 @@ describe("POST /api/checkout/confirm", () => {
     expect(response.status).toBe(400);
     const payload = await response.json();
     expect(payload.error).toBe("Checkout session is not paid.");
+  });
+
+  it("retries report job enqueue even when grant is already applied", async () => {
+    const retrieveSession = vi.fn(async () => ({
+      payment_status: "paid",
+      amount_total: 499,
+      currency: "eur",
+      metadata: {
+        purchase_id: "purchase-123",
+        tenant_id: "tenant-tenant-example-com",
+        test_id: "test-focus-rhythm",
+        session_id: "session-123",
+        distinct_id: "distinct-123",
+        locale: "en",
+        product_type: "pack_5",
+        pricing_variant: "base",
+        offer_key: "pack5",
+        credits_granted: "5",
+        currency: "EUR",
+        unit_price_eur: "4.99"
+      }
+    }));
+
+    createStripeClientMock.mockReturnValue({
+      checkout: {
+        sessions: {
+          retrieve: retrieveSession
+        }
+      }
+    } as unknown as ReturnType<typeof createStripeClient>);
+
+    enqueueReportJobMock.mockRejectedValueOnce(new Error("temporary db outage"));
+
+    const firstResponse = await POST(buildRequest({ stripe_session_id: "cs_123" }));
+    expect(firstResponse.status).toBe(200);
+
+    const stateBefore = parseCreditsCookie({}, "tenant-tenant-example-com");
+    const stateWithGrant = grantCredits(stateBefore, 5, "purchase-123");
+    const creditsCookie = serializeCreditsCookie(stateWithGrant);
+
+    const secondResponse = await POST(
+      buildRequest(
+        { stripe_session_id: "cs_123" },
+        { cookie: `${CREDITS_COOKIE}=${creditsCookie}` }
+      )
+    );
+    expect(secondResponse.status).toBe(200);
+
+    expect(enqueueReportJobMock).toHaveBeenCalledTimes(2);
+    expect(enqueueReportJobMock).toHaveBeenLastCalledWith({
+      purchase_id: "purchase-123",
+      tenant_id: "tenant-tenant-example-com",
+      test_id: "test-focus-rhythm",
+      session_id: "session-123",
+      locale: "en"
+    });
   });
 });

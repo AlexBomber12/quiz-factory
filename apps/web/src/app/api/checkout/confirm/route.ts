@@ -24,6 +24,8 @@ import {
   type ReportTokenPayload,
   signReportToken
 } from "../../../../lib/product/report_token";
+import { sanitizeEnqueueReportJobInput } from "../../../../lib/report/report_job_inputs";
+import { enqueueReportJob } from "../../../../lib/report/report_job_repo";
 import {
   DEFAULT_EVENT_BODY_BYTES,
   DEFAULT_EVENT_RATE_LIMIT,
@@ -176,6 +178,7 @@ export const POST = async (request: Request): Promise<Response> => {
   const testId = required.test_id ?? "";
   const sessionId = required.session_id ?? "";
   const distinctId = required.distinct_id ?? "";
+  const locale = required.locale ?? "";
   const productType = required.product_type ?? "";
   const pricingVariant = required.pricing_variant ?? "";
 
@@ -185,6 +188,24 @@ export const POST = async (request: Request): Promise<Response> => {
   const requestCookies = parseCookies(request.headers.get("cookie"));
   const creditsStateBefore = parseCreditsCookie(requestCookies, tenantId);
   const grantAlreadyApplied = hasGrantId(creditsStateBefore, purchaseId);
+
+  const enqueueInput = sanitizeEnqueueReportJobInput({
+    purchase_id: purchaseId,
+    tenant_id: tenantId,
+    test_id: testId,
+    session_id: sessionId,
+    locale
+  });
+
+  if (enqueueInput) {
+    try {
+      // Safe to attempt on every confirmation retry because enqueue is idempotent by purchase_id.
+      await enqueueReportJob(enqueueInput);
+    } catch {
+      // Best-effort enqueue; checkout confirm must still succeed.
+    }
+  }
+
   const creditsStateAfterGrant = grantCredits(creditsStateBefore, creditsGranted, purchaseId);
   const creditsStateAfter = setLastGrantMetadata(creditsStateAfterGrant, {
     grant_id: purchaseId,
