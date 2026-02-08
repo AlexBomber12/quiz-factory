@@ -45,7 +45,8 @@
       "is_internal",
       "fbclid",
       "gclid",
-      "ttclid"
+      "ttclid",
+      "tenant_kind"
     ]
   },
   "test_start": {
@@ -70,7 +71,8 @@
       "is_internal",
       "fbclid",
       "gclid",
-      "ttclid"
+      "ttclid",
+      "tenant_kind"
     ]
   },
   "test_complete": {
@@ -95,7 +97,8 @@
       "is_internal",
       "fbclid",
       "gclid",
-      "ttclid"
+      "ttclid",
+      "tenant_kind"
     ]
   },
   "result_preview_view": {
@@ -120,7 +123,8 @@
       "is_internal",
       "fbclid",
       "gclid",
-      "ttclid"
+      "ttclid",
+      "tenant_kind"
     ]
   },
   "paywall_view": {
@@ -145,7 +149,8 @@
       "is_internal",
       "fbclid",
       "gclid",
-      "ttclid"
+      "ttclid",
+      "tenant_kind"
     ]
   },
   "checkout_start": {
@@ -172,7 +177,8 @@
       "is_internal",
       "fbclid",
       "gclid",
-      "ttclid"
+      "ttclid",
+      "tenant_kind"
     ]
   },
   "purchase_success": {
@@ -209,7 +215,8 @@
       "is_internal",
       "fbclid",
       "gclid",
-      "ttclid"
+      "ttclid",
+      "tenant_kind"
     ]
   },
   "purchase_failed": {
@@ -237,7 +244,8 @@
       "is_internal",
       "fbclid",
       "gclid",
-      "ttclid"
+      "ttclid",
+      "tenant_kind"
     ]
   },
   "report_view": {
@@ -265,7 +273,8 @@
       "is_internal",
       "fbclid",
       "gclid",
-      "ttclid"
+      "ttclid",
+      "tenant_kind"
     ]
   },
   "report_pdf_download": {
@@ -291,7 +300,8 @@
       "is_internal",
       "fbclid",
       "gclid",
-      "ttclid"
+      "ttclid",
+      "tenant_kind"
     ]
   },
   "upsell_view": {
@@ -318,7 +328,8 @@
       "is_internal",
       "fbclid",
       "gclid",
-      "ttclid"
+      "ttclid",
+      "tenant_kind"
     ]
   },
   "upsell_accept": {
@@ -345,7 +356,8 @@
       "is_internal",
       "fbclid",
       "gclid",
-      "ttclid"
+      "ttclid",
+      "tenant_kind"
     ]
   },
   "refund_issued": {
@@ -374,7 +386,8 @@
       "is_internal",
       "fbclid",
       "gclid",
-      "ttclid"
+      "ttclid",
+      "tenant_kind"
     ]
   },
   "dispute_opened": {
@@ -403,7 +416,8 @@
       "is_internal",
       "fbclid",
       "gclid",
-      "ttclid"
+      "ttclid",
+      "tenant_kind"
     ]
   },
   "share_click": {
@@ -429,7 +443,8 @@
       "is_internal",
       "fbclid",
       "gclid",
-      "ttclid"
+      "ttclid",
+      "tenant_kind"
     ]
   }
 }

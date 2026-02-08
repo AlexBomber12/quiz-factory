@@ -3,6 +3,7 @@ import { createHmac, timingSafeEqual } from "crypto";
 import type { AnalyticsEventProperties, AnalyticsEventName } from "../analytics/events";
 import { normalizeString } from "../analytics/session";
 import { validateAnalyticsEventPayload } from "../analytics/validate";
+import { resolveTenantKind } from "../tenants/profiles";
 import { parseStripeMetadata } from "./metadata";
 import type {
   StripeAnalyticsStore,
@@ -297,6 +298,7 @@ const buildFinanceBaseProperties = (
 
   return {
     tenant_id: fallbackTenantId,
+    tenant_kind: resolveTenantKind(fallbackTenantId),
     session_id: fallbackSessionId,
     distinct_id: fallbackDistinctId,
     test_id: fallbackTestId,

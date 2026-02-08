@@ -13,6 +13,47 @@ models:
         tests:
           - not_null
 
+  - name: mart_funnel_daily_by_tenant_kind
+    columns:
+      - name: date
+        description: Reporting date in the configured reporting timezone.
+        tests:
+          - not_null
+      - name: tenant_kind
+        description: Tenant segment resolved from tenant profiles (hub or niche).
+        tests:
+          - not_null
+      - name: locale
+        description: Locale associated with the event.
+        tests:
+          - not_null
+      - name: channel_key
+        description: Marketing attribution bucket derived from UTM and referrer.
+      - name: visits
+        description: Distinct sessions with a page_view event.
+      - name: unique_visitors
+        description: Distinct users with a page_view event.
+      - name: test_starts
+        description: Distinct sessions with a test_start event.
+      - name: test_completes
+        description: Distinct sessions with a test_complete event.
+      - name: paywall_views
+        description: Distinct sessions with a paywall_view event.
+      - name: checkout_starts
+        description: Distinct sessions with a checkout_start event.
+      - name: purchases
+        description: Distinct sessions with a purchase_success event.
+      - name: test_start_rate
+        description: test_starts divided by visits.
+      - name: test_complete_rate
+        description: test_completes divided by test_starts.
+      - name: paywall_view_rate
+        description: paywall_views divided by test_completes.
+      - name: checkout_start_rate
+        description: checkout_starts divided by paywall_views.
+      - name: purchase_conversion_rate
+        description: purchases divided by visits.
+
   - name: mart_pnl_daily
     columns:
       - name: date

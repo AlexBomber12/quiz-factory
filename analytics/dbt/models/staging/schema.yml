@@ -58,6 +58,13 @@ models:
       - name: locale
         tests:
           - not_null
+      - name: tenant_kind
+        tests:
+          - accepted_values:
+              values:
+                - hub
+                - niche
+              where: "tenant_kind is not null"
 
   - name: stg_stripe_purchases
     columns:
