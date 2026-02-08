@@ -384,7 +384,7 @@ Queue (in order)
 - Depends on: PR-LLM-REPORT-02
 
 66) PR-LLM-REPORT-04: Auto-Style Mapping (Style Cards + Deterministic Selection)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-LLM-REPORT-04.md
 - Depends on: PR-LLM-REPORT-03
 
