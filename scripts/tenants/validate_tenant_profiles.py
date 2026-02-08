@@ -97,7 +97,7 @@ def serialize_profiles(profiles: list[dict[str, object]]) -> str:
     canonical_profiles: list[dict[str, object]] = []
 
     for profile in sorted_profiles:
-        featured = sorted(profile["featured_test_slugs"])
+        featured = list(profile["featured_test_slugs"])
         canonical_profiles.append(
             {
                 "tenant_id": profile["tenant_id"],
@@ -255,7 +255,7 @@ def main() -> int:
     if canonical != raw_profiles_text:
         print(
             "ERROR: tenant_profiles.json is not deterministically sorted or formatted. "
-            "Sort profiles by tenant_id and featured_test_slugs alphabetically.",
+            "Sort profiles by tenant_id and keep featured_test_slugs in intended order.",
             file=sys.stderr
         )
         return 1
