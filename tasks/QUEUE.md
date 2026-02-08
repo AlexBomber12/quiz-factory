@@ -374,7 +374,7 @@ Queue (in order)
 - Depends on: PR-CONTENT-DB-01 and PR-PRODUCT-06
 
 64) PR-LLM-REPORT-02: Report Brief Builder (Deterministic Aggregates for LLM Input)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-LLM-REPORT-02.md
 - Depends on: PR-LLM-REPORT-01
 
