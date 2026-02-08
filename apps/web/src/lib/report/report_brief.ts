@@ -28,7 +28,12 @@ type BuildReportBriefInput = {
   attemptSummary: AttemptSummaryInput;
 };
 
-const compareScaleIds = (left: string, right: string): number => left.localeCompare(right);
+const compareScaleIds = (left: string, right: string): number => {
+  if (left === right) {
+    return 0;
+  }
+  return left < right ? -1 : 1;
+};
 
 const normalizeIsoTimestamp = (value: string): string => {
   const parsed = Date.parse(value);
