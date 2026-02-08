@@ -234,6 +234,8 @@ export default function TestRunnerClient({ test }: RunnerProps) {
         session_id: attempt.sessionId,
         attempt_token: attempt.attemptToken
       });
+      clearResumeState(test.testId, test.slug);
+      setResumeState(null);
       const previewResponse = await fetch("/api/test/score-preview", {
         method: "POST",
         headers: {
@@ -249,8 +251,6 @@ export default function TestRunnerClient({ test }: RunnerProps) {
       if (!previewResponse.ok) {
         throw new Error("Score preview failed.");
       }
-      clearResumeState(test.testId, test.slug);
-      setResumeState(null);
       router.push(`/t/${test.slug}/preview`);
     } catch {
       setError("Unable to finish the test. Please try again.");
