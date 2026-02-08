@@ -1,0 +1,27 @@
+# VCS
+.git
+.gitignore
+
+# Node artifacts
+node_modules
+**/node_modules
+.pnpm-store
+.turbo
+**/.turbo
+.next
+**/.next
+dist
+**/dist
+coverage
+tmp
+**/*.tsbuildinfo
+
+# Local runtime files
+.env
+.env.*
+docker-compose.yml
+docker-compose.override.yml
+config/tenants.local.json
+
+# Build artifacts
+artifacts
