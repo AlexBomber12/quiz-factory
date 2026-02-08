@@ -9,6 +9,17 @@ coverage/
 .DS_Store
 .env
 .env.*
+!.env.example
+!.env.production.example
+!.env.local.example
+.env.production
+.env.local
+docker-compose.yml
+docker-compose.override.yml
+config/tenants.local.json
+certs/
+*.pem
+*.key
 .venv/
 __pycache__/
 *.pyc

@@ -404,7 +404,7 @@ Queue (in order)
 - Depends on: PR-TENANT-FACTORY-01
 
 70) PR-DOCKER-EXAMPLES-01: Docker Example Templates + Bootstrap Script
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-DOCKER-EXAMPLES-01.md
 - Depends on: none
 

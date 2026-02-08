@@ -1,0 +1,11 @@
+{
+  "tenants": [
+    {
+      "tenant_id": "tenant-qf-local",
+      "domains": [
+        "qf.local"
+      ],
+      "default_locale": "en"
+    }
+  ]
+}
