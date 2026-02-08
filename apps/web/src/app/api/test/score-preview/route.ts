@@ -4,6 +4,8 @@ import { getDistinctIdFromRequest, parseCookies } from "../../../../lib/analytic
 import { loadPublishedTestById } from "../../../../lib/content/provider";
 import { signResultCookie, RESULT_COOKIE } from "../../../../lib/product/result_cookie";
 import { scoreTest } from "../../../../lib/product/scoring";
+import { upsertAttemptSummary } from "../../../../lib/report/attempt_summary_repo";
+import { sanitizeAttemptSummaryInput } from "../../../../lib/report/report_job_inputs";
 import {
   DEFAULT_EVENT_BODY_BYTES,
   DEFAULT_EVENT_RATE_LIMIT,
@@ -100,6 +102,7 @@ export const POST = async (request: Request): Promise<Response> => {
   }
 
   const { tenantId, defaultLocale } = resolveTenant(request.headers, new URL(request.url).host);
+  const locale = defaultLocale ?? "en";
 
   let verifiedToken: ReturnType<typeof verifyAttemptToken>;
   try {
@@ -124,7 +127,7 @@ export const POST = async (request: Request): Promise<Response> => {
   const published = await loadPublishedTestById(
     tenantId,
     testId,
-    defaultLocale ?? "en"
+    locale
   );
   if (!published) {
     return NextResponse.json({ error: "Unknown test_id." }, { status: 400 });
@@ -138,12 +141,33 @@ export const POST = async (request: Request): Promise<Response> => {
     return NextResponse.json({ error: "Invalid answers." }, { status: 400 });
   }
 
+  const computedAtUtc = new Date().toISOString();
+  const attemptSummaryInput = sanitizeAttemptSummaryInput({
+    tenant_id: tenantId,
+    test_id: testId,
+    session_id: sessionId,
+    distinct_id: distinctId,
+    locale,
+    computed_at: computedAtUtc,
+    band_id: scoring.band_id,
+    scale_scores: scoring.scale_scores,
+    total_score: scoring.total_score
+  });
+
+  if (attemptSummaryInput) {
+    try {
+      await upsertAttemptSummary(attemptSummaryInput);
+    } catch {
+      // Best-effort write; preview should still succeed without DB.
+    }
+  }
+
   const resultCookie = signResultCookie({
     tenant_id: tenantId,
     session_id: sessionId,
     distinct_id: distinctId,
     test_id: testId,
-    computed_at_utc: new Date().toISOString(),
+    computed_at_utc: computedAtUtc,
     band_id: scoring.band_id,
     scale_scores: scoring.scale_scores
   });
