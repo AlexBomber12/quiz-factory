@@ -8,10 +8,10 @@ import { hasReportArtifact, insertReportArtifact } from "../../../../../lib/repo
 import { getAttemptSummary } from "../../../../../lib/report/attempt_summary_repo";
 import { parseReportJobClaimLimit } from "../../../../../lib/report/report_job_inputs";
 import { claimQueuedJobs, markJobFailed, markJobReady } from "../../../../../lib/report/report_job_repo";
+import { inferStyleIdFromBrief } from "../../../../../lib/report/style_inference";
 
 const DEFAULT_OPENAI_MODEL = "gpt-4o";
 const OPENAI_NOT_CONFIGURED_ERROR = "openai not configured";
-const STYLE_ID = "neutral";
 const MAX_ERROR_LENGTH = 160;
 
 const normalizeString = (value: unknown): string | null => {
@@ -89,10 +89,11 @@ export const POST = async (request: Request): Promise<Response> => {
         spec: publishedTest.spec,
         attemptSummary: summary
       });
+      const styleId = inferStyleIdFromBrief(brief);
 
       const reportJson = await generateLlmReport({
         brief,
-        styleId: STYLE_ID,
+        styleId,
         model
       });
 
@@ -102,7 +103,7 @@ export const POST = async (request: Request): Promise<Response> => {
         test_id: job.test_id,
         session_id: job.session_id,
         locale: job.locale,
-        style_id: STYLE_ID,
+        style_id: styleId,
         model,
         prompt_version: PROMPT_VERSION,
         scoring_version: SCORING_VERSION,

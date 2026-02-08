@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { buildLlmPrompt } from "./llm_prompt";
 import { LLM_REPORT_SCHEMA_NAME } from "./llm_report_schema";
 import type { ReportBrief } from "./report_brief";
+import { STYLE_CARDS } from "./style_cards";
 
 const briefFixture: ReportBrief = {
   tenant_id: "tenant-demo",
@@ -30,13 +31,27 @@ const briefFixture: ReportBrief = {
 
 describe("llm prompt", () => {
   it("includes required report brief and schema identifiers", () => {
+    const analyticalStyle = STYLE_CARDS.analytical;
     const prompt = buildLlmPrompt({
       brief: briefFixture,
-      style_id: "neutral"
+      style_id: analyticalStyle.id
     });
 
     expect(prompt.user).toContain(briefFixture.test_id);
     expect(prompt.user).toContain(briefFixture.locale);
     expect(prompt.system).toContain(LLM_REPORT_SCHEMA_NAME);
+    expect(prompt.system).toContain(analyticalStyle.tone_guidance);
+    expect(prompt.system).toContain(analyticalStyle.structure_guidance);
+    expect(prompt.system).toContain(analyticalStyle.do_list[0]);
+    expect(prompt.system).toContain(analyticalStyle.dont_list[0]);
+  });
+
+  it("falls back to balanced style when style id is unknown", () => {
+    const prompt = buildLlmPrompt({
+      brief: briefFixture,
+      style_id: "unknown-style"
+    });
+
+    expect(prompt.user).toContain("style_id: balanced");
   });
 });
