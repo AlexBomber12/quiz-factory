@@ -429,8 +429,13 @@ Queue (in order)
 - Depends on: PR-UI-04
 
 75) PR-FIX-WEB-METADATA-01: Resilient generateMetadata (no .trim on undefined) for Test Pages
-- Status: DONE
+- Status: DOING
 - Tasks file: tasks/PR-FIX-WEB-METADATA-01.md
+- Depends on: none
+
+76) PR-FIX-ATTEMPT-TOKEN-CONTEXT-01: Attempt token context should not break on host ports (normalize host for tenant resolution)
+- Status: TODO
+- Tasks file: tasks/PR-FIX-ATTEMPT-TOKEN-CONTEXT-01.md
 - Depends on: none
 
 Execution rules (apply to every PR)
