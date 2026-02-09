@@ -429,7 +429,7 @@ Queue (in order)
 - Depends on: PR-UI-04
 
 75) PR-FIX-WEB-METADATA-01: Resilient generateMetadata (no .trim on undefined) for Test Pages
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-FIX-WEB-METADATA-01.md
 - Depends on: none
 
