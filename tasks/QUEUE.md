@@ -428,6 +428,11 @@ Queue (in order)
 - Tasks file: tasks/PR-UI-06.md
 - Depends on: PR-UI-04
 
+75) PR-FIX-WEB-METADATA-01: Resilient generateMetadata (no .trim on undefined) for Test Pages
+- Status: TODO
+- Tasks file: tasks/PR-FIX-WEB-METADATA-01.md
+- Depends on: none
+
 Execution rules (apply to every PR)
 - Work on exactly 1 PR at a time.
 - Create a new branch from main named as specified in the selected tasks file (single source of truth).
