@@ -23,6 +23,11 @@ import {
   resolveSeoTestContext,
   resolveTenantSeoContext
 } from "../../../lib/seo/metadata";
+import {
+  resolveRouteParams,
+  resolveTestMetadataCopy,
+  safeLowercaseSlug
+} from "../../../lib/seo/metadata_safety";
 import { resolveTenantContext, type TenantRequestContext } from "../../../lib/tenants/request";
 import { FaqBlock } from "../../../studio/blocks/FaqBlock";
 import { FooterBlock } from "../../../studio/blocks/FooterBlock";
@@ -30,15 +35,26 @@ import { HeroBlock } from "../../../studio/blocks/HeroBlock";
 import { NavbarBlock } from "../../../studio/blocks/NavbarBlock";
 import { SocialProofBlock } from "../../../studio/blocks/SocialProofBlock";
 
+type SlugParams = {
+  slug?: string;
+};
+
 type PageProps = {
-  params: {
-    slug: string;
-  };
+  params: Promise<SlugParams> | SlugParams;
+};
+
+const resolveSlugParam = async (params: PageProps["params"]): Promise<string> => {
+  const resolved = await resolveRouteParams(params);
+  return safeLowercaseSlug(resolved.slug, "test");
 };
 
 export const generateMetadata = async ({ params }: PageProps): Promise<Metadata> => {
+  const routeSlug = await resolveSlugParam(params);
   const context = await resolveTenantContext();
-  const test = await resolveTenantTestBySlug(context.tenantId, context.locale, params.slug);
+  const [test, published] = await Promise.all([
+    resolveTenantTestBySlug(context.tenantId, context.locale, routeSlug).catch(() => null),
+    loadPublishedTestBySlug(context.tenantId, routeSlug, context.locale).catch(() => null)
+  ]);
   const tenantSeo = resolveTenantSeoContext({ tenantId: context.tenantId });
   const tenantLabel = buildTenantLabel(context);
   const fallbackOgImage = buildCanonical(context, "/og.png");
@@ -76,8 +92,8 @@ export const generateMetadata = async ({ params }: PageProps): Promise<Metadata>
     return metadata;
   };
 
-  if (!test) {
-    const path = `/t/${params.slug}`;
+  if (!test && !published) {
+    const path = `/t/${routeSlug}`;
     const canonical = buildCanonical(context, path);
     return buildMetadata(
       `${tenantLabel} | Quiz Factory`,
@@ -89,29 +105,45 @@ export const generateMetadata = async ({ params }: PageProps): Promise<Metadata>
     );
   }
 
-  const seo = resolveSeoTestContext({
-    tenantId: context.tenantId,
-    testId: test.test_id
+  const metadataCopy = resolveTestMetadataCopy({
+    routeSlug,
+    slug: test?.slug ?? published?.slug,
+    title: test?.title ?? published?.test.title,
+    descriptionCandidates: [test?.short_description, published?.test.description],
+    spec: published?.spec,
+    locale: published?.locale ?? context.locale,
+    fallbackDescription: "This test is not available for this tenant."
   });
-  const path = `/t/${test.slug}`;
+  const resolvedTestId = test?.test_id ?? published?.test_id;
+  const seo = resolvedTestId
+    ? resolveSeoTestContext({
+      tenantId: context.tenantId,
+      testId: resolvedTestId
+    })
+    : null;
+  const path = `/t/${metadataCopy.slug}`;
   const canonical = buildCanonical(context, path);
-  const ogPath = buildOgImagePath(`/t/${test.slug}/opengraph-image`, seo.token);
+  const ogPath = buildOgImagePath(
+    `/t/${metadataCopy.slug}/opengraph-image`,
+    seo?.token ?? tenantSeo.token
+  );
   const ogImage = buildCanonical(context, ogPath) ?? fallbackOgImage;
-  const title = `${test.title} (${test.slug}) | ${tenantLabel} | Quiz Factory`;
+  const title = `${metadataCopy.title} (${metadataCopy.slug}) | ${tenantLabel} | Quiz Factory`;
 
   return buildMetadata(
     title,
-    test.short_description,
+    metadataCopy.description,
     path,
     canonical,
     ogImage,
-    seo.locales
+    seo?.locales ?? tenantSeo.locales
   );
 };
 
 export default async function TestLandingPage({ params }: PageProps) {
+  const routeSlug = await resolveSlugParam(params);
   const context = await resolveTenantContext();
-  const test = await resolveTenantTestBySlug(context.tenantId, context.locale, params.slug);
+  const test = await resolveTenantTestBySlug(context.tenantId, context.locale, routeSlug);
 
   if (!test) {
     return (
@@ -133,7 +165,7 @@ export default async function TestLandingPage({ params }: PageProps) {
     );
   }
 
-  const published = await loadPublishedTestBySlug(context.tenantId, test.slug, context.locale);
+  const published = await loadPublishedTestBySlug(context.tenantId, routeSlug, context.locale);
   const landing = buildTestLandingProps(test, published);
 
   return (

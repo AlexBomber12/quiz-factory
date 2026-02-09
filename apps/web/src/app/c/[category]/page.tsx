@@ -14,12 +14,15 @@ import {
 } from "../../../components/ui/card";
 import { loadTenantHubTests, normalizeCategoryParam } from "../../../lib/hub/categories";
 import { buildHubPageMetadata } from "../../../lib/hub/metadata";
+import { resolveRouteParams, safeTrim } from "../../../lib/seo/metadata_safety";
 import { resolveTenantContext } from "../../../lib/tenants/request";
 
+type CategoryParams = {
+  category?: string;
+};
+
 type PageProps = {
-  params: {
-    category: string;
-  };
+  params: Promise<CategoryParams> | CategoryParams;
 };
 
 const toCategoryTitle = (value: string): string => {
@@ -34,8 +37,14 @@ const toCategoryTitle = (value: string): string => {
     .join(" ");
 };
 
+const resolveCategoryParam = async (params: PageProps["params"]): Promise<string> => {
+  const resolved = await resolveRouteParams(params);
+  return safeTrim(resolved.category, "");
+};
+
 export const generateMetadata = async ({ params }: PageProps): Promise<Metadata> => {
-  const categorySlug = normalizeCategoryParam(params.category);
+  const categoryValue = await resolveCategoryParam(params);
+  const categorySlug = normalizeCategoryParam(categoryValue);
   const categoryTitle = toCategoryTitle(categorySlug);
   const path = categorySlug ? `/c/${categorySlug}` : "/categories";
 
@@ -47,8 +56,9 @@ export const generateMetadata = async ({ params }: PageProps): Promise<Metadata>
 };
 
 export default async function CategoryPage({ params }: PageProps) {
+  const categoryValue = await resolveCategoryParam(params);
   const context = await resolveTenantContext();
-  const categorySlug = normalizeCategoryParam(params.category);
+  const categorySlug = normalizeCategoryParam(categoryValue);
   const tests = await loadTenantHubTests(context.tenantId, context.locale);
   const matchingTests = tests.filter((test) => test.category_slug === categorySlug);
   const categoryLabel = matchingTests[0]?.category ?? toCategoryTitle(categorySlug);

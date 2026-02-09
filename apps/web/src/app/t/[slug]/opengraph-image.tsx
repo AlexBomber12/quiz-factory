@@ -3,6 +3,7 @@ import type { CSSProperties } from "react";
 
 import { resolveTenantTestBySlug } from "../../../lib/catalog/catalog";
 import { buildTenantLabel } from "../../../lib/seo/metadata";
+import { resolveRouteParams, safeLowercaseSlug } from "../../../lib/seo/metadata_safety";
 import { resolveTenantContext } from "../../../lib/tenants/request";
 
 export const runtime = "nodejs";
@@ -13,9 +14,12 @@ export const size = {
 export const contentType = "image/png";
 
 type PageProps = {
-  params: {
-    slug: string;
-  };
+  params: Promise<{ slug?: string }> | { slug?: string };
+};
+
+const resolveSlugParam = async (params: PageProps["params"]): Promise<string> => {
+  const resolved = await resolveRouteParams(params);
+  return safeLowercaseSlug(resolved.slug, "test");
 };
 
 const containerStyle: CSSProperties = {
@@ -52,9 +56,10 @@ const descriptionStyle: CSSProperties = {
 };
 
 export default async function OpenGraphImage({ params }: PageProps) {
+  const routeSlug = await resolveSlugParam(params);
   const context = await resolveTenantContext();
   const tenantLabel = buildTenantLabel(context);
-  const test = await resolveTenantTestBySlug(context.tenantId, context.locale, params.slug);
+  const test = await resolveTenantTestBySlug(context.tenantId, context.locale, routeSlug);
 
   const title = test?.title ?? "Quiz Factory";
   const description =
