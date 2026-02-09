@@ -79,6 +79,50 @@ const orderTestsByFeaturedSlugs = (
   return ordered;
 };
 
+const deriveCategoriesForVisibleTests = (
+  tests: ReadonlyArray<TenantExplorerTest>
+): Array<{
+  slug: string;
+  label: string;
+  test_count: number;
+}> => {
+  const categoriesBySlug = new Map<
+    string,
+    {
+      slug: string;
+      label: string;
+      test_count: number;
+    }
+  >();
+
+  for (const test of tests) {
+    if (!test.category_slug || !test.category) {
+      continue;
+    }
+
+    const existingCategory = categoriesBySlug.get(test.category_slug);
+    if (existingCategory) {
+      existingCategory.test_count += 1;
+      continue;
+    }
+
+    categoriesBySlug.set(test.category_slug, {
+      slug: test.category_slug,
+      label: test.category,
+      test_count: 1
+    });
+  }
+
+  return [...categoriesBySlug.values()].sort((left, right) => {
+    const labelComparison = left.label.localeCompare(right.label);
+    if (labelComparison !== 0) {
+      return labelComparison;
+    }
+
+    return left.slug.localeCompare(right.slug);
+  });
+};
+
 export default async function HomePage() {
   const context = await resolveTenantContext();
   const [tests, categories] = await Promise.all([
@@ -97,13 +141,8 @@ export default async function HomePage() {
     featuredSlugs.length > 0 &&
     featuredTests.length > 0;
   const visibleTests = useFocusedNicheHomepage ? featuredTests : tests;
-  const visibleCategorySlugs = new Set(
-    visibleTests
-      .map((test) => test.category_slug)
-      .filter((categorySlug) => categorySlug.length > 0)
-  );
   const visibleCategories = useFocusedNicheHomepage
-    ? categories.filter((category) => visibleCategorySlugs.has(category.slug))
+    ? deriveCategoriesForVisibleTests(visibleTests)
     : categories;
   const heroHeadline = homepageCopy.headline || tenantLabel;
   const heroSubheadline =
