@@ -424,7 +424,7 @@ Queue (in order)
 - Depends on: PR-UI-04
 
 74) PR-UI-06: Test Landing Calm Premium Refresh (Sticky CTA + Conversion Layout)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-UI-06.md
 - Depends on: PR-UI-04
 
