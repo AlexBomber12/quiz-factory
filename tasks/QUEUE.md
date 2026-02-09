@@ -419,7 +419,7 @@ Queue (in order)
 - Depends on: PR-UI-03 and PR-UI-GOLDEN-01
 
 73) PR-UI-05: Tenant Homepage Calm Premium Refresh (Search + Category Tags)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-UI-05.md
 - Depends on: PR-UI-04
 
