@@ -1,19 +1,11 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 
 import { PublicNav } from "../components/public/PublicNav";
-import { Badge } from "../components/ui/badge";
-import { Button } from "../components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle
-} from "../components/ui/card";
-import { Separator } from "../components/ui/separator";
-import { loadTenantCatalog, type CatalogTest } from "../lib/catalog/catalog";
+  TenantTestExplorer,
+  type TenantExplorerTest
+} from "../components/public/TenantTestExplorer";
+import { deriveTenantCategories, loadTenantHubTests } from "../lib/hub/categories";
 import {
   buildCanonical,
   buildLocaleAlternatesForPath,
@@ -62,11 +54,11 @@ export const generateMetadata = async (): Promise<Metadata> => {
 };
 
 const orderTestsByFeaturedSlugs = (
-  tests: ReadonlyArray<CatalogTest>,
+  tests: ReadonlyArray<TenantExplorerTest>,
   featuredSlugs: ReadonlyArray<string>
-): CatalogTest[] => {
+): TenantExplorerTest[] => {
   const bySlug = new Map(tests.map((test) => [test.slug, test]));
-  const ordered: CatalogTest[] = [];
+  const ordered: TenantExplorerTest[] = [];
   const seen = new Set<string>();
 
   for (const rawSlug of featuredSlugs) {
@@ -89,7 +81,10 @@ const orderTestsByFeaturedSlugs = (
 
 export default async function HomePage() {
   const context = await resolveTenantContext();
-  const tests = await loadTenantCatalog(context.tenantId, context.locale);
+  const [tests, categories] = await Promise.all([
+    loadTenantHubTests(context.tenantId, context.locale),
+    deriveTenantCategories(context.tenantId, context.locale)
+  ]);
   const tenantProfile = getTenantProfile(context.tenantId);
   const tenantKind = resolveTenantKind(context.tenantId);
   const homepageCopy = resolveHomepageCopy(context.tenantId);
@@ -102,91 +97,30 @@ export default async function HomePage() {
     featuredSlugs.length > 0 &&
     featuredTests.length > 0;
   const visibleTests = useFocusedNicheHomepage ? featuredTests : tests;
+  const visibleCategorySlugs = new Set(
+    visibleTests
+      .map((test) => test.category_slug)
+      .filter((categorySlug) => categorySlug.length > 0)
+  );
+  const visibleCategories = useFocusedNicheHomepage
+    ? categories.filter((category) => visibleCategorySlugs.has(category.slug))
+    : categories;
   const heroHeadline = homepageCopy.headline || tenantLabel;
-  const heroSubheadline = homepageCopy.subheadline;
+  const heroSubheadline =
+    homepageCopy.subheadline?.trim() ||
+    "Find a test, complete it quickly, and get your result.";
+  const homepageLabel = useFocusedNicheHomepage ? "Niche homepage" : "Tenant homepage";
+  const explorerSubheading = `${homepageLabel} for ${tenantLabel} (${context.locale}). ${heroSubheadline}`;
 
   return (
     <section className="flex flex-col gap-8">
       <PublicNav />
-
-      <Card>
-        <CardHeader className="space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                {useFocusedNicheHomepage ? "Niche homepage" : "Tenant homepage"}
-              </p>
-              <h1 className="mt-2 text-3xl font-semibold tracking-tight">
-                {heroHeadline}
-              </h1>
-              <p className="mt-2 text-sm text-muted-foreground">{tenantLabel}</p>
-            </div>
-            <Badge variant="secondary" className="uppercase">
-              {context.locale}
-            </Badge>
-          </div>
-          <CardDescription className="text-base text-muted-foreground">
-            {heroSubheadline}
-          </CardDescription>
-        </CardHeader>
-      </Card>
-
-      <Separator />
-
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-semibold tracking-tight">
-            {useFocusedNicheHomepage ? "Featured tests" : "Available tests"}
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            {visibleTests.length} {visibleTests.length === 1 ? "test" : "tests"} ready to run.
-          </p>
-        </div>
-      </div>
-
-      {visibleTests.length === 0 ? (
-        <Card className="border-dashed">
-          <CardHeader className="space-y-2">
-            <CardTitle>No tests yet</CardTitle>
-            <CardDescription className="text-base text-muted-foreground">
-              This tenant does not have any published tests. Add a test to the catalog
-              to get started.
-            </CardDescription>
-          </CardHeader>
-          <CardFooter>
-            <Button asChild variant="outline">
-              <Link href="/docs/content/tests.md">Review test catalog docs</Link>
-            </Button>
-          </CardFooter>
-        </Card>
-      ) : (
-        <div className="grid gap-6 md:grid-cols-2">
-          {visibleTests.map((test) => {
-            const minutesLabel =
-              test.estimated_minutes === 1 ? "minute" : "minutes";
-            return (
-              <Card key={test.test_id} className="flex h-full flex-col">
-                <CardHeader className="space-y-2">
-                  <CardTitle>{test.title}</CardTitle>
-                  <CardDescription className="text-base text-muted-foreground">
-                    {test.short_description}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Badge variant="outline">
-                    {test.estimated_minutes} {minutesLabel}
-                  </Badge>
-                </CardContent>
-                <CardFooter className="mt-auto">
-                  <Button asChild>
-                    <Link href={`/t/${test.slug}`}>Start test</Link>
-                  </Button>
-                </CardFooter>
-              </Card>
-            );
-          })}
-        </div>
-      )}
+      <TenantTestExplorer
+        tests={visibleTests}
+        categories={visibleCategories}
+        heading={heroHeadline}
+        subheading={explorerSubheading}
+      />
     </section>
   );
 }
