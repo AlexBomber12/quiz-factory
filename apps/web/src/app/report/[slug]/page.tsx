@@ -18,13 +18,21 @@ import {
   resolveSeoTestContext,
   resolveTenantSeoContext
 } from "../../../lib/seo/metadata";
+import {
+  resolveRouteParams,
+  resolveTestMetadataCopy,
+  safeLowercaseSlug,
+  safeTrim
+} from "../../../lib/seo/metadata_safety";
 import { resolveTenantContext } from "../../../lib/tenants/request";
 import ReportClient from "./report-client";
 
+type SlugParams = {
+  slug?: string;
+};
+
 type PageProps = {
-  params: {
-    slug: string;
-  };
+  params: Promise<SlugParams> | SlugParams;
   searchParams?: Record<string, string | string[] | undefined>;
 };
 
@@ -64,11 +72,19 @@ const renderBlocked = (slug: string) => {
   );
 };
 
+const resolveSlugParam = async (params: PageProps["params"]): Promise<string> => {
+  const resolved = await resolveRouteParams(params);
+  return safeLowercaseSlug(resolved.slug, "test");
+};
+
 export const generateMetadata = async ({ params }: PageProps): Promise<Metadata> => {
+  const routeSlug = await resolveSlugParam(params);
   const context = await resolveTenantContext();
   const tenantSeo = resolveTenantSeoContext({ tenantId: context.tenantId });
   const tenantLabel = buildTenantLabel(context);
-  const published = await loadReportTest(context.tenantId, params.slug, context.locale);
+  const published = await loadReportTest(context.tenantId, routeSlug, context.locale).catch(
+    () => null
+  );
   const fallbackOgImage = buildCanonical(context, "/og.png");
 
   const buildMetadata = (
@@ -104,7 +120,7 @@ export const generateMetadata = async ({ params }: PageProps): Promise<Metadata>
     return metadata;
   };
 
-  const path = `/report/${params.slug}`;
+  const path = `/report/${routeSlug}`;
   const canonical = buildCanonical(context, path);
 
   if (!published) {
@@ -123,17 +139,36 @@ export const generateMetadata = async ({ params }: PageProps): Promise<Metadata>
     tenantId: context.tenantId,
     testId: published.test_id
   });
-  const description = `${test.report_title} is ready.`;
-  const ogPath = buildOgImagePath(`/report/${test.slug}/opengraph-image`, seo.token);
+  const reportTitle = safeTrim(test.report_title, "");
+  const metadataCopy = resolveTestMetadataCopy({
+    routeSlug,
+    slug: test.slug,
+    title: reportTitle,
+    descriptionCandidates: [reportTitle ? `${reportTitle} is ready.` : ""],
+    spec: published.spec,
+    locale: published.locale,
+    fallbackDescription: "Your report is ready."
+  });
+  const pathWithSlug = `/report/${metadataCopy.slug}`;
+  const pathCanonical = buildCanonical(context, pathWithSlug);
+  const ogPath = buildOgImagePath(`/report/${metadataCopy.slug}/opengraph-image`, seo.token);
   const ogImage = buildCanonical(context, ogPath) ?? fallbackOgImage;
-  const title = `${test.report_title} (${test.slug}) | ${tenantLabel} | Quiz Factory`;
+  const title = `${metadataCopy.title} (${metadataCopy.slug}) | ${tenantLabel} | Quiz Factory`;
 
-  return buildMetadata(title, description, path, canonical, ogImage, seo.locales);
+  return buildMetadata(
+    title,
+    metadataCopy.description,
+    pathWithSlug,
+    pathCanonical,
+    ogImage,
+    seo.locales
+  );
 };
 
 export default async function ReportPage({ params, searchParams }: PageProps) {
+  const routeSlug = await resolveSlugParam(params);
   const context = await resolveTenantContext();
-  const published = await loadReportTest(context.tenantId, params.slug, context.locale);
+  const published = await loadReportTest(context.tenantId, routeSlug, context.locale);
   const pdfMode = resolveReportPdfMode();
   const queryReportToken = resolveTokenParam(searchParams?.t);
 
@@ -170,7 +205,7 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
     resultPayload.distinct_id === reportPayload.distinct_id;
 
   if (!hasCookieAccess && !queryReportToken) {
-    return renderBlocked(params.slug);
+    return renderBlocked(routeSlug);
   }
 
   let reportLinkToken = queryReportToken;
@@ -196,11 +231,12 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
     });
   }
 
-  const sharePath = `/t/${params.slug}`;
+  const resolvedSlug = safeLowercaseSlug(test.slug, routeSlug);
+  const sharePath = `/t/${resolvedSlug}`;
   const shareUrl = buildCanonical(context, sharePath);
   const shareTitle = test.title;
   const reportLinkPath = reportLinkToken
-    ? `/report/${params.slug}?t=${encodeURIComponent(reportLinkToken)}`
+    ? `/report/${resolvedSlug}?t=${encodeURIComponent(reportLinkToken)}`
     : null;
   const reportLinkUrl = reportLinkPath
     ? buildCanonical(context, reportLinkPath) ?? reportLinkPath
@@ -208,7 +244,7 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
 
   return (
     <ReportClient
-      slug={params.slug}
+      slug={resolvedSlug}
       testId={published.test_id}
       sharePath={sharePath}
       shareUrl={shareUrl}

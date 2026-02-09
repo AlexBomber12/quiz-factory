@@ -18,24 +18,39 @@ import {
   resolveSeoTestContext,
   resolveTenantSeoContext
 } from "../../../../lib/seo/metadata";
+import {
+  resolveRouteParams,
+  resolveTestMetadataCopy,
+  safeLowercaseSlug
+} from "../../../../lib/seo/metadata_safety";
 import { resolveTenantContext } from "../../../../lib/tenants/request";
 import PreviewAnalytics from "./preview-analytics";
 
+type SlugParams = {
+  slug?: string;
+};
+
 type PageProps = {
-  params: {
-    slug: string;
-  };
+  params: Promise<SlugParams> | SlugParams;
 };
 
 const loadPreviewTest = (tenantId: string, slug: string, locale: string) => {
   return loadPublishedTestBySlug(tenantId, slug, locale);
 };
 
+const resolveSlugParam = async (params: PageProps["params"]): Promise<string> => {
+  const resolved = await resolveRouteParams(params);
+  return safeLowercaseSlug(resolved.slug, "test");
+};
+
 export const generateMetadata = async ({ params }: PageProps): Promise<Metadata> => {
+  const routeSlug = await resolveSlugParam(params);
   const context = await resolveTenantContext();
   const tenantSeo = resolveTenantSeoContext({ tenantId: context.tenantId });
   const tenantLabel = buildTenantLabel(context);
-  const published = await loadPreviewTest(context.tenantId, params.slug, context.locale);
+  const published = await loadPreviewTest(context.tenantId, routeSlug, context.locale).catch(
+    () => null
+  );
   const fallbackOgImage = buildCanonical(context, "/og.png");
 
   const buildMetadata = (
@@ -71,7 +86,7 @@ export const generateMetadata = async ({ params }: PageProps): Promise<Metadata>
     return metadata;
   };
 
-  const path = `/t/${params.slug}/preview`;
+  const path = `/t/${routeSlug}/preview`;
   const canonical = buildCanonical(context, path);
 
   if (!published) {
@@ -90,17 +105,36 @@ export const generateMetadata = async ({ params }: PageProps): Promise<Metadata>
     tenantId: context.tenantId,
     testId: published.test_id
   });
-  const description = test.description;
-  const ogPath = buildOgImagePath(`/t/${test.slug}/opengraph-image`, seo.token);
+  const metadataCopy = resolveTestMetadataCopy({
+    routeSlug,
+    slug: test.slug,
+    title: test.title,
+    descriptionCandidates: [test.description],
+    spec: published.spec,
+    locale: published.locale,
+    fallbackDescription: "Preview your result before checkout."
+  });
+  const pathWithSlug = `/t/${metadataCopy.slug}/preview`;
+  const pathCanonical = buildCanonical(context, pathWithSlug);
+  const ogPath = buildOgImagePath(`/t/${metadataCopy.slug}/opengraph-image`, seo.token);
   const ogImage = buildCanonical(context, ogPath) ?? fallbackOgImage;
-  const title = `${test.title} (${test.slug}) - Preview | ${tenantLabel} | Quiz Factory`;
+  const title =
+    `${metadataCopy.title} (${metadataCopy.slug}) - Preview | ${tenantLabel} | Quiz Factory`;
 
-  return buildMetadata(title, description, path, canonical, ogImage, seo.locales);
+  return buildMetadata(
+    title,
+    metadataCopy.description,
+    pathWithSlug,
+    pathCanonical,
+    ogImage,
+    seo.locales
+  );
 };
 
 export default async function TestPreviewPage({ params }: PageProps) {
+  const routeSlug = await resolveSlugParam(params);
   const context = await resolveTenantContext();
-  const published = await loadPreviewTest(context.tenantId, params.slug, context.locale);
+  const published = await loadPreviewTest(context.tenantId, routeSlug, context.locale);
 
   if (!published) {
     return (
@@ -134,7 +168,7 @@ export default async function TestPreviewPage({ params }: PageProps) {
           <h1>Preview unavailable</h1>
           <p>We could not load your preview. Please retake the test.</p>
         </header>
-        <Link className="primary-button" href={`/t/${params.slug}/run`}>
+        <Link className="primary-button" href={`/t/${routeSlug}/run`}>
           Back to the test
         </Link>
       </section>
@@ -152,7 +186,7 @@ export default async function TestPreviewPage({ params }: PageProps) {
           <h1>Preview unavailable</h1>
           <p>We could not load your preview. Please retake the test.</p>
         </header>
-        <Link className="primary-button" href={`/t/${params.slug}/run`}>
+        <Link className="primary-button" href={`/t/${routeSlug}/run`}>
           Back to the test
         </Link>
       </section>
