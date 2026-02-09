@@ -100,7 +100,7 @@ export function buildTestLandingProps(
       brand: "Quiz Factory",
       tagline: "Evidence-based self-assessment",
       links: [
-        { label: "How it works", href: `#${anchors.how}` },
+        { label: "What you get", href: `#${anchors.whatYouGet}` },
         { label: "Trust", href: `#${anchors.proof}` },
         { label: "FAQ", href: `#${anchors.faq}` }
       ],

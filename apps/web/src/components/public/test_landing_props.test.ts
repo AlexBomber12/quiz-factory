@@ -119,7 +119,11 @@ describe("test landing props mapper", () => {
 
     expect(landing.anchors).toEqual(TEST_LANDING_ANCHORS);
     expect(landing.whatYouGet.id).toBe("what-you-get");
-    expect(landing.navbar.links.map((link) => link.href)).toEqual(["#how", "#proof", "#faq"]);
+    expect(landing.navbar.links.map((link) => link.href)).toEqual([
+      "#what-you-get",
+      "#proof",
+      "#faq"
+    ]);
   });
 
   it("includes questions count in hero stats when spec data is available", () => {

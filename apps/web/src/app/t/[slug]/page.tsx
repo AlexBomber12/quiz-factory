@@ -27,7 +27,6 @@ import { resolveTenantContext, type TenantRequestContext } from "../../../lib/te
 import { FaqBlock } from "../../../studio/blocks/FaqBlock";
 import { FooterBlock } from "../../../studio/blocks/FooterBlock";
 import { HeroBlock } from "../../../studio/blocks/HeroBlock";
-import { HowItWorksBlock } from "../../../studio/blocks/HowItWorksBlock";
 import { NavbarBlock } from "../../../studio/blocks/NavbarBlock";
 import { SocialProofBlock } from "../../../studio/blocks/SocialProofBlock";
 
@@ -138,10 +137,9 @@ export default async function TestLandingPage({ params }: PageProps) {
   const landing = buildTestLandingProps(test, published);
 
   return (
-    <PublicPage>
+    <PublicPage className="pb-[calc(6.5rem+env(safe-area-inset-bottom))] md:pb-0">
       <NavbarBlock {...landing.navbar} />
       <HeroBlock {...landing.hero} />
-      <HowItWorksBlock {...landing.howItWorks} />
       <section id={landing.whatYouGet.id} className="studio-block">
         <div className="studio-section__header">
           <p className="studio-eyebrow">What you get</p>
@@ -181,6 +179,13 @@ export default async function TestLandingPage({ params }: PageProps) {
       <SocialProofBlock {...landing.socialProof} />
       <FaqBlock {...landing.faq} />
       <FooterBlock {...landing.footer} />
+      <section className="fixed inset-x-0 bottom-0 z-40 border-t border-border/80 bg-card/90 p-3 backdrop-blur md:hidden">
+        <div className="mx-auto w-full max-w-[72rem] pb-[env(safe-area-inset-bottom)]">
+          <Link className="studio-button w-full" href={`/t/${test.slug}/run`}>
+            Start test
+          </Link>
+        </div>
+      </section>
     </PublicPage>
   );
 }
