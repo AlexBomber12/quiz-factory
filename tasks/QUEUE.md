@@ -438,6 +438,11 @@ Queue (in order)
 - Tasks file: tasks/PR-FIX-ATTEMPT-TOKEN-CONTEXT-01.md
 - Depends on: none
 
+77) PR-E2E-PLAYWRIGHT-SMOKE-01: Playwright E2E Smoke (Start -> Finish, assert /api/test/complete 200)
+- Status: TODO
+- Tasks file: tasks/PR-E2E-PLAYWRIGHT-SMOKE-01.md
+- Depends on: PR-FIX-ATTEMPT-TOKEN-CONTEXT-01
+
 Execution rules (apply to every PR)
 - Work on exactly 1 PR at a time.
 - Create a new branch from main named as specified in the selected tasks file (single source of truth).
