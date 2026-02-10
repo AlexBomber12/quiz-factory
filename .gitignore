@@ -6,6 +6,7 @@ node_modules/
 dist/
 coverage/
 .turbo/
+.playwright/
 .DS_Store
 .env
 .env.*
@@ -24,6 +25,8 @@ certs/
 __pycache__/
 *.pyc
 *.tsbuildinfo
+apps/web/playwright-report/
+apps/web/test-results/
 analytics/dbt/target/
 analytics/dbt/dbt_packages/
 analytics/dbt/logs/

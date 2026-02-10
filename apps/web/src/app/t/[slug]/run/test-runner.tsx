@@ -333,14 +333,23 @@ export default function TestRunnerClient({ test }: RunnerProps) {
             ) : null}
 
             {isResumeLoaded && !resumeState ? (
-              <Button type="button" className="sm:min-w-36" onClick={handleStart} disabled={isStarting}>
+              <Button
+                type="button"
+                className="sm:min-w-36"
+                onClick={handleStart}
+                disabled={isStarting}
+                data-testid="runner-start-button"
+              >
                 {isStarting ? "Starting..." : "Start test"}
               </Button>
             ) : null}
           </CardContent>
           {error ? (
             <CardFooter className="pt-0">
-              <p className="w-full rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+              <p
+                className="w-full rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+                data-testid="runner-error-banner"
+              >
                 {error}
               </p>
             </CardFooter>
@@ -413,6 +422,7 @@ export default function TestRunnerClient({ test }: RunnerProps) {
                     role="radio"
                     aria-checked={isSelected}
                     tabIndex={isFocused ? 0 : -1}
+                    data-testid={optionIndex === 0 ? "runner-first-option" : undefined}
                     className={cn(
                       "h-auto w-full justify-start whitespace-normal px-4 py-4 text-left text-base leading-relaxed",
                       isFocused ? "ring-2 ring-ring ring-offset-2" : null
@@ -451,13 +461,17 @@ export default function TestRunnerClient({ test }: RunnerProps) {
               handleNext();
             }}
             disabled={!canProceed || isCompleting}
+            data-testid={isLastQuestion ? "runner-finish-button" : "runner-next-button"}
           >
             {isLastQuestion ? (isCompleting ? "Finishing..." : "Finish") : "Next"}
           </Button>
         </CardFooter>
         {error ? (
           <CardFooter className="pt-0">
-            <p className="w-full rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+            <p
+              className="w-full rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+              data-testid="runner-error-banner"
+            >
               {error}
             </p>
           </CardFooter>
