@@ -5,6 +5,7 @@ import tenantsConfig from "../../../../../config/tenants.json";
 
 import { DISTINCT_COOKIE_NAME } from "../analytics/constants";
 import { parseCookies } from "../analytics/session";
+import { normalizeHostname, resolveEffectiveRequestHost } from "./request_host";
 
 type TenantConfig = {
   tenant_id: string;
@@ -29,7 +30,6 @@ type RateLimitEntry = {
 
 type AllowlistMode = "prod" | "dev";
 
-const HOST_PORT_PATTERN = /:\d+$/;
 const ALLOWED_METHOD_FALLBACK = "OPTIONS";
 const DEV_RATE_LIMIT_SALT = "dev-rate-limit-salt";
 const DEV_LOCALHOST_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
@@ -47,38 +47,6 @@ const normalizeString = (value: string | null | undefined): string | null => {
 
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
-};
-
-const normalizeHost = (value: string | null | undefined): string | null => {
-  const trimmed = normalizeString(value);
-  if (!trimmed) {
-    return null;
-  }
-
-  const [firstHost] = trimmed.split(",");
-  const host = firstHost?.trim();
-  if (!host) {
-    return null;
-  }
-
-  if (host.startsWith("[")) {
-    const closingBracket = host.indexOf("]");
-    if (closingBracket > 0) {
-      const ipv6 = host.slice(1, closingBracket).trim();
-      return ipv6.length > 0 ? ipv6.toLowerCase() : null;
-    }
-  }
-
-  const colonMatches = host.match(/:/g);
-  if (colonMatches && colonMatches.length > 1) {
-    return host.toLowerCase();
-  }
-
-  return host.replace(HOST_PORT_PATTERN, "").toLowerCase();
-};
-
-const normalizeHostHeader = (hostHeader: string | null | undefined): string | null => {
-  return normalizeHost(hostHeader);
 };
 
 const normalizeOrigin = (originHeader: string | null | undefined): string | null => {
@@ -103,7 +71,7 @@ const normalizeOrigin = (originHeader: string | null | undefined): string | null
     return null;
   }
 
-  return normalizeHost(originUrl.hostname);
+  return normalizeHostname(originUrl.host);
 };
 
 export const getAllowlistMode = (): AllowlistMode => {
@@ -115,7 +83,7 @@ const allowedHosts = new Set<string>();
 
 for (const tenant of tenantRegistry) {
   for (const domain of tenant.domains ?? []) {
-    const normalized = normalizeHost(domain);
+    const normalized = normalizeHostname(domain);
     if (normalized) {
       allowedHosts.add(normalized);
     }
@@ -130,7 +98,7 @@ const getExtraAllowedHosts = (): Set<string> => {
   }
 
   for (const entry of raw.split(",")) {
-    const normalized = normalizeHost(entry);
+    const normalized = normalizeHostname(entry);
     if (normalized) {
       extraHosts.add(normalized);
     }
@@ -281,28 +249,8 @@ export const resetRateLimitState = (): void => {
   rateLimitState.clear();
 };
 
-const shouldTrustForwardedHost = (): boolean => {
-  return parseBoolean(process.env.TRUST_X_FORWARDED_HOST) ?? false;
-};
-
 export const resolveRequestHost = (request: Request): string => {
-  if (shouldTrustForwardedHost()) {
-    const forwardedHost = normalizeHostHeader(request.headers.get("x-forwarded-host"));
-    if (forwardedHost) {
-      return forwardedHost;
-    }
-  }
-
-  const host = normalizeHostHeader(request.headers.get("host"));
-  if (host) {
-    return host;
-  }
-
-  try {
-    return new URL(request.url).hostname.toLowerCase();
-  } catch {
-    return "";
-  }
+  return resolveEffectiveRequestHost(request);
 };
 
 export const assertAllowedHost = (request: Request): Response | null => {

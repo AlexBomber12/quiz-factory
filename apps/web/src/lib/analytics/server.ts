@@ -170,7 +170,7 @@ export const handleAnalyticsEvent = async (
     return respondBadRequest(missingRequiredError("session_id"));
   }
 
-  const { tenantId, defaultLocale } = resolveTenant(request.headers, url.host);
+  const { tenantId, defaultLocale } = resolveTenant(request.headers, url.hostname);
   const locale = resolveLocale({
     defaultLocale,
     acceptLanguage: request.headers.get("accept-language")

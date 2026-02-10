@@ -5,6 +5,7 @@ import {
   issueAttemptToken,
   verifyAttemptToken
 } from "./attempt_token";
+import { resolveTenant } from "../tenants/resolve";
 
 describe("attempt token", () => {
   beforeEach(() => {
@@ -76,5 +77,35 @@ describe("attempt token", () => {
         distinct_id: "distinct-2"
       })
     ).toThrow("Attempt token does not match request context.");
+  });
+
+  it("resolves the same tenant_id for hostnames with and without ports", () => {
+    const withoutPort = resolveTenant(new Headers({ host: "quizfactory.lan" }));
+    const withPort = resolveTenant(new Headers({ host: "quizfactory.lan:3000" }));
+
+    expect(withoutPort.tenantId).toBe(withPort.tenantId);
+  });
+
+  it("validates attempt token context for host and host:port consistently", () => {
+    const withoutPort = resolveTenant(new Headers({ host: "quizfactory.lan" }));
+    const withPort = resolveTenant(new Headers({ host: "quizfactory.lan:3000" }));
+
+    const token = issueAttemptToken(
+      {
+        tenant_id: withoutPort.tenantId,
+        session_id: "session-1",
+        distinct_id: "distinct-1"
+      },
+      60
+    );
+    const payload = verifyAttemptToken(token);
+
+    expect(() =>
+      assertAttemptTokenMatchesContext(payload, {
+        tenant_id: withPort.tenantId,
+        session_id: "session-1",
+        distinct_id: "distinct-1"
+      })
+    ).not.toThrow();
   });
 });
