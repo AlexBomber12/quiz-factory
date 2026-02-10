@@ -439,7 +439,7 @@ Queue (in order)
 - Depends on: none
 
 77) PR-E2E-PLAYWRIGHT-SMOKE-01: Playwright E2E Smoke (Start -> Finish, assert /api/test/complete 200)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-E2E-PLAYWRIGHT-SMOKE-01.md
 - Depends on: PR-FIX-ATTEMPT-TOKEN-CONTEXT-01
 
