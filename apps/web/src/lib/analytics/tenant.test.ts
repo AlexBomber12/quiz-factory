@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
   parseAcceptLanguage,
@@ -11,6 +11,22 @@ const resolveTenantWithHeaders = (headers: Record<string, string>) => {
 };
 
 describe("resolveTenant", () => {
+  let trustForwardedHostSnapshot: string | undefined;
+
+  beforeEach(() => {
+    trustForwardedHostSnapshot = process.env.TRUST_X_FORWARDED_HOST;
+    delete process.env.TRUST_X_FORWARDED_HOST;
+  });
+
+  afterEach(() => {
+    if (trustForwardedHostSnapshot === undefined) {
+      delete process.env.TRUST_X_FORWARDED_HOST;
+      return;
+    }
+
+    process.env.TRUST_X_FORWARDED_HOST = trustForwardedHostSnapshot;
+  });
+
   it("matches configured domains to tenant_id", () => {
     const result = resolveTenantWithHeaders({ host: "tenant.example.com" });
 
@@ -18,7 +34,18 @@ describe("resolveTenant", () => {
     expect(result.defaultLocale).toBe("en");
   });
 
-  it("prefers x-forwarded-host", () => {
+  it("ignores x-forwarded-host by default", () => {
+    const result = resolveTenantWithHeaders({
+      "x-forwarded-host": "tenant.example.com",
+      host: "other.example.com"
+    });
+
+    expect(result.tenantId).toBe("tenant-other-example-com");
+  });
+
+  it("prefers trusted x-forwarded-host", () => {
+    process.env.TRUST_X_FORWARDED_HOST = "true";
+
     const result = resolveTenantWithHeaders({
       "x-forwarded-host": "tenant.example.com",
       host: "other.example.com"

@@ -101,7 +101,10 @@ export const POST = async (request: Request): Promise<Response> => {
     return NextResponse.json({ error: "Distinct id is required." }, { status: 401 });
   }
 
-  const { tenantId, defaultLocale } = resolveTenant(request.headers, new URL(request.url).host);
+  const { tenantId, defaultLocale } = resolveTenant(
+    request.headers,
+    new URL(request.url).hostname
+  );
   const locale = defaultLocale ?? "en";
 
   let verifiedToken: ReturnType<typeof verifyAttemptToken>;

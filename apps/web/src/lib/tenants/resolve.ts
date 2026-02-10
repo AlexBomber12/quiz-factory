@@ -1,6 +1,7 @@
 import tenantsConfig from "../../../../../config/tenants.json";
 
 import { normalizeString } from "../analytics/session";
+import { normalizeHostname, resolveEffectiveHost } from "../security/request_host";
 
 type TenantConfig = {
   tenant_id: string;
@@ -18,22 +19,6 @@ type TenantResolution = {
 };
 
 const DEFAULT_LOCALE = "en";
-const HOST_PORT_PATTERN = /:\d+$/;
-
-const normalizeHost = (value: string | null | undefined): string | null => {
-  const trimmed = normalizeString(value);
-  if (!trimmed) {
-    return null;
-  }
-
-  const [firstHost] = trimmed.split(",");
-  const host = firstHost?.trim();
-  if (!host) {
-    return null;
-  }
-
-  return host.replace(HOST_PORT_PATTERN, "").toLowerCase();
-};
 
 const slugify = (value: string): string => {
   return value
@@ -54,7 +39,7 @@ const tenantByDomain = new Map<string, TenantConfig>();
 
 for (const tenant of tenantRegistry) {
   for (const domain of tenant.domains ?? []) {
-    const normalized = normalizeString(domain)?.toLowerCase();
+    const normalized = normalizeHostname(domain);
     if (normalized) {
       tenantByDomain.set(normalized, tenant);
     }
@@ -117,9 +102,7 @@ export const resolveTenant = (
   headers: Headers,
   fallbackHost?: string | null
 ): TenantResolution => {
-  const forwardedHost = normalizeHost(headers.get("x-forwarded-host"));
-  const host =
-    forwardedHost ?? normalizeHost(headers.get("host")) ?? normalizeHost(fallbackHost);
+  const host = resolveEffectiveHost(headers, fallbackHost);
 
   if (!host) {
     return { tenantId: buildFallbackTenantId(null), defaultLocale: null };
