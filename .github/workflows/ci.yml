@@ -57,6 +57,7 @@ jobs:
 
       - name: Run smoke test
         run: |
+          set -o pipefail
           mkdir -p artifacts
           PLAYWRIGHT_BASE_URL=http://tenant.example.com:3000 \
           pnpm --filter @quiz-factory/web e2e -- e2e/smoke-focus-rhythm.spec.ts --grep @smoke 2>&1 | tee artifacts/e2e.log
