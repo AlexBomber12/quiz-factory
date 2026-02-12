@@ -33,10 +33,15 @@ type SlugParams = {
 
 type PageProps = {
   params: Promise<SlugParams> | SlugParams;
-  searchParams?: {
-    offer_key?: string | string[];
-    is_upsell?: string | string[];
-  };
+  searchParams?:
+    | {
+        offer_key?: string | string[];
+        is_upsell?: string | string[];
+      }
+    | Promise<{
+        offer_key?: string | string[];
+        is_upsell?: string | string[];
+      }>;
 };
 
 const loadPaywallTest = (tenantId: string, slug: string, locale: string) => {
@@ -147,6 +152,7 @@ export const generateMetadata = async ({ params }: PageProps): Promise<Metadata>
 
 export default async function PaywallPage({ params, searchParams }: PageProps) {
   const routeSlug = await resolveSlugParam(params);
+  const resolvedSearchParams = await searchParams;
   const context = await resolveTenantContext();
   const published = await loadPaywallTest(context.tenantId, routeSlug, context.locale);
 
@@ -197,10 +203,10 @@ export default async function PaywallPage({ params, searchParams }: PageProps) {
   const hasReportAccess =
     hasGrantReference &&
     (creditsRemaining > 0 || creditsState.consumed_report_keys.includes(reportKey));
-  const offerKeyParam = searchParams?.offer_key;
+  const offerKeyParam = resolvedSearchParams?.offer_key;
   const offerKeyCandidate = Array.isArray(offerKeyParam) ? offerKeyParam[0] : offerKeyParam;
   const preferredOfferKey = isOfferKey(offerKeyCandidate) ? offerKeyCandidate : null;
-  const isUpsell = parseIsUpsellParam(searchParams?.is_upsell);
+  const isUpsell = parseIsUpsellParam(resolvedSearchParams?.is_upsell);
   const priceFormatter = new Intl.NumberFormat(context.locale, {
     style: "currency",
     currency: "EUR"
