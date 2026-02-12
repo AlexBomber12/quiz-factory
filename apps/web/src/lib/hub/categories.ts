@@ -36,6 +36,26 @@ const normalizeCategoryLabel = (value: string): string | null => {
   return label.length > 0 ? label : null;
 };
 
+const SLUG_CATEGORY_PATTERN = /^[a-z0-9]+(?:[-_][a-z0-9]+)+$/;
+
+const toHumanCategoryLabel = (value: string): string => {
+  const label = value.trim();
+  if (!SLUG_CATEGORY_PATTERN.test(label)) {
+    return label;
+  }
+
+  const words = label.split(/[-_]+/g).filter(Boolean);
+  if (words.length === 0) {
+    return label;
+  }
+
+  const [firstWord, ...restWords] = words;
+  const firstWordCapitalized =
+    firstWord.charAt(0).toUpperCase() + firstWord.slice(1);
+
+  return [firstWordCapitalized, ...restWords].join(" ");
+};
+
 const decodeCategoryParam = (value: string): string => {
   try {
     return decodeURIComponent(value);
@@ -113,10 +133,11 @@ const buildHubTestsFromCatalog = async (
       continue;
     }
 
-    const categoryLabel =
+    const categoryValue =
       normalizeCategoryLabel(published.test.category) ??
       normalizeCategoryLabel(published.spec.category) ??
       "";
+    const categoryLabel = toHumanCategoryLabel(categoryValue);
 
     tests.push({
       test_id: published.test_id,
@@ -125,7 +146,7 @@ const buildHubTestsFromCatalog = async (
       short_description: published.test.description,
       estimated_minutes: getEstimatedMinutes(published.spec),
       category: categoryLabel,
-      category_slug: toCategorySlug(categoryLabel)
+      category_slug: toCategorySlug(categoryValue)
     });
   }
 
