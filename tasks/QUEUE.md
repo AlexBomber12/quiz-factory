@@ -455,7 +455,7 @@ Queue (in order)
 - Depends on: PR-E2E-PLAYWRIGHT-SMOKE-01 and PR-UI-07
 
 80) PR-UI-LANDING-01: Homepage + /tests Product Redesign (Calm Premium)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-UI-LANDING-01.md
 - Depends on: PR-UI-GATE-01 and PR-UI-07
 

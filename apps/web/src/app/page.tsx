@@ -132,7 +132,6 @@ export default async function HomePage() {
   const tenantProfile = getTenantProfile(context.tenantId);
   const tenantKind = resolveTenantKind(context.tenantId);
   const homepageCopy = resolveHomepageCopy(context.tenantId);
-  const tenantLabel = context.requestHost ?? context.host ?? context.tenantId;
   const featuredSlugs = tenantProfile?.featured_test_slugs ?? [];
   const featuredTests =
     tenantKind === "niche" ? orderTestsByFeaturedSlugs(tests, featuredSlugs) : [];
@@ -144,12 +143,11 @@ export default async function HomePage() {
   const visibleCategories = useFocusedNicheHomepage
     ? deriveCategoriesForVisibleTests(visibleTests)
     : categories;
-  const heroHeadline = homepageCopy.headline || tenantLabel;
+  const heroHeadline =
+    homepageCopy.headline?.trim() || "Discover your next self-assessment";
   const heroSubheadline =
     homepageCopy.subheadline?.trim() ||
-    "Find a test, complete it quickly, and get your result.";
-  const homepageLabel = useFocusedNicheHomepage ? "Niche homepage" : "Tenant homepage";
-  const explorerSubheading = `${homepageLabel} for ${tenantLabel} (${context.locale}). ${heroSubheadline}`;
+    "Browse the available tests and start when you're ready.";
 
   return (
     <section className="flex flex-col gap-8">
@@ -158,7 +156,7 @@ export default async function HomePage() {
         tests={visibleTests}
         categories={visibleCategories}
         heading={heroHeadline}
-        subheading={explorerSubheading}
+        subheading={heroSubheadline}
       />
     </section>
   );

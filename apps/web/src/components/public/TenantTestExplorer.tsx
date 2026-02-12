@@ -54,6 +54,10 @@ const formatMinutes = (minutes: number): string => {
   return `${minutes} ${unit}`;
 };
 
+const formatTestCount = (count: number): string => {
+  return count === 1 ? "1 test" : `${count} tests`;
+};
+
 const getAverageMinutes = (tests: ReadonlyArray<TenantExplorerTest>): number => {
   if (tests.length === 0) {
     return 0;
@@ -92,6 +96,7 @@ export function TenantTestExplorer({
 
   const hasActiveFilters = searchQuery.length > 0 || selectedCategorySlugs.length > 0;
   const averageMinutes = getAverageMinutes(tests);
+  const showCompactStats = tests.length <= 1;
 
   const toggleCategory = (slug: string) => {
     setSelectedCategorySlugs((current) => {
@@ -168,45 +173,60 @@ export function TenantTestExplorer({
                     isSelected && "bg-accent text-accent-foreground hover:bg-accent/90"
                   )}
                 >
-                  {category.label}
-                  <span className="text-[11px] text-muted-foreground">
+                  <span>{category.label}</span>
+                  <Badge
+                    variant={isSelected ? "default" : "secondary"}
+                    className={cn(
+                      "ml-1 h-5 rounded-full px-1.5 text-[10px]",
+                      isSelected && "bg-accent-foreground/15 text-accent-foreground"
+                    )}
+                  >
                     {category.test_count}
-                  </span>
+                  </Badge>
                 </Button>
               );
             })}
           </div>
+
+          {showCompactStats ? (
+            <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+              <span>{formatTestCount(tests.length)}</span>
+              {averageMinutes > 0 ? <span>~{averageMinutes} min</span> : null}
+            </div>
+          ) : null}
         </CardContent>
       </Card>
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Card className="border-border/90 bg-card shadow-[0_1px_2px_rgba(15,23,42,0.06),0_8px_24px_-16px_rgba(15,23,42,0.12)]">
-          <CardHeader className="space-y-1 pb-2">
-            <CardDescription className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
-              Available tests
-            </CardDescription>
-            <CardTitle className="text-2xl">{tests.length}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card className="border-border/90 bg-card shadow-[0_1px_2px_rgba(15,23,42,0.06),0_8px_24px_-16px_rgba(15,23,42,0.12)]">
-          <CardHeader className="space-y-1 pb-2">
-            <CardDescription className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
-              Categories
-            </CardDescription>
-            <CardTitle className="text-2xl">{categories.length}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card className="border-border/90 bg-card shadow-[0_1px_2px_rgba(15,23,42,0.06),0_8px_24px_-16px_rgba(15,23,42,0.12)]">
-          <CardHeader className="space-y-1 pb-2">
-            <CardDescription className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
-              Average length
-            </CardDescription>
-            <CardTitle className="text-2xl">
-              {averageMinutes > 0 ? `${averageMinutes} min` : "N/A"}
-            </CardTitle>
-          </CardHeader>
-        </Card>
-      </div>
+      {showCompactStats ? null : (
+        <div className="grid gap-3 sm:grid-cols-3">
+          <Card className="border-border/90 bg-card shadow-[0_1px_2px_rgba(15,23,42,0.06),0_8px_24px_-16px_rgba(15,23,42,0.12)]">
+            <CardHeader className="space-y-1 pb-2">
+              <CardDescription className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                Available tests
+              </CardDescription>
+              <CardTitle className="text-2xl">{tests.length}</CardTitle>
+            </CardHeader>
+          </Card>
+          <Card className="border-border/90 bg-card shadow-[0_1px_2px_rgba(15,23,42,0.06),0_8px_24px_-16px_rgba(15,23,42,0.12)]">
+            <CardHeader className="space-y-1 pb-2">
+              <CardDescription className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                Categories
+              </CardDescription>
+              <CardTitle className="text-2xl">{categories.length}</CardTitle>
+            </CardHeader>
+          </Card>
+          <Card className="border-border/90 bg-card shadow-[0_1px_2px_rgba(15,23,42,0.06),0_8px_24px_-16px_rgba(15,23,42,0.12)]">
+            <CardHeader className="space-y-1 pb-2">
+              <CardDescription className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                Average length
+              </CardDescription>
+              <CardTitle className="text-2xl">
+                {averageMinutes > 0 ? `${averageMinutes} min` : "N/A"}
+              </CardTitle>
+            </CardHeader>
+          </Card>
+        </div>
+      )}
 
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
@@ -245,8 +265,13 @@ export function TenantTestExplorer({
             return (
               <Card
                 key={test.test_id}
-                className="flex h-full flex-col border-border/90 bg-card shadow-[0_1px_2px_rgba(15,23,42,0.06),0_8px_24px_-16px_rgba(15,23,42,0.12)]"
+                className="relative flex h-full flex-col border-border/90 bg-card shadow-[0_1px_2px_rgba(15,23,42,0.06),0_8px_24px_-16px_rgba(15,23,42,0.12)]"
               >
+                <Link
+                  href={`/t/${test.slug}`}
+                  aria-label={`Open ${test.title}`}
+                  className="absolute inset-0 z-10 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                />
                 <CardHeader className="space-y-2">
                   <CardTitle>{test.title}</CardTitle>
                   <CardDescription className="text-base text-muted-foreground [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:1] overflow-hidden">
@@ -257,7 +282,7 @@ export function TenantTestExplorer({
                   <Badge variant="outline">{formatMinutes(test.estimated_minutes)}</Badge>
                   <Badge variant="outline">{categoryLabel}</Badge>
                 </CardContent>
-                <CardFooter className="mt-auto">
+                <CardFooter className="relative z-20 mt-auto">
                   <Button asChild className="no-underline">
                     <Link href={`/t/${test.slug}`}>Start test</Link>
                   </Button>
