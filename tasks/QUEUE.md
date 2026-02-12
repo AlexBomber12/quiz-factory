@@ -449,6 +449,16 @@ Queue (in order)
 - Tasks file: tasks/PR-UI-07.md
 - Depends on: PR-UI-06 and PR-UI-GOLDEN-01
 
+79) PR-UI-GATE-01: Playwright Visual Regression (Golden Pages Screenshots)
+- Status: TODO
+- Tasks file: tasks/PR-UI-GATE-01.md
+- Depends on: PR-E2E-PLAYWRIGHT-SMOKE-01 and PR-UI-07
+
+80) PR-UI-LANDING-01: Homepage + /tests Product Redesign (Calm Premium)
+- Status: TODO
+- Tasks file: tasks/PR-UI-LANDING-01.md
+- Depends on: PR-UI-GATE-01 and PR-UI-07
+
 Execution rules (apply to every PR)
 - Work on exactly 1 PR at a time.
 - Create a new branch from main named as specified in the selected tasks file (single source of truth).

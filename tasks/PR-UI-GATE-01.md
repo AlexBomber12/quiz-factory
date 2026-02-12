@@ -1,0 +1,17 @@
+You are Codex Agent working in the quiz-factory repository. Implement PR-UI-GATE-01.
+PR ID: PR-UI-GATE-01
+Title: Playwright visual regression gate for golden pages (screenshots)
+Branch name: pr/ui-gate-01-playwright-visual
+Goal: Add deterministic Playwright screenshot tests for the critical public routes (golden pages) and wire them into CI so that UI regressions become visible as screenshot diffs.
+Non-goals: Do not redesign UI in this PR. Do not change product copy. Do not touch DB schemas. Do not modify production deployment.
+Context: Playwright is already configured in apps/web/playwright.config.ts and apps/web/e2e/smoke-focus-rhythm.spec.ts. CI already runs e2e-smoke. This PR adds visual regression.
+Implementation tasks:
+1) Add a new Playwright test file apps/web/e2e/visual-golden-pages.spec.ts that produces full-page screenshots for these states: (a) home page /, (b) tests page /tests, (c) test landing /t/focus-rhythm, (d) runner start screen /t/focus-rhythm/run before starting, (e) preview screen /t/focus-rhythm/preview after completing the runner, (f) paywall screen /t/focus-rhythm/pay after clicking unlock.
+2) Make screenshots deterministic and reduce flakiness: use a fixed viewport (1280x720), emulate reduced motion, wait for document fonts to be ready, wait for a stable selector on each page before capturing (use getByRole/getByTestId selectors that already exist, prefer data-testid when available), and use expect(page).toHaveScreenshot with options fullPage=true, animations='disabled', caret='hide'.
+3) Reuse runner completion logic without duplication: extract a helper function into apps/web/e2e/helpers/focus_rhythm.ts (new file) that (a) navigates to /t/focus-rhythm/run, (b) clicks runner-start-button, (c) answers questions by clicking runner-first-option then runner-next-button until runner-finish-button becomes visible, (d) clicks finish and waits for /api/test/complete 200 and URL to match /t/focus-rhythm/preview. Update the existing smoke-focus-rhythm.spec.ts to import and use the helper so logic is single-sourced.
+4) Add scripts to apps/web/package.json for convenience: add "e2e:visual": "playwright test e2e/visual-golden-pages.spec.ts". Do not remove existing scripts.
+5) Generate and commit baseline screenshots: run pnpm --filter @quiz-factory/web e2e:visual -- --update-snapshots. Ensure the generated snapshot directory apps/web/e2e/visual-golden-pages.spec.ts-snapshots is committed to git.
+6) CI wiring: update .github/workflows/ci.yml to add a new job named e2e-visual (needs: app). Steps should match e2e-smoke (checkout, setup node, corepack enable, pnpm install, playwright install chromium). Run the visual test with pnpm --filter @quiz-factory/web e2e:visual and tee output to artifacts/e2e-visual.log. Upload artifacts on failure: artifacts/e2e-visual.log, plus apps/web/test-results and apps/web/playwright-report.
+Quality gate before commit: pnpm --filter @quiz-factory/web lint, pnpm --filter @quiz-factory/web typecheck, pnpm --filter @quiz-factory/web e2e -- e2e/smoke-focus-rhythm.spec.ts --grep @smoke, pnpm --filter @quiz-factory/web e2e:visual.
+Commit message: PR-UI-GATE-01: Playwright visual regression screenshots
+Success criteria: (a) Visual test creates deterministic screenshots for the 6 golden routes listed above, (b) Baseline snapshots are committed, (c) CI contains a dedicated e2e-visual job that fails on screenshot diffs and uploads diffs as artifacts, (d) Existing e2e-smoke continues to pass and shares the same runner completion helper.
