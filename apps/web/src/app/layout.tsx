@@ -14,7 +14,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
     <html lang={context.locale}>
       <body className="min-h-screen bg-background text-foreground font-sans antialiased">
         <div className="flex min-h-screen flex-col">
-          <header className="border-b border-border/60">
+          <header id="site-shell-header" className="border-b border-border/60">
             <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-4">
               <span className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                 Quiz Factory
@@ -22,10 +22,12 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
               <span className="text-xs text-muted-foreground">Foundation</span>
             </div>
           </header>
-          <main className="flex-1">
-            <div className="mx-auto w-full max-w-5xl px-6 py-10">{children}</div>
+          <main id="site-shell-main" className="flex-1">
+            <div id="site-shell-main-inner" className="mx-auto w-full max-w-5xl px-6 py-10">
+              {children}
+            </div>
           </main>
-          <footer className="border-t border-border/60">
+          <footer id="site-shell-footer" className="border-t border-border/60">
             <div className="mx-auto w-full max-w-5xl px-6 py-6 text-sm text-muted-foreground">
               <p>Built for calm, mobile-first test experiences.</p>
             </div>

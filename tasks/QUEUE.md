@@ -460,7 +460,7 @@ Queue (in order)
 - Depends on: PR-UI-GATE-01 and PR-UI-07
 
 81) PR-UI-STITCH-MCP-01: Stitch MCP export + apply annotations to Tenant Home (Standard Grid)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-UI-STITCH-MCP-01.md
 - Depends on: PR-UI-LANDING-01 and PR-UI-GATE-01
 
