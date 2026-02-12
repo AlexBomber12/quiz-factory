@@ -79,6 +79,16 @@
   }
 }
 
+body[data-tenant-home-shell="true"] #site-shell-header,
+body[data-tenant-home-shell="true"] #site-shell-footer {
+  display: none;
+}
+
+body[data-tenant-home-shell="true"] #site-shell-main-inner {
+  max-width: none;
+  padding: 0;
+}
+
 @supports selector(body:has(*)) {
   body:has([data-tenant-home-shell="true"]) #site-shell-header,
   body:has([data-tenant-home-shell="true"]) #site-shell-footer {

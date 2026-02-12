@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Bell, BrainCircuit, Clock3, Play, Search } from "lucide-react";
 
 import { Input } from "../ui/input";
@@ -135,6 +135,13 @@ export function TenantTestExplorer({
     setSelectedCategorySlugs([]);
   };
 
+  useEffect(() => {
+    document.body.setAttribute("data-tenant-home-shell", "true");
+    return () => {
+      document.body.removeAttribute("data-tenant-home-shell");
+    };
+  }, []);
+
   return (
     <div data-tenant-home-shell="true" className="min-h-screen bg-[#f6f7f8] text-[#3d3630]">
       <header className="sticky top-0 z-40 bg-[#18304b] text-white shadow-md">
@@ -261,7 +268,10 @@ export function TenantTestExplorer({
         </div>
       </div>
 
-      <main className="mx-auto w-full max-w-[1120px] px-4 py-12 lg:px-0">
+      <section
+        aria-label="Featured assessments"
+        className="mx-auto w-full max-w-[1120px] px-4 py-12 lg:px-0"
+      >
         <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
           <div>
             <h2 className="text-2xl font-bold tracking-tight text-[#3d3630]">
@@ -359,7 +369,7 @@ export function TenantTestExplorer({
             })}
           </div>
         )}
-      </main>
+      </section>
 
       <footer className="border-t border-[#e2ddd3] bg-white py-12">
         <div className="mx-auto w-full max-w-[1120px] px-4 lg:px-0">
