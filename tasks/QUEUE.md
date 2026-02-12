@@ -443,6 +443,12 @@ Queue (in order)
 - Tasks file: tasks/PR-E2E-PLAYWRIGHT-SMOKE-01.md
 - Depends on: PR-FIX-ATTEMPT-TOKEN-CONTEXT-01
 
+
+78) PR-UI-07: Primary Ink CTA (Decouple --primary from --color-primary)
+- Status: TODO
+- Tasks file: tasks/PR-UI-07.md
+- Depends on: PR-UI-06 and PR-UI-GOLDEN-01
+
 Execution rules (apply to every PR)
 - Work on exactly 1 PR at a time.
 - Create a new branch from main named as specified in the selected tasks file (single source of truth).
