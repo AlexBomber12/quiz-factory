@@ -282,8 +282,8 @@ export function TenantTestExplorer({
                   <Badge variant="outline">{formatMinutes(test.estimated_minutes)}</Badge>
                   <Badge variant="outline">{categoryLabel}</Badge>
                 </CardContent>
-                <CardFooter className="relative z-20 mt-auto">
-                  <Button asChild className="no-underline">
+                <CardFooter className="mt-auto">
+                  <Button asChild className="relative z-20 no-underline">
                     <Link href={`/t/${test.slug}`}>Start test</Link>
                   </Button>
                 </CardFooter>
