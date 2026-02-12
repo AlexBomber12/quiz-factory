@@ -2,17 +2,8 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { Bell, BrainCircuit, Clock3, Play, Search } from "lucide-react";
 
-import { Badge } from "../ui/badge";
-import { Button } from "../ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle
-} from "../ui/card";
 import { Input } from "../ui/input";
 import { cn } from "../../lib/ui/cn";
 
@@ -39,6 +30,46 @@ type TenantTestExplorerProps = {
   subheading: string;
 };
 
+const TOP_NAV_LINKS = [
+  { label: "All Tests", href: "/tests" },
+  { label: "Categories", href: "/categories" },
+  { label: "Resources", href: "/about" }
+] as const;
+
+const FOOTER_COLUMNS = [
+  {
+    title: "Platform",
+    links: [
+      { label: "All Assessments", href: "/tests" },
+      { label: "Categories", href: "/categories" },
+      { label: "Research Method", href: "/about" }
+    ]
+  },
+  {
+    title: "Support",
+    links: [
+      { label: "Contact Us", href: "/contact" },
+      { label: "Help Center", href: "/about" },
+      { label: "Cookie Policy", href: "/cookies" }
+    ]
+  },
+  {
+    title: "Legal",
+    links: [
+      { label: "Privacy Policy", href: "/privacy" },
+      { label: "Terms of Service", href: "/terms" },
+      { label: "Data Processing", href: "/privacy" }
+    ]
+  }
+] as const;
+
+const CARD_BANNER_CLASSES = [
+  "from-[#ebe2d6] via-[#f6f1e7] to-[#dccdb9]",
+  "from-[#e0d8cf] via-[#f4ede4] to-[#d0c3b4]",
+  "from-[#e7e4de] via-[#f5f2ea] to-[#d8d2c8]",
+  "from-[#e3ddd2] via-[#efe9dd] to-[#cabba8]"
+] as const;
+
 const normalizeSearchValue = (value: string): string => value.trim().toLowerCase();
 
 const includesSearchValue = (value: string, query: string): boolean => {
@@ -50,21 +81,13 @@ const includesSearchValue = (value: string, query: string): boolean => {
 };
 
 const formatMinutes = (minutes: number): string => {
-  const unit = minutes === 1 ? "minute" : "minutes";
-  return `${minutes} ${unit}`;
-};
-
-const formatTestCount = (count: number): string => {
-  return count === 1 ? "1 test" : `${count} tests`;
-};
-
-const getAverageMinutes = (tests: ReadonlyArray<TenantExplorerTest>): number => {
-  if (tests.length === 0) {
-    return 0;
+  if (!Number.isFinite(minutes) || minutes <= 0) {
+    return "Flexible";
   }
-
-  const totalMinutes = tests.reduce((total, test) => total + test.estimated_minutes, 0);
-  return Math.max(1, Math.round(totalMinutes / tests.length));
+  if (minutes === 1) {
+    return "1 min";
+  }
+  return `${minutes} min`;
 };
 
 export function TenantTestExplorer({
@@ -95,8 +118,7 @@ export function TenantTestExplorer({
   }, [searchQuery, selectedCategorySet, tests]);
 
   const hasActiveFilters = searchQuery.length > 0 || selectedCategorySlugs.length > 0;
-  const averageMinutes = getAverageMinutes(tests);
-  const showCompactStats = tests.length <= 1;
+  const allCategoriesSelected = selectedCategorySlugs.length === 0;
 
   const toggleCategory = (slug: string) => {
     setSelectedCategorySlugs((current) => {
@@ -114,184 +136,278 @@ export function TenantTestExplorer({
   };
 
   return (
-    <div className="flex flex-col gap-6">
-      <Card className="border-border/90 bg-card shadow-[0_1px_2px_rgba(15,23,42,0.06),0_8px_24px_-16px_rgba(15,23,42,0.12)]">
-        <CardHeader className="space-y-4">
-          <Badge variant="secondary" className="w-fit uppercase tracking-[0.2em]">
-            Discover tests
-          </Badge>
-          <div className="space-y-2">
-            <CardTitle className="text-3xl">{heading}</CardTitle>
-            <CardDescription className="text-base text-muted-foreground">
-              {subheading}
-            </CardDescription>
+    <div data-tenant-home-shell="true" className="min-h-screen bg-[#f6f7f8] text-[#3d3630]">
+      <header className="sticky top-0 z-40 bg-[#18304b] text-white shadow-md">
+        <div className="mx-auto flex h-16 w-full max-w-[1120px] items-center justify-between px-4 lg:px-0">
+          <div className="flex items-center gap-8">
+            <Link href="/" className="flex items-center gap-2 text-white no-underline">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/30 bg-white/20">
+                <BrainCircuit className="h-4 w-4" aria-hidden="true" />
+              </span>
+              <span className="text-xl font-bold tracking-tight text-white">Quiz Factory</span>
+            </Link>
+            <nav className="hidden items-center gap-6 md:flex" aria-label="Homepage navigation">
+              {TOP_NAV_LINKS.map((link, index) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={cn(
+                    "text-sm font-medium text-white/70 no-underline transition-colors hover:text-white",
+                    index === 0 &&
+                      "text-white underline decoration-white/30 underline-offset-4"
+                  )}
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </nav>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
-            <div className="space-y-2">
-              <label htmlFor="tenant-home-search" className="text-sm font-medium">
-                Search tests
-              </label>
-              <Input
-                id="tenant-home-search"
-                aria-label="Search tests by title, description, or category"
-                value={searchValue}
-                onChange={(event) => {
-                  setSearchValue(event.target.value);
-                }}
-                placeholder="Search by title, description, or category"
-                autoComplete="off"
-              />
-            </div>
-            <Button
+          <div className="flex items-center gap-4">
+            <button
               type="button"
-              variant="outline"
-              className="w-full md:w-auto"
-              onClick={handleReset}
-              disabled={!hasActiveFilters}
+              aria-label="Notifications"
+              className="rounded-md p-2 text-white/70 transition-colors hover:text-white"
             >
-              Reset
-            </Button>
+              <Bell className="h-5 w-5" aria-hidden="true" />
+            </button>
+            <div className="hidden items-center gap-2 border-l border-white/20 pl-4 sm:flex">
+              <div className="text-right">
+                <p className="text-xs font-semibold text-white">Guest User</p>
+                <p className="text-[10px] uppercase tracking-[0.2em] text-white/60">Visitor</p>
+              </div>
+              <span className="flex h-9 w-9 items-center justify-center rounded-full border border-white/30 bg-white/20 text-xs font-semibold text-white">
+                QF
+              </span>
+            </div>
           </div>
+        </div>
+      </header>
 
-          <div className="flex flex-wrap gap-2">
+      <section className="border-b border-[#e2ddd3] bg-[linear-gradient(135deg,#f9f7f2_0%,#f0ede4_100%)]">
+        <div className="mx-auto w-full max-w-[1120px] px-4 py-16 text-center md:py-24 lg:px-0">
+          <h1 className="mb-6 text-4xl font-bold tracking-tight text-[#3d3630] md:text-5xl">
+            {heading}
+          </h1>
+          <p className="mx-auto mb-10 max-w-2xl text-lg leading-relaxed text-[#5f554c]">
+            {subheading}
+          </p>
+          <div className="relative mx-auto max-w-2xl">
+            <Search
+              aria-hidden="true"
+              className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#7f7368]"
+            />
+            <Input
+              id="tenant-home-search"
+              aria-label="Search tests by title, description, or category"
+              value={searchValue}
+              onChange={(event) => {
+                setSearchValue(event.target.value);
+              }}
+              placeholder="Search for tests (e.g., Big Five, Leadership, Career)..."
+              autoComplete="off"
+              className="h-14 rounded-xl border-2 border-[#e2ddd3] bg-white/70 pl-12 pr-32 text-[15px] text-[#3d3630] placeholder:text-[#7f7368] focus-visible:ring-[#18304b]"
+            />
+            <button
+              type="button"
+              className="absolute inset-y-2 right-2 rounded-lg bg-[#c68160] px-6 text-sm font-semibold text-white transition-colors hover:bg-[#b86f4d]"
+            >
+              Search
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <div className="sticky top-16 z-30 border-b border-[#e2ddd3] bg-[#f6f7f8]">
+        <div className="mx-auto w-full max-w-[1120px] px-4 lg:px-0">
+          <div className="flex items-center gap-3 overflow-x-auto py-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedCategorySlugs([]);
+              }}
+              aria-pressed={allCategoriesSelected}
+              className={cn(
+                "whitespace-nowrap rounded-full px-5 py-2 text-sm font-semibold transition-colors",
+                allCategoriesSelected
+                  ? "bg-[#c68160] text-white"
+                  : "bg-[#e9e4d9] text-[#665a4f] hover:bg-[#dfd9cc]"
+              )}
+            >
+              All Categories
+            </button>
             {categories.map((category) => {
               const isSelected = selectedCategorySet.has(category.slug);
               return (
-                <Button
+                <button
                   key={category.slug}
                   type="button"
-                  size="sm"
-                  variant={isSelected ? "secondary" : "outline"}
                   aria-pressed={isSelected}
                   onClick={() => {
                     toggleCategory(category.slug);
                   }}
                   className={cn(
-                    "rounded-full px-3",
-                    isSelected && "bg-accent text-accent-foreground hover:bg-accent/90"
+                    "whitespace-nowrap rounded-full px-5 py-2 text-sm font-medium transition-colors",
+                    isSelected
+                      ? "bg-[#c68160] text-white"
+                      : "bg-[#e9e4d9] text-[#665a4f] hover:bg-[#dfd9cc]"
                   )}
                 >
-                  <span>{category.label}</span>
-                  <Badge
-                    variant={isSelected ? "default" : "secondary"}
-                    className={cn(
-                      "ml-1 h-5 rounded-full px-1.5 text-[10px]",
-                      isSelected && "bg-accent-foreground/15 text-accent-foreground"
-                    )}
-                  >
-                    {category.test_count}
-                  </Badge>
-                </Button>
+                  {category.label}
+                  <span className="ml-2 text-xs opacity-80">{category.test_count}</span>
+                </button>
               );
             })}
           </div>
-
-          {showCompactStats ? (
-            <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-              <span>{formatTestCount(tests.length)}</span>
-              {averageMinutes > 0 ? <span>~{averageMinutes} min</span> : null}
-            </div>
-          ) : null}
-        </CardContent>
-      </Card>
-
-      {showCompactStats ? null : (
-        <div className="grid gap-3 sm:grid-cols-3">
-          <Card className="border-border/90 bg-card shadow-[0_1px_2px_rgba(15,23,42,0.06),0_8px_24px_-16px_rgba(15,23,42,0.12)]">
-            <CardHeader className="space-y-1 pb-2">
-              <CardDescription className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
-                Available tests
-              </CardDescription>
-              <CardTitle className="text-2xl">{tests.length}</CardTitle>
-            </CardHeader>
-          </Card>
-          <Card className="border-border/90 bg-card shadow-[0_1px_2px_rgba(15,23,42,0.06),0_8px_24px_-16px_rgba(15,23,42,0.12)]">
-            <CardHeader className="space-y-1 pb-2">
-              <CardDescription className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
-                Categories
-              </CardDescription>
-              <CardTitle className="text-2xl">{categories.length}</CardTitle>
-            </CardHeader>
-          </Card>
-          <Card className="border-border/90 bg-card shadow-[0_1px_2px_rgba(15,23,42,0.06),0_8px_24px_-16px_rgba(15,23,42,0.12)]">
-            <CardHeader className="space-y-1 pb-2">
-              <CardDescription className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
-                Average length
-              </CardDescription>
-              <CardTitle className="text-2xl">
-                {averageMinutes > 0 ? `${averageMinutes} min` : "N/A"}
-              </CardTitle>
-            </CardHeader>
-          </Card>
-        </div>
-      )}
-
-      <div className="flex flex-wrap items-end justify-between gap-2">
-        <div>
-          <h2 className="text-2xl font-semibold tracking-tight">Available tests</h2>
-          <p className="text-sm text-muted-foreground">
-            Showing {filteredTests.length} of {tests.length}{" "}
-            {tests.length === 1 ? "test" : "tests"}.
-          </p>
         </div>
       </div>
 
-      {filteredTests.length === 0 ? (
-        <Card className="border-dashed">
-          <CardHeader className="space-y-2">
-            <CardTitle>
+      <main className="mx-auto w-full max-w-[1120px] px-4 py-12 lg:px-0">
+        <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight text-[#3d3630]">
+              Featured Assessments
+            </h2>
+            <p className="mt-1 text-sm text-[#6f6459]">
+              Showing {filteredTests.length} of {tests.length}{" "}
+              {tests.length === 1 ? "assessment" : "assessments"}.
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            {hasActiveFilters ? (
+              <button
+                type="button"
+                onClick={handleReset}
+                className="rounded-lg border border-[#c68160] px-4 py-2 text-sm font-semibold text-[#c68160] transition-colors hover:bg-[#c68160] hover:text-white"
+              >
+                Reset filters
+              </button>
+            ) : null}
+            <Link
+              href="/tests"
+              className="inline-flex items-center gap-2 text-sm font-semibold text-[#c68160] no-underline hover:underline"
+            >
+              View all
+            </Link>
+          </div>
+        </div>
+
+        {filteredTests.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-[#d7cec2] bg-white p-8 text-center">
+            <h3 className="text-xl font-bold text-[#3d3630]">
               {tests.length === 0 ? "No tests yet" : "No matching tests right now"}
-            </CardTitle>
-            <CardDescription className="text-base text-muted-foreground">
+            </h3>
+            <p className="mt-2 text-sm text-[#6f6459]">
               {tests.length === 0
                 ? "This tenant does not have any published tests yet."
                 : "Try a different search term or clear your category filters."}
-            </CardDescription>
-          </CardHeader>
-          {hasActiveFilters ? (
-            <CardFooter>
-              <Button type="button" variant="outline" onClick={handleReset}>
-                Clear filters
-              </Button>
-            </CardFooter>
-          ) : null}
-        </Card>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {filteredTests.map((test) => {
-            const categoryLabel = test.category || "General";
-            return (
-              <Card
-                key={test.test_id}
-                className="relative flex h-full flex-col border-border/90 bg-card shadow-[0_1px_2px_rgba(15,23,42,0.06),0_8px_24px_-16px_rgba(15,23,42,0.12)]"
+            </p>
+            {hasActiveFilters ? (
+              <button
+                type="button"
+                onClick={handleReset}
+                className="mt-4 rounded-lg bg-[#18304b] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#152a41]"
               >
-                <Link
-                  href={`/t/${test.slug}`}
-                  aria-label={`Open ${test.title}`}
-                  className="absolute inset-0 z-10 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                />
-                <CardHeader className="space-y-2">
-                  <CardTitle>{test.title}</CardTitle>
-                  <CardDescription className="text-base text-muted-foreground [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:1] overflow-hidden">
-                    {test.short_description}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="flex flex-wrap items-center gap-2">
-                  <Badge variant="outline">{formatMinutes(test.estimated_minutes)}</Badge>
-                  <Badge variant="outline">{categoryLabel}</Badge>
-                </CardContent>
-                <CardFooter className="mt-auto">
-                  <Button asChild className="relative z-20 no-underline">
-                    <Link href={`/t/${test.slug}`}>Start test</Link>
-                  </Button>
-                </CardFooter>
-              </Card>
-            );
-          })}
+                Clear filters
+              </button>
+            ) : null}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
+            {filteredTests.map((test, index) => {
+              const categoryLabel = test.category || "General";
+              return (
+                <article
+                  key={test.test_id}
+                  className="flex h-full flex-col overflow-hidden rounded-lg border border-[#e2ddd3] bg-white shadow-[0_4px_20px_-2px_rgba(61,54,48,0.08)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_8px_24px_-6px_rgba(61,54,48,0.16)]"
+                >
+                  <div
+                    className={cn(
+                      "relative h-48 overflow-hidden bg-gradient-to-br",
+                      CARD_BANNER_CLASSES[index % CARD_BANNER_CLASSES.length]
+                    )}
+                  >
+                    <div className="absolute inset-0 bg-white/20" />
+                    <div className="absolute -right-10 top-8 h-28 w-28 rounded-full bg-white/25 blur-md" />
+                    <div className="absolute -left-8 bottom-0 h-20 w-20 rounded-full bg-[#18304b]/10 blur-sm" />
+                    <span className="absolute left-4 top-4 rounded-md bg-white/90 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-[#3d3630]">
+                      {categoryLabel}
+                    </span>
+                  </div>
+                  <div className="flex flex-1 flex-col p-6">
+                    <h3 className="mb-2 text-xl font-bold tracking-tight text-[#3d3630]">
+                      {test.title}
+                    </h3>
+                    <p className="mb-6 text-sm leading-relaxed text-[#5f554c] [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] overflow-hidden">
+                      {test.short_description}
+                    </p>
+                    <div className="mt-auto flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2 text-xs text-[#6f6459]">
+                        <Clock3 className="h-4 w-4" aria-hidden="true" />
+                        <span>{formatMinutes(test.estimated_minutes)}</span>
+                      </div>
+                      <Link
+                        href={`/t/${test.slug}`}
+                        className="inline-flex items-center gap-2 rounded-lg bg-[#18304b] px-5 py-2.5 text-sm font-semibold text-white no-underline transition-colors hover:bg-[#152a41]"
+                      >
+                        Take test
+                        <Play className="h-4 w-4" aria-hidden="true" />
+                      </Link>
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        )}
+      </main>
+
+      <footer className="border-t border-[#e2ddd3] bg-white py-12">
+        <div className="mx-auto w-full max-w-[1120px] px-4 lg:px-0">
+          <div className="grid grid-cols-1 gap-12 md:grid-cols-4">
+            <div>
+              <div className="mb-6 flex items-center gap-2">
+                <span className="flex h-6 w-6 items-center justify-center rounded bg-[#18304b]">
+                  <BrainCircuit className="h-4 w-4 text-white" aria-hidden="true" />
+                </span>
+                <span className="text-lg font-bold tracking-tight text-[#3d3630]">
+                  Quiz Factory
+                </span>
+              </div>
+              <p className="text-sm leading-relaxed text-[#6f6459]">
+                The leading platform for validated psychological testing and professional
+                development analytics.
+              </p>
+            </div>
+            {FOOTER_COLUMNS.map((column) => (
+              <div key={column.title}>
+                <h4 className="mb-6 text-base font-bold text-[#3d3630]">{column.title}</h4>
+                <ul className="space-y-4 text-sm text-[#6f6459]">
+                  {column.links.map((link) => (
+                    <li key={`${link.href}-${link.label}`}>
+                      <Link
+                        href={link.href}
+                        className="text-[#6f6459] no-underline transition-colors hover:text-[#c68160]"
+                      >
+                        {link.label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+          <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-[#e2ddd3] pt-8 md:flex-row">
+            <p className="text-xs text-[#8a8074]">
+              © 2026 Quiz Factory Intelligence Systems. All rights reserved.
+            </p>
+            <div className="flex gap-4">
+              <span className="h-2 w-2 rounded-full bg-[#c68160]" />
+              <span className="h-2 w-2 rounded-full bg-[#c68160]/80" />
+              <span className="h-2 w-2 rounded-full bg-[#c68160]/60" />
+            </div>
+          </div>
         </div>
-      )}
+      </footer>
     </div>
   );
 }

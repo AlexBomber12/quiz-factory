@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 
-import { PublicNav } from "../components/public/PublicNav";
 import {
   TenantTestExplorer,
   type TenantExplorerTest
@@ -150,8 +149,7 @@ export default async function HomePage() {
     "Browse the available tests and start when you're ready.";
 
   return (
-    <section className="flex flex-col gap-8">
-      <PublicNav />
+    <section>
       <TenantTestExplorer
         tests={visibleTests}
         categories={visibleCategories}
