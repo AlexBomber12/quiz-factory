@@ -459,6 +459,12 @@ Queue (in order)
 - Tasks file: tasks/PR-UI-LANDING-01.md
 - Depends on: PR-UI-GATE-01 and PR-UI-07
 
+81) PR-UI-STITCH-MCP-01: Stitch MCP export + apply annotations to Tenant Home (Standard Grid)
+- Status: TODO
+- Tasks file: tasks/PR-UI-STITCH-MCP-01.md
+- Depends on: PR-UI-LANDING-01 and PR-UI-GATE-01
+
+
 Execution rules (apply to every PR)
 - Work on exactly 1 PR at a time.
 - Create a new branch from main named as specified in the selected tasks file (single source of truth).
