@@ -13,7 +13,7 @@
     --card-foreground: 222.22 47.37% 11.18%;
     --popover: 0 0% 100%;
     --popover-foreground: 222.22 47.37% 11.18%;
-    --primary: 174.67 83.85% 31.57%;
+    --primary: var(--brand-navy);
     --primary-foreground: 0 0% 100%;
     --secondary: 210 40% 96%;
     --secondary-foreground: 222.22 47.37% 11.18%;
@@ -25,10 +25,11 @@
     --destructive-foreground: 0 0% 100%;
     --border: 214.29 31.82% 91.37%;
     --input: 214.29 31.82% 91.37%;
-    --ring: 174.67 83.85% 31.57%;
+    --ring: var(--brand-navy);
     --brand-navy: 210 72.97% 14.51%;
-    --primary-hover: 175.34 77.44% 26.08%;
-    --color-primary: var(--primary);
+    --brand-teal: 174.67 83.85% 31.57%;
+    --primary-hover: 210 72.97% 17.65%;
+    --color-primary: var(--brand-teal);
     --radius: 0.75rem;
   }
 

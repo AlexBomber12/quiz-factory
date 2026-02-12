@@ -445,7 +445,7 @@ Queue (in order)
 
 
 78) PR-UI-07: Primary Ink CTA (Decouple --primary from --color-primary)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-UI-07.md
 - Depends on: PR-UI-06 and PR-UI-GOLDEN-01
 
