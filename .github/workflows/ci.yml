@@ -69,6 +69,43 @@ jobs:
           name: ci-log-e2e-smoke
           path: artifacts/e2e.log
 
+  e2e-visual:
+    needs: app
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browser
+        run: pnpm --filter @quiz-factory/web exec playwright install --with-deps chromium
+
+      - name: Run visual tests
+        run: |
+          set -o pipefail
+          mkdir -p artifacts
+          PLAYWRIGHT_BASE_URL=http://tenant.example.com:3000 \
+          pnpm --filter @quiz-factory/web e2e:visual 2>&1 | tee artifacts/e2e-visual.log
+
+      - name: Upload visual artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-log-e2e-visual
+          path: |
+            artifacts/e2e-visual.log
+            apps/web/test-results
+            apps/web/playwright-report
+
   analytics:
     runs-on: ubuntu-latest
     steps:

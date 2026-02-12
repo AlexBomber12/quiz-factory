@@ -17,9 +17,13 @@ import { buildHubPageMetadata } from "../../lib/hub/metadata";
 import { resolveTenantContext } from "../../lib/tenants/request";
 
 type PageProps = {
-  searchParams?: {
-    q?: string | string[];
-  };
+  searchParams?:
+    | {
+        q?: string | string[];
+      }
+    | Promise<{
+        q?: string | string[];
+      }>;
 };
 
 const normalizeQueryParam = (value: string | string[] | undefined): string => {
@@ -45,7 +49,8 @@ export const generateMetadata = async (): Promise<Metadata> => {
 export default async function TestsPage({ searchParams }: PageProps) {
   const context = await resolveTenantContext();
   const tests = await loadTenantCatalog(context.tenantId, context.locale);
-  const query = normalizeQueryParam(searchParams?.q);
+  const resolvedSearchParams = await searchParams;
+  const query = normalizeQueryParam(resolvedSearchParams?.q);
 
   const filteredTests = query
     ? tests.filter((test) => {
