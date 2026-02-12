@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "e2e": "playwright test",
+    "e2e:visual": "playwright test e2e/visual-golden-pages.spec.ts",
     "e2e:ui": "playwright test --ui",
     "db:migrate": "node scripts/content-db-migrate.js"
   },

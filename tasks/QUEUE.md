@@ -450,7 +450,7 @@ Queue (in order)
 - Depends on: PR-UI-06 and PR-UI-GOLDEN-01
 
 79) PR-UI-GATE-01: Playwright Visual Regression (Golden Pages Screenshots)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-UI-GATE-01.md
 - Depends on: PR-E2E-PLAYWRIGHT-SMOKE-01 and PR-UI-07
 
