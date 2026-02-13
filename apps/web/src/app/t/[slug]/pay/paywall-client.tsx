@@ -261,11 +261,17 @@ export default function PaywallClient({
             {orderedOptions.map((option) => {
               const isActive = activeOfferKey === option.offerKey;
               const isPreferred = preferredOfferKey === option.offerKey;
+              const offerIdentity = `${option.label} (${option.priceLabel})`;
               const actionLabel = isActive
                 ? "Starting checkout..."
                 : isPreferred
                   ? "Recommended · Continue to checkout"
                   : "Continue to checkout";
+              const actionAriaLabel = isActive
+                ? `Starting checkout for ${offerIdentity}`
+                : isPreferred
+                  ? `Recommended offer, continue to checkout for ${offerIdentity}`
+                  : `Continue to checkout for ${offerIdentity}`;
 
               return (
                 <li
@@ -308,6 +314,7 @@ export default function PaywallClient({
                     className="mt-4 w-full"
                     variant={isPreferred ? "default" : "outline"}
                     disabled={isSubmitting}
+                    aria-label={actionAriaLabel}
                     onClick={() => handleCheckout(option)}
                   >
                     {actionLabel}
