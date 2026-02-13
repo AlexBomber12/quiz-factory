@@ -19,7 +19,7 @@
     --secondary-foreground: 222.22 47.37% 11.18%;
     --muted: 210 40% 96%;
     --muted-foreground: 215.29 19.32% 34.51%;
-    --accent: 166.15 76.47% 96.67%;
+    --accent: 22 40.54% 85.49%;
     --accent-foreground: 210 72.97% 14.51%;
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
@@ -27,6 +27,7 @@
     --input: 214.29 31.82% 91.37%;
     --ring: var(--brand-navy);
     --brand-navy: 210 72.97% 14.51%;
+    --brand-terracotta: 19.41 47.22% 57.65%;
     --brand-teal: 174.67 83.85% 31.57%;
     --primary-hover: 210 72.97% 17.65%;
     --color-primary: var(--brand-teal);
@@ -883,7 +884,7 @@ body[data-tenant-home-shell="true"] #site-shell-main-inner {
 }
 
 .studio-icon--accent {
-  color: hsl(var(--primary));
+  color: hsl(var(--brand-terracotta));
 }
 
 @keyframes studio-rise {
@@ -946,6 +947,13 @@ body[data-tenant-home-shell="true"] #site-shell-main-inner {
   .studio-catalog__item {
     animation: none;
   }
+}
+
+:root[data-visual-test="true"] *,
+:root[data-visual-test="true"] *::before,
+:root[data-visual-test="true"] *::after {
+  animation: none !important;
+  transition: none !important;
 }
 
 @media (max-width: 720px) {
