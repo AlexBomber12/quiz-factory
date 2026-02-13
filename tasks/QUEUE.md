@@ -485,7 +485,7 @@ Queue (in order)
 - Depends on: PR-UI-CONTENT-PACK-02
 
 86) PR-UI-GATE-02: Extend visual suite to flow pages (landing/run/preview/pay)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-UI-GATE-02.md
 - Depends on: PR-UI-FLOW-01
 
