@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type ReactNode
+} from "react";
 import { useRouter } from "next/navigation";
 
 import { Badge } from "../../../../components/ui/badge";
@@ -29,6 +36,12 @@ import {
 } from "../../../../lib/product/resume_state";
 import { cn } from "../../../../lib/ui/cn";
 
+const FLOW_CARD_CLASS_NAME =
+  "border-border/70 bg-card/95 shadow-[0_14px_34px_-28px_rgba(15,23,42,0.55)]";
+
+const ERROR_BANNER_CLASS_NAME =
+  "w-full rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive";
+
 type RunnerTest = {
   testId: string;
   slug: string;
@@ -45,6 +58,21 @@ type AttemptState = {
 type RunnerProps = {
   test: RunnerTest;
 };
+
+type FlowFrameProps = {
+  children: ReactNode;
+  className?: string;
+};
+
+function FlowFrame({ children, className }: FlowFrameProps) {
+  return (
+    <section className={cn("mx-auto w-full max-w-[72rem] px-4 sm:px-6", className)}>
+      <div className="studio-shell">
+        <div className="studio-stack">{children}</div>
+      </div>
+    </section>
+  );
+}
 
 export default function TestRunnerClient({ test }: RunnerProps) {
   const router = useRouter();
@@ -188,19 +216,24 @@ export default function TestRunnerClient({ test }: RunnerProps) {
 
   if (totalQuestions === 0) {
     return (
-      <section className="mx-auto w-full max-w-3xl px-4 py-10 sm:py-12">
-        <Card>
-          <CardHeader className="space-y-3">
-            <Badge variant="secondary" className="w-fit uppercase tracking-[0.18em]">
-              Quiz Factory
-            </Badge>
+      <FlowFrame className="py-8">
+        <Card className={FLOW_CARD_CLASS_NAME}>
+          <CardHeader className="space-y-4">
+            <div className="flex flex-wrap gap-2">
+              <Badge variant="secondary" className="w-fit uppercase tracking-[0.18em]">
+                Quiz Factory
+              </Badge>
+              <Badge className="w-fit border-transparent bg-[hsl(var(--brand-terracotta)/0.2)] text-[hsl(var(--brand-navy))]">
+                Setup needed
+              </Badge>
+            </div>
             <CardTitle className="text-3xl">{test.title}</CardTitle>
             <CardDescription className="text-base text-muted-foreground">
               This test has no questions yet.
             </CardDescription>
           </CardHeader>
         </Card>
-      </section>
+      </FlowFrame>
     );
   }
 
@@ -298,44 +331,57 @@ export default function TestRunnerClient({ test }: RunnerProps) {
 
   if (!attempt) {
     return (
-      <section className="mx-auto w-full max-w-3xl px-4 py-10 sm:py-12">
-        <Card className="shadow-sm">
-          <CardHeader className="space-y-3">
-            <Badge variant="secondary" className="w-fit uppercase tracking-[0.18em]">
-              Quiz Factory
-            </Badge>
+      <FlowFrame className="pb-[calc(6.5rem+env(safe-area-inset-bottom))] pt-8 md:py-8">
+        <Card className={FLOW_CARD_CLASS_NAME}>
+          <CardHeader className="space-y-4">
+            <div className="flex flex-wrap gap-2">
+              <Badge variant="secondary" className="w-fit uppercase tracking-[0.18em]">
+                Quiz Factory
+              </Badge>
+              <Badge className="w-fit border-transparent bg-[hsl(var(--brand-terracotta)/0.2)] text-[hsl(var(--brand-navy))]">
+                Free preview first
+              </Badge>
+            </div>
             <CardTitle className="text-3xl">{test.title}</CardTitle>
-            <CardDescription className="text-base text-muted-foreground">
+            <CardDescription className="text-base leading-relaxed text-muted-foreground">
               {test.intro}
             </CardDescription>
           </CardHeader>
           <Separator />
           <CardContent className="space-y-4 pt-6">
             {!isResumeLoaded ? (
-              <p className="text-sm text-muted-foreground">Checking saved progress...</p>
+              <p className="rounded-lg border border-border/70 bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+                Checking saved progress...
+              </p>
             ) : null}
 
             {isResumeLoaded && resumeState ? (
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <Button type="button" className="sm:min-w-36" onClick={handleContinue}>
-                  Continue
-                </Button>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  className="sm:min-w-36"
-                  onClick={handleStartOver}
-                  disabled={isStarting}
-                >
-                  {isStarting ? "Starting..." : "Start over"}
-                </Button>
+              <div className="space-y-4 rounded-xl border border-[hsl(var(--brand-teal)/0.35)] bg-[hsl(var(--brand-teal)/0.08)] p-4">
+                <p className="text-sm text-foreground/90">
+                  Saved progress found. Continue where you left off or restart from the
+                  beginning.
+                </p>
+                <div className="flex flex-col gap-3 sm:flex-row">
+                  <Button type="button" className="w-full sm:min-w-36 sm:w-auto" onClick={handleContinue}>
+                    Continue
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full sm:min-w-36 sm:w-auto"
+                    onClick={handleStartOver}
+                    disabled={isStarting}
+                  >
+                    {isStarting ? "Starting..." : "Start over"}
+                  </Button>
+                </div>
               </div>
             ) : null}
 
             {isResumeLoaded && !resumeState ? (
               <Button
                 type="button"
-                className="sm:min-w-36"
+                className="w-full sm:min-w-40 sm:w-auto"
                 onClick={handleStart}
                 disabled={isStarting}
                 data-testid="runner-start-button"
@@ -346,16 +392,13 @@ export default function TestRunnerClient({ test }: RunnerProps) {
           </CardContent>
           {error ? (
             <CardFooter className="pt-0">
-              <p
-                className="w-full rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
-                data-testid="runner-error-banner"
-              >
+              <p className={ERROR_BANNER_CLASS_NAME} data-testid="runner-error-banner">
                 {error}
               </p>
             </CardFooter>
           ) : null}
         </Card>
-      </section>
+      </FlowFrame>
     );
   }
 
@@ -364,25 +407,35 @@ export default function TestRunnerClient({ test }: RunnerProps) {
   }
 
   return (
-    <section className="mx-auto w-full max-w-3xl px-4 py-10 sm:py-12">
-      <Card className="shadow-sm">
-        <CardHeader className="space-y-4">
+    <FlowFrame className="pb-[calc(6.5rem+env(safe-area-inset-bottom))] pt-8 md:py-8">
+      <Card className={FLOW_CARD_CLASS_NAME}>
+        <CardHeader className="space-y-5">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <Badge variant="secondary" className="uppercase tracking-[0.18em]">
-              Quiz Factory
+            <div className="flex flex-wrap gap-2">
+              <Badge variant="secondary" className="uppercase tracking-[0.18em]">
+                Quiz Factory
+              </Badge>
+              <Badge className="border-transparent bg-[hsl(var(--brand-terracotta)/0.2)] text-[hsl(var(--brand-navy))]">
+                Question {currentIndex + 1} of {totalQuestions}
+              </Badge>
+            </div>
+            <Badge
+              variant="outline"
+              className="border-[hsl(var(--brand-teal)/0.45)] bg-[hsl(var(--brand-teal)/0.08)] text-[hsl(var(--brand-teal))]"
+            >
+              {progressValue}% complete
             </Badge>
-            <Badge variant="outline">{progressValue}%</Badge>
           </div>
-          <CardTitle className="text-3xl">{test.title}</CardTitle>
+          <CardTitle className="text-2xl leading-tight sm:text-3xl">{test.title}</CardTitle>
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
-              <p className="font-medium">
-                Question {currentIndex + 1} / {totalQuestions}
+              <p className="font-medium text-foreground/90">Current step</p>
+              <p className="text-muted-foreground">
+                {currentIndex + 1} / {totalQuestions}
               </p>
-              <p className="text-muted-foreground">{progressValue}% complete</p>
             </div>
             <div
-              className="h-2 w-full overflow-hidden rounded-full bg-muted"
+              className="h-2 w-full overflow-hidden rounded-full bg-[hsl(var(--brand-teal)/0.18)]"
               role="progressbar"
               aria-label="Test progress"
               aria-valuenow={progressValue}
@@ -398,7 +451,7 @@ export default function TestRunnerClient({ test }: RunnerProps) {
         </CardHeader>
         <Separator />
         <CardContent className="space-y-6 pt-6">
-          <h2 id={questionHeadingId} className="text-xl leading-snug">
+          <h2 id={questionHeadingId} className="text-xl leading-snug text-foreground">
             {currentQuestion.prompt}
           </h2>
           <ul
@@ -418,13 +471,17 @@ export default function TestRunnerClient({ test }: RunnerProps) {
                       optionRefs.current[optionIndex] = element;
                     }}
                     type="button"
-                    variant={isSelected ? "default" : "outline"}
+                    variant="outline"
                     role="radio"
                     aria-checked={isSelected}
                     tabIndex={isFocused ? 0 : -1}
                     data-testid={optionIndex === 0 ? "runner-first-option" : undefined}
                     className={cn(
-                      "h-auto w-full justify-start whitespace-normal px-4 py-4 text-left text-base leading-relaxed",
+                      "h-auto w-full justify-start whitespace-normal rounded-xl border px-4 py-4 text-left text-base leading-relaxed",
+                      "transition-all duration-150",
+                      isSelected
+                        ? "border-primary bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground"
+                        : "border-border/80 bg-white/90 hover:border-[hsl(var(--brand-terracotta)/0.6)] hover:bg-[hsl(var(--brand-terracotta)/0.12)]",
                       isFocused ? "ring-2 ring-ring ring-offset-2" : null
                     )}
                     onFocus={() => {
@@ -441,10 +498,11 @@ export default function TestRunnerClient({ test }: RunnerProps) {
             })}
           </ul>
         </CardContent>
-        <CardFooter className="flex flex-wrap gap-3">
+        <CardFooter className="sticky bottom-0 z-20 flex flex-wrap gap-3 border-t border-border/70 bg-card/95 p-4 pt-4 backdrop-blur supports-[backdrop-filter]:bg-card/85">
           <Button
             variant="outline"
             type="button"
+            className="min-w-[7.5rem] flex-1 sm:flex-none"
             onClick={handleBack}
             disabled={currentIndex === 0 || isCompleting}
           >
@@ -452,6 +510,7 @@ export default function TestRunnerClient({ test }: RunnerProps) {
           </Button>
           <Button
             type="button"
+            className="min-w-[8.5rem] flex-1 sm:flex-none"
             onClick={() => {
               if (isLastQuestion) {
                 void handleFinish();
@@ -468,15 +527,12 @@ export default function TestRunnerClient({ test }: RunnerProps) {
         </CardFooter>
         {error ? (
           <CardFooter className="pt-0">
-            <p
-              className="w-full rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
-              data-testid="runner-error-banner"
-            >
+            <p className={ERROR_BANNER_CLASS_NAME} data-testid="runner-error-banner">
               {error}
             </p>
           </CardFooter>
         ) : null}
       </Card>
-    </section>
+    </FlowFrame>
   );
 }

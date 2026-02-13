@@ -480,7 +480,7 @@ Queue (in order)
 - Depends on: PR-UI-STITCH-TESTS-01
 
 85) PR-UI-FLOW-01: Unify run/preview/pay UI with premium design language
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-UI-FLOW-01.md
 - Depends on: PR-UI-CONTENT-PACK-02
 
