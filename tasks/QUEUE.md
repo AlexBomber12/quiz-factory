@@ -489,6 +489,41 @@ Queue (in order)
 - Tasks file: tasks/PR-UI-GATE-02.md
 - Depends on: PR-UI-FLOW-01
 
+87) PR-ADMIN-CONSOLE-01: Admin Layout and Navigation Shell
+- Status: TODO
+- Tasks file: tasks/PR-ADMIN-CONSOLE-01.md
+- Depends on: PR-HARDEN-ADMIN-01 and PR-WEB-CONTENT-01
+
+88) PR-ADMIN-CONSOLE-02: Imports Index (List + Filters)
+- Status: TODO
+- Tasks file: tasks/PR-ADMIN-CONSOLE-02.md
+- Depends on: PR-ADMIN-CONSOLE-01
+
+89) PR-ADMIN-CONSOLE-03: Tests Registry Page (Admin)
+- Status: TODO
+- Tasks file: tasks/PR-ADMIN-CONSOLE-03.md
+- Depends on: PR-ADMIN-CONSOLE-02
+
+90) PR-ADMIN-CONSOLE-04: Test Detail Page (Versions + Publish Status)
+- Status: TODO
+- Tasks file: tasks/PR-ADMIN-CONSOLE-04.md
+- Depends on: PR-ADMIN-CONSOLE-03
+
+91) PR-ADMIN-CONSOLE-05: Tenants Registry + Tenant Detail (Publications)
+- Status: TODO
+- Tasks file: tasks/PR-ADMIN-CONSOLE-05.md
+- Depends on: PR-ADMIN-CONSOLE-04
+
+92) PR-ADMIN-CONSOLE-06: Audit Log Page + Event Instrumentation
+- Status: TODO
+- Tasks file: tasks/PR-ADMIN-CONSOLE-06.md
+- Depends on: PR-ADMIN-CONSOLE-05
+
+93) PR-ADMIN-CONSOLE-07: Admin Guardrails (Diagnostics + Publish Safety)
+- Status: TODO
+- Tasks file: tasks/PR-ADMIN-CONSOLE-07.md
+- Depends on: PR-ADMIN-CONSOLE-06
+
 Execution rules (apply to every PR)
 - Work on exactly 1 PR at a time.
 - Create a new branch from main named as specified in the selected tasks file (single source of truth).
