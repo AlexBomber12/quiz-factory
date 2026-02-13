@@ -1,6 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { PublicPage } from "../../../../components/public/PublicPage";
+import { Button } from "../../../../components/ui/button";
+import {
+  Card,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle
+} from "../../../../components/ui/card";
 import type { LocaleTag } from "../../../../lib/content/types";
 import { loadPublishedTestBySlug } from "../../../../lib/content/provider";
 import {
@@ -131,16 +140,24 @@ export default async function TestRunPage({ params }: PageProps) {
 
   if (!published) {
     return (
-      <section className="page">
-        <header className="hero">
-          <p className="eyebrow">Quiz Factory</p>
-          <h1>Test not available</h1>
-          <p>Choose a test from the tenant catalog to continue.</p>
-        </header>
-        <Link className="text-link" href="/">
-          Back to tests
-        </Link>
-      </section>
+      <PublicPage className="py-8">
+        <Card className="border-border/70 bg-card/95 shadow-[0_14px_34px_-28px_rgba(15,23,42,0.55)]">
+          <CardHeader className="space-y-3">
+            <CardTitle>Test not available</CardTitle>
+            <CardDescription className="text-base text-muted-foreground">
+              Choose a test from the tenant catalog to continue.
+            </CardDescription>
+          </CardHeader>
+          <CardFooter className="gap-3">
+            <Button asChild>
+              <Link href="/tests">Browse tests</Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link href="/">Back home</Link>
+            </Button>
+          </CardFooter>
+        </Card>
+      </PublicPage>
     );
   }
 

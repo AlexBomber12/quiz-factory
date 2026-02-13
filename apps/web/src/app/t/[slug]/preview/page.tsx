@@ -2,6 +2,17 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
 
+import { PublicPage } from "../../../../components/public/PublicPage";
+import { Badge } from "../../../../components/ui/badge";
+import { Button } from "../../../../components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle
+} from "../../../../components/ui/card";
 import type { LocaleTag } from "../../../../lib/content/types";
 import { loadPublishedTestBySlug } from "../../../../lib/content/provider";
 import {
@@ -34,6 +45,9 @@ type PageProps = {
   params: Promise<SlugParams> | SlugParams;
 };
 
+const FLOW_CARD_CLASS_NAME =
+  "border-border/70 bg-card/95 shadow-[0_14px_34px_-28px_rgba(15,23,42,0.55)]";
+
 const loadPreviewTest = (tenantId: string, slug: string, locale: string) => {
   return loadPublishedTestBySlug(tenantId, slug, locale);
 };
@@ -41,6 +55,47 @@ const loadPreviewTest = (tenantId: string, slug: string, locale: string) => {
 const resolveSlugParam = async (params: PageProps["params"]): Promise<string> => {
   const resolved = await resolveRouteParams(params);
   return safeLowercaseSlug(resolved.slug, "test");
+};
+
+const renderPreviewState = ({
+  title,
+  description,
+  primaryHref,
+  primaryLabel
+}: {
+  title: string;
+  description: string;
+  primaryHref: string;
+  primaryLabel: string;
+}) => {
+  return (
+    <PublicPage className="py-8">
+      <Card className={FLOW_CARD_CLASS_NAME}>
+        <CardHeader className="space-y-3">
+          <div className="flex flex-wrap gap-2">
+            <Badge variant="secondary" className="w-fit uppercase tracking-[0.18em]">
+              Quiz Factory
+            </Badge>
+            <Badge className="w-fit border-transparent bg-[hsl(var(--brand-terracotta)/0.2)] text-[hsl(var(--brand-navy))]">
+              Preview state
+            </Badge>
+          </div>
+          <CardTitle>{title}</CardTitle>
+          <CardDescription className="text-base text-muted-foreground">
+            {description}
+          </CardDescription>
+        </CardHeader>
+        <CardFooter className="flex flex-wrap gap-3">
+          <Button asChild>
+            <Link href={primaryHref}>{primaryLabel}</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href="/tests">Browse tests</Link>
+          </Button>
+        </CardFooter>
+      </Card>
+    </PublicPage>
+  );
 };
 
 export const generateMetadata = async ({ params }: PageProps): Promise<Metadata> => {
@@ -137,18 +192,12 @@ export default async function TestPreviewPage({ params }: PageProps) {
   const published = await loadPreviewTest(context.tenantId, routeSlug, context.locale);
 
   if (!published) {
-    return (
-      <section className="page">
-        <header className="hero">
-          <p className="eyebrow">Quiz Factory</p>
-          <h1>Test not available</h1>
-          <p>Choose a test from the tenant catalog to continue.</p>
-        </header>
-        <Link className="text-link" href="/">
-          Back to tests
-        </Link>
-      </section>
-    );
+    return renderPreviewState({
+      title: "Test not available",
+      description: "Choose a test from the tenant catalog to continue.",
+      primaryHref: "/tests",
+      primaryLabel: "Back to tests"
+    });
   }
 
   const test = published.test;
@@ -161,70 +210,84 @@ export default async function TestPreviewPage({ params }: PageProps) {
     resultPayload.test_id !== published.test_id ||
     resultPayload.tenant_id !== context.tenantId
   ) {
-    return (
-      <section className="page">
-        <header className="hero">
-          <p className="eyebrow">Quiz Factory</p>
-          <h1>Preview unavailable</h1>
-          <p>We could not load your preview. Please retake the test.</p>
-        </header>
-        <Link className="primary-button" href={`/t/${routeSlug}/run`}>
-          Back to the test
-        </Link>
-      </section>
-    );
+    return renderPreviewState({
+      title: "Preview unavailable",
+      description:
+        "Your preview session could not be restored. Retake the test and we will generate it again.",
+      primaryHref: `/t/${routeSlug}/run`,
+      primaryLabel: "Back to the test"
+    });
   }
 
   const band = test.result_bands.find((candidate) => candidate.band_id === resultPayload.band_id);
   const bandCopy = band?.copy[test.locale];
 
   if (!band || !bandCopy) {
-    return (
-      <section className="page">
-        <header className="hero">
-          <p className="eyebrow">Quiz Factory</p>
-          <h1>Preview unavailable</h1>
-          <p>We could not load your preview. Please retake the test.</p>
-        </header>
-        <Link className="primary-button" href={`/t/${routeSlug}/run`}>
-          Back to the test
-        </Link>
-      </section>
-    );
+    return renderPreviewState({
+      title: "Preview unavailable",
+      description:
+        "We could not load the preview details for your result. Retake the test to refresh your session.",
+      primaryHref: `/t/${routeSlug}/run`,
+      primaryLabel: "Back to the test"
+    });
   }
 
   const attemptToken = cookieStore.get(ATTEMPT_TOKEN_COOKIE_NAME)?.value ?? null;
 
   return (
-    <section className="page">
+    <PublicPage className="pb-[calc(6.5rem+env(safe-area-inset-bottom))] pt-8 md:py-8">
       <PreviewAnalytics
         testId={test.test_id}
         sessionId={resultPayload.session_id}
         attemptToken={attemptToken}
       />
-      <header className="hero">
-        <p className="eyebrow">Quiz Factory</p>
-        <h1>{bandCopy.headline}</h1>
-        <p>{bandCopy.summary}</p>
-      </header>
 
-      <div className="runner-card">
-        <h2 className="runner-question">{test.title}</h2>
-        <ul>
-          {bandCopy.bullets.map((bullet) => (
-            <li key={bullet}>{bullet}</li>
-          ))}
-        </ul>
-      </div>
+      <Card className={FLOW_CARD_CLASS_NAME}>
+        <CardHeader className="space-y-3">
+          <div className="flex flex-wrap gap-2">
+            <Badge variant="secondary" className="w-fit uppercase tracking-[0.18em]">
+              Quiz Factory
+            </Badge>
+            <Badge className="w-fit border-transparent bg-[hsl(var(--brand-terracotta)/0.2)] text-[hsl(var(--brand-navy))]">
+              Free preview
+            </Badge>
+          </div>
+          <CardTitle className="text-3xl leading-tight">{bandCopy.headline}</CardTitle>
+          <CardDescription className="text-base leading-relaxed text-muted-foreground">
+            {bandCopy.summary}
+          </CardDescription>
+        </CardHeader>
+      </Card>
 
-      <div className="cta-row">
-        <Link className="primary-button" href={`/t/${test.slug}/pay`}>
-          Unlock full report
-        </Link>
-        <Link className="text-link" href={`/t/${test.slug}/run`}>
-          Retake the test
-        </Link>
-      </div>
-    </section>
+      <Card className={FLOW_CARD_CLASS_NAME}>
+        <CardHeader className="space-y-2">
+          <CardTitle className="text-2xl">{test.title}</CardTitle>
+          <CardDescription className="text-sm text-muted-foreground">
+            Snapshot of what your full report will expand on.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ul className="space-y-3">
+            {bandCopy.bullets.map((bullet) => (
+              <li key={bullet} className="flex items-start gap-3 text-sm text-foreground/90 sm:text-base">
+                <span
+                  aria-hidden="true"
+                  className="mt-2 h-2 w-2 flex-none rounded-full bg-[hsl(var(--brand-terracotta))]"
+                />
+                <span>{bullet}</span>
+              </li>
+            ))}
+          </ul>
+        </CardContent>
+        <CardFooter className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
+          <Button asChild className="w-full sm:w-auto">
+            <Link href={`/t/${test.slug}/pay`}>Unlock full report</Link>
+          </Button>
+          <Button asChild variant="outline" className="w-full sm:w-auto">
+            <Link href={`/t/${test.slug}/run`}>Retake the test</Link>
+          </Button>
+        </CardFooter>
+      </Card>
+    </PublicPage>
   );
 }

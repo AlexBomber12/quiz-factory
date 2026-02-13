@@ -2,7 +2,17 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import { Badge } from "../../../../components/ui/badge";
+import { Button } from "../../../../components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from "../../../../components/ui/card";
 import type { OfferKey } from "../../../../lib/pricing";
+import { cn } from "../../../../lib/ui/cn";
 
 type PaywallOption = {
   offerKey: OfferKey;
@@ -22,6 +32,12 @@ type PaywallClientProps = {
   preferredOfferKey?: OfferKey | null;
   isUpsell?: boolean;
 };
+
+const FLOW_CARD_CLASS_NAME =
+  "border-border/70 bg-card/95 shadow-[0_14px_34px_-28px_rgba(15,23,42,0.55)]";
+
+const ERROR_BANNER_CLASS_NAME =
+  "rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive";
 
 const createPurchaseId = (): string => {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -201,54 +217,124 @@ export default function PaywallClient({
   }, [options, preferredOfferKey]);
 
   return (
-    <div className="runner-card">
-      <h2 className="runner-question">Choose your report</h2>
-      {creditsRemaining > 0 ? (
-        <p className="status-message">
-          {creditsRemaining === 1
-            ? "You have 1 credit remaining."
-            : `You have ${creditsRemaining} credits remaining.`}
+    <Card className={FLOW_CARD_CLASS_NAME}>
+      <CardHeader className="space-y-3">
+        <div className="flex flex-wrap gap-2">
+          <Badge variant="secondary" className="w-fit uppercase tracking-[0.18em]">
+            Checkout
+          </Badge>
+          {preferredOfferKey ? (
+            <Badge className="w-fit border-transparent bg-[hsl(var(--brand-terracotta)/0.2)] text-[hsl(var(--brand-navy))]">
+              Recommended preselected
+            </Badge>
+          ) : null}
+        </div>
+        <CardTitle className="text-2xl sm:text-3xl">Choose your report</CardTitle>
+        <CardDescription className="text-base text-muted-foreground">
+          Select the option that matches the depth you want right now.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        {creditsRemaining > 0 ? (
+          <div className="rounded-xl border border-[hsl(var(--brand-teal)/0.35)] bg-[hsl(var(--brand-teal)/0.08)] p-4">
+            <p className="text-sm font-medium text-foreground/90">
+              {creditsRemaining === 1
+                ? "You have 1 credit remaining."
+                : `You have ${creditsRemaining} credits remaining.`}
+            </p>
+          </div>
+        ) : null}
+
+        {hasReportAccess ? (
+          <Button
+            type="button"
+            className="w-full sm:w-auto"
+            disabled={isSubmitting}
+            onClick={handleCreditAccess}
+          >
+            {creditButtonLabel}
+          </Button>
+        ) : null}
+
+        {orderedOptions.length > 0 ? (
+          <ul className="space-y-3" aria-label="Paywall options">
+            {orderedOptions.map((option) => {
+              const isActive = activeOfferKey === option.offerKey;
+              const isPreferred = preferredOfferKey === option.offerKey;
+              const offerIdentity = `${option.label} (${option.priceLabel})`;
+              const actionLabel = isActive
+                ? "Starting checkout..."
+                : isPreferred
+                  ? "Recommended · Continue to checkout"
+                  : "Continue to checkout";
+              const actionAriaLabel = isActive
+                ? `Starting checkout for ${offerIdentity}`
+                : isPreferred
+                  ? `Recommended offer, continue to checkout for ${offerIdentity}`
+                  : `Continue to checkout for ${offerIdentity}`;
+
+              return (
+                <li
+                  key={option.offerKey}
+                  className={cn(
+                    "rounded-xl border p-4",
+                    isPreferred
+                      ? "border-[hsl(var(--brand-terracotta)/0.55)] bg-[hsl(var(--brand-terracotta)/0.1)]"
+                      : "border-border/70 bg-card/80"
+                  )}
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="space-y-1">
+                      <p className="font-semibold text-foreground">{option.label}</p>
+                      {option.description ? (
+                        <p className="text-sm text-muted-foreground">{option.description}</p>
+                      ) : null}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Badge
+                        variant="outline"
+                        className="border-[hsl(var(--brand-teal)/0.4)] bg-[hsl(var(--brand-teal)/0.08)] text-[hsl(var(--brand-teal))]"
+                      >
+                        {option.priceLabel}
+                      </Badge>
+                      {option.badge ? (
+                        <Badge className="border-transparent bg-muted text-foreground">
+                          {option.badge}
+                        </Badge>
+                      ) : null}
+                      {isPreferred ? (
+                        <Badge className="border-transparent bg-[hsl(var(--brand-terracotta)/0.2)] text-[hsl(var(--brand-navy))]">
+                          Recommended
+                        </Badge>
+                      ) : null}
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    className="mt-4 w-full"
+                    variant={isPreferred ? "default" : "outline"}
+                    disabled={isSubmitting}
+                    aria-label={actionAriaLabel}
+                    onClick={() => handleCheckout(option)}
+                  >
+                    {actionLabel}
+                  </Button>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <p className="rounded-lg border border-border/70 bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+            Checkout options are temporarily unavailable. Please try again in a moment.
+          </p>
+        )}
+
+        <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">
+          Secure checkout powered by Stripe.
         </p>
-      ) : null}
-      {hasReportAccess ? (
-        <button
-          className="primary-button"
-          type="button"
-          disabled={isSubmitting}
-          onClick={handleCreditAccess}
-        >
-          {creditButtonLabel}
-        </button>
-      ) : null}
-      <ul className="option-list" aria-label="Paywall options">
-        {orderedOptions.map((option) => {
-          const isActive = activeOfferKey === option.offerKey;
-          const isPreferred = preferredOfferKey === option.offerKey;
-          const badgePrefix = option.badge ? `${option.badge} · ` : "";
-          const preferredPrefix = isPreferred ? "Recommended · " : "";
-          const label = isActive
-            ? "Starting checkout..."
-            : `${preferredPrefix}${badgePrefix}${option.label} - ${option.priceLabel}`;
-          const buttonClassName = isPreferred
-            ? "option-button border-foreground/40 bg-accent/40"
-            : "option-button";
-          return (
-            <li key={option.offerKey}>
-              <button
-                className={buttonClassName}
-                type="button"
-                disabled={isSubmitting}
-                onClick={() => handleCheckout(option)}
-              >
-                {label}
-              </button>
-              {option.description ? <p>{option.description}</p> : null}
-            </li>
-          );
-        })}
-      </ul>
-      <p>Secure checkout powered by Stripe.</p>
-      {error ? <p className="status-message">{error}</p> : null}
-    </div>
+
+        {error ? <p className={ERROR_BANNER_CLASS_NAME}>{error}</p> : null}
+      </CardContent>
+    </Card>
   );
 }

@@ -2,6 +2,16 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
 
+import { PublicPage } from "../../../../components/public/PublicPage";
+import { Badge } from "../../../../components/ui/badge";
+import { Button } from "../../../../components/ui/button";
+import {
+  Card,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle
+} from "../../../../components/ui/card";
 import type { LocaleTag } from "../../../../lib/content/types";
 import { loadPublishedTestBySlug } from "../../../../lib/content/provider";
 import {
@@ -35,14 +45,17 @@ type PageProps = {
   params: Promise<SlugParams> | SlugParams;
   searchParams?:
     | {
-        offer_key?: string | string[];
-        is_upsell?: string | string[];
-      }
+      offer_key?: string | string[];
+      is_upsell?: string | string[];
+    }
     | Promise<{
-        offer_key?: string | string[];
-        is_upsell?: string | string[];
-      }>;
+      offer_key?: string | string[];
+      is_upsell?: string | string[];
+    }>;
 };
+
+const FLOW_CARD_CLASS_NAME =
+  "border-border/70 bg-card/95 shadow-[0_14px_34px_-28px_rgba(15,23,42,0.55)]";
 
 const loadPaywallTest = (tenantId: string, slug: string, locale: string) => {
   return loadPublishedTestBySlug(tenantId, slug, locale);
@@ -61,6 +74,47 @@ const parseIsUpsellParam = (value: string | string[] | undefined): boolean => {
 const resolveSlugParam = async (params: PageProps["params"]): Promise<string> => {
   const resolved = await resolveRouteParams(params);
   return safeLowercaseSlug(resolved.slug, "test");
+};
+
+const renderPaywallState = ({
+  title,
+  description,
+  primaryHref,
+  primaryLabel
+}: {
+  title: string;
+  description: string;
+  primaryHref: string;
+  primaryLabel: string;
+}) => {
+  return (
+    <PublicPage className="py-8">
+      <Card className={FLOW_CARD_CLASS_NAME}>
+        <CardHeader className="space-y-3">
+          <div className="flex flex-wrap gap-2">
+            <Badge variant="secondary" className="w-fit uppercase tracking-[0.18em]">
+              Quiz Factory
+            </Badge>
+            <Badge className="w-fit border-transparent bg-[hsl(var(--brand-terracotta)/0.2)] text-[hsl(var(--brand-navy))]">
+              Payment state
+            </Badge>
+          </div>
+          <CardTitle>{title}</CardTitle>
+          <CardDescription className="text-base text-muted-foreground">
+            {description}
+          </CardDescription>
+        </CardHeader>
+        <CardFooter className="flex flex-wrap gap-3">
+          <Button asChild>
+            <Link href={primaryHref}>{primaryLabel}</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href="/tests">Browse tests</Link>
+          </Button>
+        </CardFooter>
+      </Card>
+    </PublicPage>
+  );
 };
 
 export const generateMetadata = async ({ params }: PageProps): Promise<Metadata> => {
@@ -157,18 +211,12 @@ export default async function PaywallPage({ params, searchParams }: PageProps) {
   const published = await loadPaywallTest(context.tenantId, routeSlug, context.locale);
 
   if (!published) {
-    return (
-      <section className="page">
-        <header className="hero">
-          <p className="eyebrow">Quiz Factory</p>
-          <h1>Test not available</h1>
-          <p>Choose a test from the tenant catalog to continue.</p>
-        </header>
-        <Link className="text-link" href="/">
-          Back to tests
-        </Link>
-      </section>
-    );
+    return renderPaywallState({
+      title: "Test not available",
+      description: "Choose a test from the tenant catalog to continue.",
+      primaryHref: "/tests",
+      primaryLabel: "Back to tests"
+    });
   }
 
   const test = published.test;
@@ -181,18 +229,13 @@ export default async function PaywallPage({ params, searchParams }: PageProps) {
     resultPayload.test_id !== published.test_id ||
     resultPayload.tenant_id !== context.tenantId
   ) {
-    return (
-      <section className="page">
-        <header className="hero">
-          <p className="eyebrow">Quiz Factory</p>
-          <h1>Paywall unavailable</h1>
-          <p>We could not confirm your result. Please retake the test.</p>
-        </header>
-        <Link className="primary-button" href={`/t/${routeSlug}/run`}>
-          Back to the test
-        </Link>
-      </section>
-    );
+    return renderPaywallState({
+      title: "Paywall unavailable",
+      description:
+        "We could not confirm your latest result. Retake the test and we will send you back here.",
+      primaryHref: `/t/${routeSlug}/run`,
+      primaryLabel: "Back to the test"
+    });
   }
 
   const creditsState = parseCreditsCookie(cookieStore, context.tenantId);
@@ -220,12 +263,23 @@ export default async function PaywallPage({ params, searchParams }: PageProps) {
   }));
 
   return (
-    <section className="page">
-      <header className="hero">
-        <p className="eyebrow">Quiz Factory</p>
-        <h1>{test.paywall_headline}</h1>
-        <p>Select the report option that fits you best.</p>
-      </header>
+    <PublicPage className="pb-[calc(6.5rem+env(safe-area-inset-bottom))] pt-8 md:py-8">
+      <Card className={FLOW_CARD_CLASS_NAME}>
+        <CardHeader className="space-y-3">
+          <div className="flex flex-wrap gap-2">
+            <Badge variant="secondary" className="w-fit uppercase tracking-[0.18em]">
+              Quiz Factory
+            </Badge>
+            <Badge className="w-fit border-transparent bg-[hsl(var(--brand-terracotta)/0.2)] text-[hsl(var(--brand-navy))]">
+              Secure checkout
+            </Badge>
+          </div>
+          <CardTitle className="text-3xl leading-tight">{test.paywall_headline}</CardTitle>
+          <CardDescription className="text-base text-muted-foreground">
+            Select the report option that fits you best.
+          </CardDescription>
+        </CardHeader>
+      </Card>
 
       <PaywallClient
         testId={test.test_id}
@@ -238,14 +292,16 @@ export default async function PaywallPage({ params, searchParams }: PageProps) {
         isUpsell={isUpsell}
       />
 
-      <div className="cta-row">
-        <Link className="text-link" href={`/t/${test.slug}/preview`}>
-          Back to preview
-        </Link>
-        <Link className="text-link" href={`/t/${test.slug}/run`}>
-          Retake the test
-        </Link>
-      </div>
-    </section>
+      <Card className={FLOW_CARD_CLASS_NAME}>
+        <CardFooter className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
+          <Button asChild variant="outline" className="w-full sm:w-auto">
+            <Link href={`/t/${test.slug}/preview`}>Back to preview</Link>
+          </Button>
+          <Button asChild variant="outline" className="w-full sm:w-auto">
+            <Link href={`/t/${test.slug}/run`}>Retake the test</Link>
+          </Button>
+        </CardFooter>
+      </Card>
+    </PublicPage>
   );
 }
