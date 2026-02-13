@@ -490,7 +490,7 @@ Queue (in order)
 - Depends on: PR-UI-FLOW-01
 
 87) PR-ADMIN-CONSOLE-01: Admin Layout and Navigation Shell
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-ADMIN-CONSOLE-01.md
 - Depends on: PR-HARDEN-ADMIN-01 and PR-WEB-CONTENT-01
 
