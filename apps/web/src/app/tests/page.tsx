@@ -7,6 +7,8 @@ import {
   type HubTest
 } from "../../lib/hub/categories";
 import { buildHubPageMetadata } from "../../lib/hub/metadata";
+import { resolveCategoryLabel } from "../../lib/public/category_label";
+import { resolveTestsPageContentPack } from "../../lib/public/content_pack";
 import { resolveTenantContext } from "../../lib/tenants/request";
 
 type PageProps = {
@@ -43,7 +45,7 @@ const deriveCategoriesFromTests = (tests: ReadonlyArray<HubTest>): HubCategory[]
 
     categories.set(test.category_slug, {
       slug: test.category_slug,
-      label: test.category,
+      label: resolveCategoryLabel(test.category, test.category_slug),
       test_count: 1
     });
   }
@@ -72,18 +74,19 @@ export default async function TestsPage({ searchParams }: PageProps) {
   const categories = deriveCategoriesFromTests(tests);
   const resolvedSearchParams = await searchParams;
   const query = normalizeQueryParam(resolvedSearchParams?.q);
+  const contentPack = resolveTestsPageContentPack();
 
   return (
     <section>
       <TenantTestExplorer
         tests={tests}
         categories={categories}
-        heading="Tests"
-        subheading="Explore self-assessments and start the one that fits your goals today."
+        heading={contentPack.heroHeadline}
+        subheading={contentPack.heroSubheadline}
         initialSearchValue={query}
         includeCategoryInSearch={false}
-        sectionHeading="All Assessments"
         showViewAllLink={false}
+        copy={contentPack.explorer}
       />
     </section>
   );

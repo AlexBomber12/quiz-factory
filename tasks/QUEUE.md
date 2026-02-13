@@ -475,7 +475,7 @@ Queue (in order)
 - Depends on: PR-UI-STITCH-HARDEN-01
 
 84) PR-UI-CONTENT-PACK-02: Content packs for small catalogs and empty states
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-UI-CONTENT-PACK-02.md
 - Depends on: PR-UI-STITCH-TESTS-01
 

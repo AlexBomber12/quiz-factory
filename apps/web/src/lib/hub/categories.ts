@@ -6,6 +6,7 @@ import {
   type TenantCatalogRecord
 } from "../content/provider";
 import { normalizeLocaleTag } from "../content/types";
+import { toHumanCategoryLabel } from "../public/category_label";
 
 export type HubTest = {
   test_id: string;
@@ -34,26 +35,6 @@ const collapseHyphens = (value: string): string => {
 const normalizeCategoryLabel = (value: string): string | null => {
   const label = value.trim();
   return label.length > 0 ? label : null;
-};
-
-const SLUG_CATEGORY_PATTERN = /^[a-z0-9]+(?:[-_][a-z0-9]+)+$/;
-
-const toHumanCategoryLabel = (value: string): string => {
-  const label = value.trim();
-  if (!SLUG_CATEGORY_PATTERN.test(label)) {
-    return label;
-  }
-
-  const words = label.split(/[-_]+/g).filter(Boolean);
-  if (words.length === 0) {
-    return label;
-  }
-
-  const [firstWord, ...restWords] = words;
-  const firstWordCapitalized =
-    firstWord.charAt(0).toUpperCase() + firstWord.slice(1);
-
-  return [firstWordCapitalized, ...restWords].join(" ");
 };
 
 const decodeCategoryParam = (value: string): string => {

@@ -12,11 +12,9 @@ import {
   buildTenantLabel,
   resolveTenantSeoContext
 } from "../lib/seo/metadata";
-import {
-  getTenantProfile,
-  resolveHomepageCopy,
-  resolveTenantKind
-} from "../lib/tenants/profiles";
+import { getTenantProfile, resolveTenantKind } from "../lib/tenants/profiles";
+import { resolveCategoryLabel } from "../lib/public/category_label";
+import { resolveHomePageContentPack } from "../lib/public/content_pack";
 import { resolveTenantContext } from "../lib/tenants/request";
 
 export const generateMetadata = async (): Promise<Metadata> => {
@@ -107,7 +105,7 @@ const deriveCategoriesForVisibleTests = (
 
     categoriesBySlug.set(test.category_slug, {
       slug: test.category_slug,
-      label: test.category,
+      label: resolveCategoryLabel(test.category, test.category_slug),
       test_count: 1
     });
   }
@@ -130,7 +128,7 @@ export default async function HomePage() {
   ]);
   const tenantProfile = getTenantProfile(context.tenantId);
   const tenantKind = resolveTenantKind(context.tenantId);
-  const homepageCopy = resolveHomepageCopy(context.tenantId);
+  const contentPack = resolveHomePageContentPack(context.tenantId);
   const featuredSlugs = tenantProfile?.featured_test_slugs ?? [];
   const featuredTests =
     tenantKind === "niche" ? orderTestsByFeaturedSlugs(tests, featuredSlugs) : [];
@@ -142,19 +140,14 @@ export default async function HomePage() {
   const visibleCategories = useFocusedNicheHomepage
     ? deriveCategoriesForVisibleTests(visibleTests)
     : categories;
-  const heroHeadline =
-    homepageCopy.headline?.trim() || "Discover your next self-assessment";
-  const heroSubheadline =
-    homepageCopy.subheadline?.trim() ||
-    "Browse the available tests and start when you're ready.";
-
   return (
     <section>
       <TenantTestExplorer
         tests={visibleTests}
         categories={visibleCategories}
-        heading={heroHeadline}
-        subheading={heroSubheadline}
+        heading={contentPack.heroHeadline}
+        subheading={contentPack.heroSubheadline}
+        copy={contentPack.explorer}
       />
     </section>
   );
