@@ -11,12 +11,26 @@ const waitForFonts = async (page: Page): Promise<void> => {
   });
 };
 
+const hideDevRuntimeOverlays = async (page: Page): Promise<void> => {
+  await page.addStyleTag({
+    content: `
+      nextjs-portal,
+      [data-nextjs-toast],
+      [data-next-badge-root],
+      [data-nextjs-dev-tools-button] {
+        display: none !important;
+      }
+    `
+  });
+};
+
 const captureGoldenScreenshot = async (
   page: Page,
   stableLocator: Locator,
   screenshotName: string
 ): Promise<void> => {
   await stableLocator.waitFor({ state: "visible" });
+  await hideDevRuntimeOverlays(page);
   await waitForFonts(page);
   await expect(page).toHaveScreenshot(screenshotName, {
     fullPage: true,
@@ -29,6 +43,9 @@ test.describe("golden public pages visual regression", () => {
   test.use({ viewport: GOLDEN_VIEWPORT });
 
   test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      document.documentElement.setAttribute("data-visual-test", "true");
+    });
     await page.emulateMedia({ reducedMotion: "reduce" });
   });
 

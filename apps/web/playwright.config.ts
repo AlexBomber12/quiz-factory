@@ -29,7 +29,7 @@ export default defineConfig({
     timeout: 10_000
   },
   retries: process.env.CI ? 1 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  workers: 1,
   use: {
     ...devices["Desktop Chrome"],
     baseURL: normalizedBaseUrl,

@@ -465,7 +465,7 @@ Queue (in order)
 - Depends on: PR-UI-LANDING-01 and PR-UI-GATE-01
 
 82) PR-UI-STITCH-HARDEN-01: Stitch hardening (Terracotta accent, no external assets, deterministic)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-UI-STITCH-HARDEN-01.md
 - Depends on: PR-UI-STITCH-MCP-01
 
