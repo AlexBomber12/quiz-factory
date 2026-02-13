@@ -363,37 +363,39 @@ export default async function AdminPage({ searchParams }: PageProps) {
   const csrfToken = await getAdminCsrfTokenForRender();
 
   return (
-    <section className="mx-auto flex w-full max-w-7xl flex-col gap-6 py-12">
-      <Card>
-        <CardHeader>
-          <CardTitle>Admin console</CardTitle>
-          <CardDescription>
-            Authenticated as <strong>{session.role}</strong>. Session expires at{" "}
-            {new Date(session.expires_at).toISOString()}.
-          </CardDescription>
-        </CardHeader>
-      </Card>
+    <section className="mx-auto flex w-full flex-col gap-6 py-2">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
+        <Card>
+          <CardHeader>
+            <CardTitle>Admin console</CardTitle>
+            <CardDescription>
+              Authenticated as <strong>{session.role}</strong>. Session expires at{" "}
+              {new Date(session.expires_at).toISOString()}.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Session controls</CardTitle>
+            <CardDescription>
+              Admin routes are protected by middleware and signed session cookies.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form action="/api/admin/logout" method="post">
+              <input name={ADMIN_CSRF_FORM_FIELD} type="hidden" value={csrfToken} />
+              <Button type="submit" variant="outline">
+                Log out
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Session controls</CardTitle>
-          <CardDescription>
-            Admin routes are protected by middleware and signed session cookies.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form action="/api/admin/logout" method="post">
-            <input name={ADMIN_CSRF_FORM_FIELD} type="hidden" value={csrfToken} />
-            <Button type="submit" variant="outline">
-              Log out
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Imports</CardTitle>
+          <CardTitle>Quick actions</CardTitle>
           <CardDescription>
             Upload multi-locale markdown bundles and preview source metadata before conversion.
           </CardDescription>
@@ -451,11 +453,17 @@ export default async function AdminPage({ searchParams }: PageProps) {
         </Card>
       ) : null}
 
-      {!loadError
-        ? publishTests.map((testRecord) =>
-            renderPublishCard(testRecord, tenantRegistry.length, csrfToken)
-          )
-        : null}
+      {!loadError ? (
+        <section aria-label="Test publish controls" className="space-y-4">
+          <div className="space-y-1">
+            <h2 className="text-lg font-semibold">Test publish controls</h2>
+            <p className="text-sm text-muted-foreground">
+              Manage versions and tenant enablement state for each test.
+            </p>
+          </div>
+          {publishTests.map((testRecord) => renderPublishCard(testRecord, tenantRegistry.length, csrfToken))}
+        </section>
+      ) : null}
     </section>
   );
 }
