@@ -28,6 +28,10 @@ type TenantTestExplorerProps = {
   categories: ReadonlyArray<TenantExplorerCategory>;
   heading: string;
   subheading: string;
+  initialSearchValue?: string;
+  includeCategoryInSearch?: boolean;
+  sectionHeading?: string;
+  showViewAllLink?: boolean;
 };
 
 const TOP_NAV_LINKS = [
@@ -94,12 +98,17 @@ export function TenantTestExplorer({
   tests,
   categories,
   heading,
-  subheading
+  subheading,
+  initialSearchValue = "",
+  includeCategoryInSearch = true,
+  sectionHeading = "Featured Assessments",
+  showViewAllLink = true
 }: TenantTestExplorerProps) {
-  const [searchValue, setSearchValue] = useState("");
+  const [searchValue, setSearchValue] = useState(initialSearchValue);
   const [selectedCategorySlugs, setSelectedCategorySlugs] = useState<string[]>([]);
 
   const searchQuery = normalizeSearchValue(searchValue);
+  const searchValueLabel = searchValue.trim();
   const selectedCategorySet = useMemo(
     () => new Set(selectedCategorySlugs),
     [selectedCategorySlugs]
@@ -110,15 +119,29 @@ export function TenantTestExplorer({
       const matchesSearch =
         includesSearchValue(test.title, searchQuery) ||
         includesSearchValue(test.short_description, searchQuery) ||
-        includesSearchValue(test.category, searchQuery);
+        (includeCategoryInSearch && includesSearchValue(test.category, searchQuery));
       const matchesSelectedCategories =
         selectedCategorySet.size === 0 || selectedCategorySet.has(test.category_slug);
       return matchesSearch && matchesSelectedCategories;
     });
-  }, [searchQuery, selectedCategorySet, tests]);
+  }, [includeCategoryInSearch, searchQuery, selectedCategorySet, tests]);
 
   const hasActiveFilters = searchQuery.length > 0 || selectedCategorySlugs.length > 0;
   const allCategoriesSelected = selectedCategorySlugs.length === 0;
+  const searchInputLabel = includeCategoryInSearch
+    ? "Search tests by title, description, or category"
+    : "Search tests by title or description";
+  const hasSearchQuery = searchValueLabel.length > 0;
+  const hasAnyTests = tests.length > 0;
+  let emptyStateTitle = "No tests yet";
+  let emptyStateDescription = "This tenant does not have any published tests yet.";
+  if (hasSearchQuery) {
+    emptyStateTitle = "No matching tests";
+    emptyStateDescription = `No tests matched "${searchValueLabel}". Try another search term.`;
+  } else if (hasAnyTests) {
+    emptyStateTitle = "No matching tests right now";
+    emptyStateDescription = "Try a different search term or clear your category filters.";
+  }
 
   const toggleCategory = (slug: string) => {
     setSelectedCategorySlugs((current) => {
@@ -141,6 +164,11 @@ export function TenantTestExplorer({
       document.body.removeAttribute("data-tenant-home-shell");
     };
   }, []);
+
+  useEffect(() => {
+    setSearchValue(initialSearchValue);
+    setSelectedCategorySlugs([]);
+  }, [initialSearchValue]);
 
   return (
     <div data-tenant-home-shell="true" className="min-h-screen bg-[#f6f7f8] text-[#3d3630]">
@@ -205,7 +233,7 @@ export function TenantTestExplorer({
             />
             <Input
               id="tenant-home-search"
-              aria-label="Search tests by title, description, or category"
+              aria-label={searchInputLabel}
               value={searchValue}
               onChange={(event) => {
                 setSearchValue(event.target.value);
@@ -269,13 +297,13 @@ export function TenantTestExplorer({
       </div>
 
       <section
-        aria-label="Featured assessments"
+        aria-label="Assessments"
         className="mx-auto w-full max-w-[1120px] px-4 py-12 lg:px-0"
       >
         <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
           <div>
             <h2 className="text-2xl font-bold tracking-tight text-[#3d3630]">
-              Featured Assessments
+              {sectionHeading}
             </h2>
             <p className="mt-1 text-sm text-[#6f6459]">
               Showing {filteredTests.length} of {tests.length}{" "}
@@ -292,25 +320,21 @@ export function TenantTestExplorer({
                 Reset filters
               </button>
             ) : null}
-            <Link
-              href="/tests"
-              className="inline-flex items-center gap-2 text-sm font-semibold text-[#c68160] no-underline hover:underline"
-            >
-              View all
-            </Link>
+            {showViewAllLink ? (
+              <Link
+                href="/tests"
+                className="inline-flex items-center gap-2 text-sm font-semibold text-[#c68160] no-underline hover:underline"
+              >
+                View all
+              </Link>
+            ) : null}
           </div>
         </div>
 
         {filteredTests.length === 0 ? (
           <div className="rounded-lg border border-dashed border-[#d7cec2] bg-white p-8 text-center">
-            <h3 className="text-xl font-bold text-[#3d3630]">
-              {tests.length === 0 ? "No tests yet" : "No matching tests right now"}
-            </h3>
-            <p className="mt-2 text-sm text-[#6f6459]">
-              {tests.length === 0
-                ? "This tenant does not have any published tests yet."
-                : "Try a different search term or clear your category filters."}
-            </p>
+            <h3 className="text-xl font-bold text-[#3d3630]">{emptyStateTitle}</h3>
+            <p className="mt-2 text-sm text-[#6f6459]">{emptyStateDescription}</p>
             {hasActiveFilters ? (
               <button
                 type="button"

@@ -470,7 +470,7 @@ Queue (in order)
 - Depends on: PR-UI-STITCH-MCP-01
 
 83) PR-UI-STITCH-TESTS-01: Align /tests with Stitch Tenant Home design
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-UI-STITCH-TESTS-01.md
 - Depends on: PR-UI-STITCH-HARDEN-01
 
