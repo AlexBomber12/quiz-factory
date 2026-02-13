@@ -505,7 +505,7 @@ Queue (in order)
 - Depends on: PR-ADMIN-CONSOLE-02
 
 90) PR-ADMIN-CONSOLE-04: Test Detail Page (Versions + Publish Status)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-ADMIN-CONSOLE-04.md
 - Depends on: PR-ADMIN-CONSOLE-03
 
