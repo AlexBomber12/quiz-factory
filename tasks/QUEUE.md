@@ -500,7 +500,7 @@ Queue (in order)
 - Depends on: PR-ADMIN-CONSOLE-01
 
 89) PR-ADMIN-CONSOLE-03: Tests Registry Page (Admin)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-ADMIN-CONSOLE-03.md
 - Depends on: PR-ADMIN-CONSOLE-02
 
