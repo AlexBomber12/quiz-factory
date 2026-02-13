@@ -464,6 +464,30 @@ Queue (in order)
 - Tasks file: tasks/PR-UI-STITCH-MCP-01.md
 - Depends on: PR-UI-LANDING-01 and PR-UI-GATE-01
 
+82) PR-UI-STITCH-HARDEN-01: Stitch hardening (Terracotta accent, no external assets, deterministic)
+- Status: TODO
+- Tasks file: tasks/PR-UI-STITCH-HARDEN-01.md
+- Depends on: PR-UI-STITCH-MCP-01
+
+83) PR-UI-STITCH-TESTS-01: Align /tests with Stitch Tenant Home design
+- Status: TODO
+- Tasks file: tasks/PR-UI-STITCH-TESTS-01.md
+- Depends on: PR-UI-STITCH-HARDEN-01
+
+84) PR-UI-CONTENT-PACK-02: Content packs for small catalogs and empty states
+- Status: TODO
+- Tasks file: tasks/PR-UI-CONTENT-PACK-02.md
+- Depends on: PR-UI-STITCH-TESTS-01
+
+85) PR-UI-FLOW-01: Unify run/preview/pay UI with premium design language
+- Status: TODO
+- Tasks file: tasks/PR-UI-FLOW-01.md
+- Depends on: PR-UI-CONTENT-PACK-02
+
+86) PR-UI-GATE-02: Extend visual suite to flow pages (landing/run/preview/pay)
+- Status: TODO
+- Tasks file: tasks/PR-UI-GATE-02.md
+- Depends on: PR-UI-FLOW-01
 
 Execution rules (apply to every PR)
 - Work on exactly 1 PR at a time.
