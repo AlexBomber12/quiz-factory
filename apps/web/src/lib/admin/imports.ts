@@ -21,6 +21,8 @@ type TimestampValue = Date | string;
 
 export type ImportStatus = "uploaded" | "processed" | "failed";
 
+export type ImportListStatusFilter = "uploaded" | "converted" | "failed";
+
 export type ImportFileRecord = {
   filename: string;
   md: string;
@@ -35,6 +37,15 @@ export type ImportRecord = {
   files_json: ImportFilesJson;
   detected_meta: Record<string, unknown> | null;
   error: string | null;
+  created_at: string;
+  created_by: string | null;
+};
+
+export type ImportListRecord = {
+  id: string;
+  source_test_id: string | null;
+  locales: string[];
+  status: ImportStatus;
   created_at: string;
   created_by: string | null;
 };
@@ -116,6 +127,15 @@ type ImportRow = {
   created_by: string | null;
 };
 
+type ImportListRow = {
+  id: string;
+  source_test_id: string | null;
+  locales: unknown;
+  status: ImportStatus;
+  created_at: TimestampValue;
+  created_by: string | null;
+};
+
 type TestRow = {
   id: string;
   test_id: string;
@@ -180,6 +200,8 @@ const CONVERTER_TIMEOUT_MS = 15_000;
 const MAX_IMPORT_ERROR_CHARS = 1_500;
 const MAX_CONVERTED_SPEC_BYTES = 2_000_000;
 const DEFAULT_IMPORT_LOCALE_ALLOWLIST_REGEX = "^(en|es|pt-BR)$";
+const LIST_IMPORTS_DEFAULT_LIMIT = 100;
+const LIST_IMPORTS_MAX_LIMIT = 200;
 const LIKERT_LEVELS = 5;
 const execFileAsync = promisify(execFile);
 
@@ -229,6 +251,36 @@ const normalizeNonEmptyString = (value: unknown): string | null => {
 
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
+};
+
+export const normalizeImportListStatusFilter = (
+  value: string | null | undefined
+): ImportListStatusFilter | null => {
+  const normalized = normalizeNonEmptyString(value)?.toLowerCase();
+  switch (normalized) {
+    case "uploaded":
+      return "uploaded";
+    case "processed":
+    case "converted":
+      return "converted";
+    case "failed":
+      return "failed";
+    default:
+      return null;
+  }
+};
+
+const normalizeImportListLimit = (value: number | null | undefined): number => {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return LIST_IMPORTS_DEFAULT_LIMIT;
+  }
+
+  const rounded = Math.floor(value);
+  if (rounded < 1) {
+    return 1;
+  }
+
+  return Math.min(rounded, LIST_IMPORTS_MAX_LIMIT);
 };
 
 const resolveImportLocaleAllowlistRegex = (): RegExp => {
@@ -334,6 +386,36 @@ const toImportRecord = (row: ImportRow): ImportRecord => {
   };
 };
 
+const normalizeLocaleList = (value: unknown): string[] => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .filter((locale): locale is string => typeof locale === "string")
+    .map((locale) => locale.trim())
+    .filter((locale) => locale.length > 0);
+};
+
+const toImportListRecord = (row: ImportListRow): ImportListRecord => {
+  return {
+    id: row.id,
+    source_test_id: normalizeNonEmptyString(row.source_test_id),
+    locales: normalizeLocaleList(row.locales),
+    status: row.status,
+    created_at: toIsoString(row.created_at),
+    created_by: row.created_by
+  };
+};
+
+const toImportListStatusSqlValue = (status: ImportListStatusFilter): ImportStatus => {
+  if (status === "converted") {
+    return "processed";
+  }
+
+  return status;
+};
+
 const toImportDraftRecord = (row: DraftRow): ImportDraftRecord => {
   return {
     id: row.id,
@@ -348,6 +430,59 @@ const toImportDraftRecord = (row: DraftRow): ImportDraftRecord => {
     created_at: toIsoString(row.created_at),
     created_by: row.created_by
   };
+};
+
+export const listImports = async (input?: {
+  q?: string | null;
+  status?: ImportListStatusFilter | null;
+  limit?: number | null;
+}): Promise<ImportListRecord[]> => {
+  const queryText = normalizeNonEmptyString(input?.q ?? null);
+  const statusFilter = normalizeImportListStatusFilter(input?.status ?? null);
+  const limit = normalizeImportListLimit(input?.limit ?? null);
+  const whereClauses: string[] = [];
+  const params: unknown[] = [];
+
+  if (queryText) {
+    params.push(`%${queryText}%`);
+    const parameterIndex = params.length;
+    whereClauses.push(
+      `(i.id::text ILIKE $${parameterIndex} OR COALESCE(i.detected_meta ->> 'test_id', '') ILIKE $${parameterIndex})`
+    );
+  }
+
+  if (statusFilter) {
+    params.push(toImportListStatusSqlValue(statusFilter));
+    whereClauses.push(`i.status = $${params.length}`);
+  }
+
+  params.push(limit);
+  const limitParameterIndex = params.length;
+  const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
+  const pool = getContentDbPool();
+
+  const { rows } = await pool.query<ImportListRow>(
+    `
+      SELECT
+        i.id,
+        NULLIF(BTRIM(i.detected_meta ->> 'test_id'), '') AS source_test_id,
+        COALESCE(locale_data.locales, ARRAY[]::text[]) AS locales,
+        i.status,
+        i.created_at,
+        i.created_by
+      FROM imports i
+      LEFT JOIN LATERAL (
+        SELECT ARRAY_AGG(locale.locale_key ORDER BY locale.locale_key) AS locales
+        FROM jsonb_object_keys(i.files_json) AS locale(locale_key)
+      ) AS locale_data ON TRUE
+      ${whereSql}
+      ORDER BY i.created_at DESC
+      LIMIT $${limitParameterIndex}
+    `,
+    params
+  );
+
+  return rows.map(toImportListRecord);
 };
 
 const parseFrontMatter = (markdown: string): ParsedFrontMatter | null => {
