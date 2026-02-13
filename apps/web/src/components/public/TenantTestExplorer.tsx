@@ -4,6 +4,11 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { Bell, BrainCircuit, Clock3, Play, Search } from "lucide-react";
 
+import { resolveCategoryLabel } from "../../lib/public/category_label";
+import {
+  DEFAULT_TENANT_EXPLORER_COPY,
+  type TenantExplorerCopy
+} from "../../lib/public/explorer_copy";
 import { Input } from "../ui/input";
 import { cn } from "../../lib/ui/cn";
 
@@ -30,8 +35,8 @@ type TenantTestExplorerProps = {
   subheading: string;
   initialSearchValue?: string;
   includeCategoryInSearch?: boolean;
-  sectionHeading?: string;
   showViewAllLink?: boolean;
+  copy?: TenantExplorerCopy;
 };
 
 const TOP_NAV_LINKS = [
@@ -94,6 +99,18 @@ const formatMinutes = (minutes: number): string => {
   return `${minutes} min`;
 };
 
+const resolveGridClassName = (itemCount: number): string => {
+  if (itemCount <= 1) {
+    return "mx-auto grid max-w-[27rem] grid-cols-1 gap-8";
+  }
+
+  if (itemCount === 2) {
+    return "mx-auto grid max-w-[56rem] grid-cols-1 gap-8 md:grid-cols-2";
+  }
+
+  return "grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3";
+};
+
 export function TenantTestExplorer({
   tests,
   categories,
@@ -101,11 +118,15 @@ export function TenantTestExplorer({
   subheading,
   initialSearchValue = "",
   includeCategoryInSearch = true,
-  sectionHeading = "Featured Assessments",
-  showViewAllLink = true
+  showViewAllLink = true,
+  copy
 }: TenantTestExplorerProps) {
   const [searchValue, setSearchValue] = useState(initialSearchValue);
   const [selectedCategorySlugs, setSelectedCategorySlugs] = useState<string[]>([]);
+  const explorerCopy = {
+    ...DEFAULT_TENANT_EXPLORER_COPY,
+    ...copy
+  };
 
   const searchQuery = normalizeSearchValue(searchValue);
   const searchValueLabel = searchValue.trim();
@@ -127,15 +148,17 @@ export function TenantTestExplorer({
   }, [includeCategoryInSearch, searchQuery, selectedCategorySet, tests]);
 
   const hasActiveFilters = searchQuery.length > 0 || selectedCategorySlugs.length > 0;
+  const shouldShowSmallCatalogGuidance =
+    !hasActiveFilters && tests.length > 0 && tests.length <= 3;
   const allCategoriesSelected = selectedCategorySlugs.length === 0;
   const searchInputLabel = includeCategoryInSearch
     ? "Search tests by title, description, or category"
     : "Search tests by title or description";
   const hasSearchQuery = searchValueLabel.length > 0;
   const hasAnyTests = tests.length > 0;
-  let emptyStateTitle = "No tests yet";
-  let emptyStateDescription = "This tenant does not have any published tests yet.";
-  if (hasSearchQuery) {
+  let emptyStateTitle = explorerCopy.emptyCatalogTitle;
+  let emptyStateDescription = explorerCopy.emptyCatalogDescription;
+  if (hasAnyTests && hasSearchQuery) {
     emptyStateTitle = "No matching tests";
     emptyStateDescription = `No tests matched "${searchValueLabel}". Try another search term.`;
   } else if (hasAnyTests) {
@@ -207,8 +230,10 @@ export function TenantTestExplorer({
             </button>
             <div className="hidden items-center gap-2 border-l border-white/20 pl-4 sm:flex">
               <div className="text-right">
-                <p className="text-xs font-semibold text-white">Guest User</p>
-                <p className="text-[10px] uppercase tracking-[0.2em] text-white/60">Visitor</p>
+                <p className="text-xs font-semibold text-white">Open Access</p>
+                <p className="text-[10px] uppercase tracking-[0.2em] text-white/60">
+                  No sign-in
+                </p>
               </div>
               <span className="flex h-9 w-9 items-center justify-center rounded-full border border-white/30 bg-white/20 text-xs font-semibold text-white">
                 QF
@@ -238,7 +263,7 @@ export function TenantTestExplorer({
               onChange={(event) => {
                 setSearchValue(event.target.value);
               }}
-              placeholder="Search for tests (e.g., Big Five, Leadership, Career)..."
+              placeholder={explorerCopy.searchPlaceholder}
               autoComplete="off"
               className="h-14 rounded-xl border-2 border-[#e2ddd3] bg-white/70 pl-12 pr-32 text-[15px] text-[#3d3630] placeholder:text-[#7f7368] focus-visible:ring-[#18304b]"
             />
@@ -287,7 +312,7 @@ export function TenantTestExplorer({
                       : "bg-[#e9e4d9] text-[#665a4f] hover:bg-[#dfd9cc]"
                   )}
                 >
-                  {category.label}
+                  {resolveCategoryLabel(category.label, category.slug)}
                   <span className="ml-2 text-xs opacity-80">{category.test_count}</span>
                 </button>
               );
@@ -303,7 +328,7 @@ export function TenantTestExplorer({
         <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
           <div>
             <h2 className="text-2xl font-bold tracking-tight text-[#3d3630]">
-              {sectionHeading}
+              {explorerCopy.sectionHeading}
             </h2>
             <p className="mt-1 text-sm text-[#6f6459]">
               Showing {filteredTests.length} of {tests.length}{" "}
@@ -331,6 +356,17 @@ export function TenantTestExplorer({
           </div>
         </div>
 
+        {shouldShowSmallCatalogGuidance ? (
+          <div className="mb-8 rounded-lg border border-[#dccfbf] bg-[#f4ede3] p-5">
+            <h3 className="text-base font-semibold text-[#3d3630]">
+              {explorerCopy.smallCatalogTitle}
+            </h3>
+            <p className="mt-1 text-sm text-[#6f6459]">
+              {explorerCopy.smallCatalogDescription}
+            </p>
+          </div>
+        ) : null}
+
         {filteredTests.length === 0 ? (
           <div className="rounded-lg border border-dashed border-[#d7cec2] bg-white p-8 text-center">
             <h3 className="text-xl font-bold text-[#3d3630]">{emptyStateTitle}</h3>
@@ -346,9 +382,12 @@ export function TenantTestExplorer({
             ) : null}
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
+          <div className={resolveGridClassName(filteredTests.length)}>
             {filteredTests.map((test, index) => {
-              const categoryLabel = test.category || "General";
+              const categoryLabel = resolveCategoryLabel(
+                test.category,
+                test.category_slug
+              );
               return (
                 <article
                   key={test.test_id}
