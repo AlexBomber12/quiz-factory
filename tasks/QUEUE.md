@@ -495,7 +495,7 @@ Queue (in order)
 - Depends on: PR-HARDEN-ADMIN-01 and PR-WEB-CONTENT-01
 
 88) PR-ADMIN-CONSOLE-02: Imports Index (List + Filters)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-ADMIN-CONSOLE-02.md
 - Depends on: PR-ADMIN-CONSOLE-01
 
