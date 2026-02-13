@@ -23,7 +23,6 @@ export type ListAdminTestsOptions = {
   limit?: number | null;
 };
 
-const LIST_ADMIN_TESTS_DEFAULT_LIMIT = 100;
 const LIST_ADMIN_TESTS_MAX_LIMIT = 300;
 
 const normalizeNonEmptyString = (value: unknown): string | null => {
@@ -35,9 +34,9 @@ const normalizeNonEmptyString = (value: unknown): string | null => {
   return trimmed.length > 0 ? trimmed : null;
 };
 
-const normalizeLimit = (value: number | null | undefined): number => {
+const normalizeLimit = (value: number | null | undefined): number | null => {
   if (typeof value !== "number" || !Number.isFinite(value)) {
-    return LIST_ADMIN_TESTS_DEFAULT_LIMIT;
+    return null;
   }
 
   const rounded = Math.floor(value);
@@ -80,9 +79,12 @@ export const listAdminTests = async (
     whereClauses.push(`(t.test_id ILIKE $${params.length} OR t.slug ILIKE $${params.length})`);
   }
 
-  params.push(limit);
-  const limitParameterIndex = params.length;
   const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
+  let limitSql = "";
+  if (limit !== null) {
+    params.push(limit);
+    limitSql = `LIMIT $${params.length}`;
+  }
 
   const pool = getContentDbPool();
   let rows: AdminTestsRow[];
@@ -129,7 +131,7 @@ export const listAdminTests = async (
         ) AS published ON TRUE
         ${whereSql}
         ORDER BY COALESCE(latest.created_at, t.updated_at, t.created_at) DESC, t.slug ASC
-        LIMIT $${limitParameterIndex}
+        ${limitSql}
       `,
       params
     );
