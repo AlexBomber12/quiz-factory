@@ -29,6 +29,8 @@ type TestPublishPanelProps = {
   tenants: TenantOption[];
   versions: VersionOption[];
   publications: PublicationState[];
+  publishActionsEnabled?: boolean;
+  publishActionsDisabledMessage?: string | null;
 };
 
 type PanelMessage =
@@ -59,7 +61,7 @@ const buildErrorMessage = (code: string | null, detail: string | null): string =
     case "rate_limited":
       return `Too many requests${suffix}.`;
     case "invalid_payload":
-      return "Action payload is invalid.";
+      return `Action payload is invalid${suffix}.`;
     case "invalid_test_id":
     case "invalid_version_id":
     case "invalid_tenant_ids":
@@ -100,7 +102,9 @@ export default function TestPublishPanel({
   csrfToken,
   tenants,
   versions,
-  publications
+  publications,
+  publishActionsEnabled = true,
+  publishActionsDisabledMessage = null
 }: TestPublishPanelProps) {
   const router = useRouter();
   const [publishTenantId, setPublishTenantId] = useState(tenants[0]?.tenant_id ?? "");
@@ -170,6 +174,7 @@ export default function TestPublishPanel({
 
   const hasTenants = tenants.length > 0;
   const hasVersions = versions.length > 0;
+  const actionsDisabled = !publishActionsEnabled;
 
   return (
     <Card>
@@ -181,6 +186,13 @@ export default function TestPublishPanel({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
+        {actionsDisabled ? (
+          <p className="rounded border border-amber-400 bg-amber-50 px-3 py-2 text-sm text-amber-900" role="alert">
+            {publishActionsDisabledMessage ??
+              "Publish and rollback actions are disabled. Configure CONTENT_SOURCE=db and CONTENT_DATABASE_URL."}
+          </p>
+        ) : null}
+
         {message ? (
           <p
             className={message.kind === "error" ? "text-sm text-red-700" : "text-sm text-green-700"}
@@ -195,7 +207,7 @@ export default function TestPublishPanel({
             className="space-y-3 rounded border p-3"
             onSubmit={(event) => {
               event.preventDefault();
-              if (!publishTenantId || !publishVersionId) {
+              if (!publishTenantId || !publishVersionId || actionsDisabled) {
                 return;
               }
 
@@ -217,6 +229,7 @@ export default function TestPublishPanel({
               </span>
               <select
                 className="w-full rounded border bg-background px-2 py-2 text-sm"
+                disabled={actionsDisabled}
                 onChange={(event) => setPublishTenantId(event.target.value)}
                 value={publishTenantId}
               >
@@ -234,6 +247,7 @@ export default function TestPublishPanel({
               </span>
               <select
                 className="w-full rounded border bg-background px-2 py-2 text-sm"
+                disabled={actionsDisabled}
                 onChange={(event) => setPublishVersionId(event.target.value)}
                 value={publishVersionId}
               >
@@ -245,7 +259,10 @@ export default function TestPublishPanel({
               </select>
             </label>
 
-            <Button disabled={!hasTenants || !hasVersions || pendingAction !== null} type="submit">
+            <Button
+              disabled={!hasTenants || !hasVersions || pendingAction !== null || actionsDisabled}
+              type="submit"
+            >
               Publish
             </Button>
           </form>
@@ -254,7 +271,7 @@ export default function TestPublishPanel({
             className="space-y-3 rounded border p-3"
             onSubmit={(event) => {
               event.preventDefault();
-              if (!rollbackTenantId || !rollbackVersionId) {
+              if (!rollbackTenantId || !rollbackVersionId || actionsDisabled) {
                 return;
               }
 
@@ -275,6 +292,7 @@ export default function TestPublishPanel({
               </span>
               <select
                 className="w-full rounded border bg-background px-2 py-2 text-sm"
+                disabled={actionsDisabled}
                 onChange={(event) => setRollbackTenantId(event.target.value)}
                 value={rollbackTenantId}
               >
@@ -292,6 +310,7 @@ export default function TestPublishPanel({
               </span>
               <select
                 className="w-full rounded border bg-background px-2 py-2 text-sm"
+                disabled={actionsDisabled}
                 onChange={(event) => setRollbackVersionId(event.target.value)}
                 value={rollbackVersionId}
               >
@@ -304,7 +323,7 @@ export default function TestPublishPanel({
             </label>
 
             <Button
-              disabled={!hasTenants || !hasVersions || pendingAction !== null}
+              disabled={!hasTenants || !hasVersions || pendingAction !== null || actionsDisabled}
               type="submit"
               variant="outline"
             >
@@ -316,7 +335,7 @@ export default function TestPublishPanel({
             className="space-y-3 rounded border p-3"
             onSubmit={(event) => {
               event.preventDefault();
-              if (!toggleTenantId || !resolvedToggleVersionId) {
+              if (!toggleTenantId || !resolvedToggleVersionId || actionsDisabled) {
                 return;
               }
 
@@ -338,6 +357,7 @@ export default function TestPublishPanel({
               </span>
               <select
                 className="w-full rounded border bg-background px-2 py-2 text-sm"
+                disabled={actionsDisabled}
                 onChange={(event) => setToggleTenantId(event.target.value)}
                 value={toggleTenantId}
               >
@@ -355,6 +375,7 @@ export default function TestPublishPanel({
               </span>
               <select
                 className="w-full rounded border bg-background px-2 py-2 text-sm"
+                disabled={actionsDisabled}
                 onChange={(event) => setToggleVersionId(event.target.value)}
                 value={toggleVersionId}
               >
@@ -373,7 +394,13 @@ export default function TestPublishPanel({
             </p>
 
             <Button
-              disabled={!hasTenants || !hasVersions || !resolvedToggleVersionId || pendingAction !== null}
+              disabled={
+                !hasTenants ||
+                !hasVersions ||
+                !resolvedToggleVersionId ||
+                pendingAction !== null ||
+                actionsDisabled
+              }
               type="submit"
               variant={nextToggleEnabled ? "secondary" : "destructive"}
             >

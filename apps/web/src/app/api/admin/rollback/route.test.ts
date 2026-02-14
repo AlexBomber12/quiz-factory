@@ -5,6 +5,13 @@ const csrfToken = "csrf-token-01234567890123456789";
 
 const rollbackVersionForTenant = vi.fn();
 const logAdminEvent = vi.fn();
+const validateRollbackGuardrails = vi.fn();
+
+const buildGuardrailError = (message: string): Error => {
+  const error = new Error(message);
+  error.name = "PublishGuardrailValidationError";
+  return error;
+};
 
 vi.mock("next/headers", () => ({
   cookies: async () => ({
@@ -38,6 +45,12 @@ vi.mock("../../../../lib/admin/publish", () => ({
   }
 }));
 
+vi.mock("../../../../lib/admin/publish_guardrails", () => ({
+  isPublishGuardrailValidationError: (error: unknown) =>
+    error instanceof Error && error.name === "PublishGuardrailValidationError",
+  validateRollbackGuardrails: (...args: unknown[]) => validateRollbackGuardrails(...args)
+}));
+
 vi.mock("../../../../lib/admin/audit", () => ({
   logAdminEvent: (...args: unknown[]) => logAdminEvent(...args)
 }));
@@ -61,6 +74,8 @@ describe("POST /api/admin/rollback", () => {
     sessionRole = "admin";
     rollbackVersionForTenant.mockReset();
     logAdminEvent.mockReset();
+    validateRollbackGuardrails.mockReset();
+    validateRollbackGuardrails.mockResolvedValue(undefined);
     rollbackVersionForTenant.mockResolvedValue({
       test_id: "test-focus-rhythm",
       version_id: "version-1",
@@ -133,6 +148,11 @@ describe("POST /api/admin/rollback", () => {
     );
 
     expect(response.status).toBe(200);
+    expect(validateRollbackGuardrails).toHaveBeenCalledWith({
+      test_id: "test-focus-rhythm",
+      version_id: "version-1",
+      tenant_id: "tenant-tenant-example-com"
+    });
     expect(rollbackVersionForTenant).toHaveBeenCalledWith({
       actor_role: "admin",
       test_id: "test-focus-rhythm",
@@ -175,6 +195,28 @@ describe("POST /api/admin/rollback", () => {
     const payload = await response.json();
     expect(payload.error).toBe("test_version_not_found");
     expect(payload.detail).toBe("missing");
+  });
+
+  it("returns 400 when rollback guardrail checks fail", async () => {
+    validateRollbackGuardrails.mockRejectedValue(
+      buildGuardrailError(
+        "version_id 'version-1' does not belong to test_id 'test-focus-rhythm'."
+      )
+    );
+
+    const response = await POST(
+      buildJsonRequest({
+        test_id: "test-focus-rhythm",
+        tenant_id: "tenant-tenant-example-com",
+        version_id: "version-1"
+      })
+    );
+
+    expect(response.status).toBe(400);
+    expect(rollbackVersionForTenant).not.toHaveBeenCalled();
+    const payload = await response.json();
+    expect(payload.error).toBe("invalid_payload");
+    expect(payload.detail).toContain("does not belong to test_id");
   });
 
   it("redirects HTML form submissions back to /admin", async () => {

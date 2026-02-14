@@ -17,6 +17,10 @@ import {
   isPublishWorkflowError,
   publishVersionToTenants
 } from "../../../../lib/admin/publish";
+import {
+  isPublishGuardrailValidationError,
+  validatePublishGuardrails
+} from "../../../../lib/admin/publish_guardrails";
 import { logAdminEvent } from "../../../../lib/admin/audit";
 import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "../../../../lib/admin/session";
 
@@ -221,6 +225,20 @@ export const POST = async (request: Request): Promise<Response> => {
       429,
       rateLimitResult.retryAfterSeconds ? String(rateLimitResult.retryAfterSeconds) : null
     );
+  }
+
+  try {
+    await validatePublishGuardrails({
+      test_id: parsedRequest.payload.test_id,
+      version_id: parsedRequest.payload.version_id,
+      tenant_ids: parsedRequest.payload.tenant_ids
+    });
+  } catch (error) {
+    if (isPublishGuardrailValidationError(error)) {
+      return handleRequestError(request, "invalid_payload", 400, error.message);
+    }
+
+    return handleRequestError(request, "publish_failed", 500);
   }
 
   try {
