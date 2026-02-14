@@ -524,6 +524,47 @@ Queue (in order)
 - Tasks file: tasks/PR-ADMIN-CONSOLE-07.md
 - Depends on: PR-ADMIN-CONSOLE-06
 
+
+94) PR-ADMIN-ANALYTICS-01: Analytics UI Skeleton + Global FilterBar
+- Status: TODO
+- Tasks file: tasks/PR-ADMIN-ANALYTICS-01.md
+- Depends on: PR-ADMIN-CONSOLE-07
+
+95) PR-ADMIN-ANALYTICS-02: Admin Analytics API Contract + Provider Abstraction
+- Status: TODO
+- Tasks file: tasks/PR-ADMIN-ANALYTICS-02.md
+- Depends on: PR-ADMIN-ANALYTICS-01
+
+96) PR-ADMIN-ANALYTICS-03: Global Analytics Overview (BigQuery) + UI Wiring
+- Status: TODO
+- Tasks file: tasks/PR-ADMIN-ANALYTICS-03.md
+- Depends on: PR-ADMIN-ANALYTICS-02
+
+97) PR-ADMIN-ANALYTICS-04: Tenants Analytics (List + Detail)
+- Status: TODO
+- Tasks file: tasks/PR-ADMIN-ANALYTICS-04.md
+- Depends on: PR-ADMIN-ANALYTICS-03
+
+98) PR-ADMIN-ANALYTICS-05: Tests Analytics (List + Detail)
+- Status: TODO
+- Tasks file: tasks/PR-ADMIN-ANALYTICS-05.md
+- Depends on: PR-ADMIN-ANALYTICS-04
+
+99) PR-ADMIN-ANALYTICS-06: Distribution Matrix (Tenant x Test) + Quick Metrics
+- Status: TODO
+- Tasks file: tasks/PR-ADMIN-ANALYTICS-06.md
+- Depends on: PR-ADMIN-ANALYTICS-05
+
+100) PR-ADMIN-ANALYTICS-07: Traffic Analytics (UTM, Referrers, Devices, Geo)
+- Status: TODO
+- Tasks file: tasks/PR-ADMIN-ANALYTICS-07.md
+- Depends on: PR-ADMIN-ANALYTICS-06
+
+101) PR-ADMIN-ANALYTICS-08: Revenue + Data Health (Stripe + Freshness)
+- Status: TODO
+- Tasks file: tasks/PR-ADMIN-ANALYTICS-08.md
+- Depends on: PR-ADMIN-ANALYTICS-07
+
 Execution rules (apply to every PR)
 - Work on exactly 1 PR at a time.
 - Create a new branch from main named as specified in the selected tasks file (single source of truth).
