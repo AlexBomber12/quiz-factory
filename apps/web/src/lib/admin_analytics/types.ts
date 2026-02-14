@@ -90,11 +90,37 @@ export type AdminAnalyticsTestsRow = TableRow & {
 
 export type AdminAnalyticsTenantsRow = TableRow & {
   tenant_id: string;
-  domain: string;
-  visits: number;
+  sessions: number;
+  test_starts: number;
   test_completions: number;
-  purchase_success_count: number;
-  revenue_eur: number;
+  purchases: number;
+  paid_conversion: number;
+  net_revenue_eur: number;
+  refunds_eur: number;
+  top_test_id: string | null;
+  last_activity_date: string | null;
+};
+
+export type AdminAnalyticsTenantTopTestRow = TableRow & {
+  test_id: string;
+  sessions: number;
+  test_starts: number;
+  test_completions: number;
+  purchases: number;
+  paid_conversion: number;
+  net_revenue_eur: number;
+  refunds_eur: number;
+};
+
+export type AdminAnalyticsTenantLocaleRow = TableRow & {
+  locale: string;
+  sessions: number;
+  test_starts: number;
+  test_completions: number;
+  purchases: number;
+  paid_conversion: number;
+  net_revenue_eur: number;
+  refunds_eur: number;
 };
 
 export type AdminAnalyticsDistributionRow = TableRow & {
@@ -214,6 +240,7 @@ export type AdminAnalyticsTenantsResponse = {
   filters: AdminAnalyticsFilters;
   generated_at_utc: string;
   rows: AdminAnalyticsTenantsRow[];
+  total_rows: number;
 };
 
 export type AdminAnalyticsTenantDetailResponse = {
@@ -221,9 +248,14 @@ export type AdminAnalyticsTenantDetailResponse = {
   generated_at_utc: string;
   tenant_id: string;
   kpis: KpiCard[];
-  visits_timeseries: TimeseriesPoint[];
+  funnel: FunnelStep[];
+  sessions_timeseries: TimeseriesPoint[];
   revenue_timeseries: TimeseriesPoint[];
-  top_tests: AdminAnalyticsTestsRow[];
+  top_tests: AdminAnalyticsTenantTopTestRow[];
+  top_tests_total: number;
+  locale_breakdown: AdminAnalyticsTenantLocaleRow[];
+  locale_breakdown_total: number;
+  has_data: boolean;
 };
 
 export type AdminAnalyticsDistributionResponse = {

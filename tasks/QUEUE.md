@@ -541,7 +541,7 @@ Queue (in order)
 - Depends on: PR-ADMIN-ANALYTICS-02
 
 97) PR-ADMIN-ANALYTICS-04: Tenants Analytics (List + Detail)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-ADMIN-ANALYTICS-04.md
 - Depends on: PR-ADMIN-ANALYTICS-03
 

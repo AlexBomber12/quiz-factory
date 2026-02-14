@@ -13,6 +13,9 @@ import type {
   AdminAnalyticsOverviewResponse,
   AdminAnalyticsRevenueResponse,
   AdminAnalyticsTenantDetailResponse,
+  AdminAnalyticsTenantLocaleRow,
+  AdminAnalyticsTenantTopTestRow,
+  AdminAnalyticsTenantsRow,
   AdminAnalyticsTenantsResponse,
   AdminAnalyticsTestDetailResponse,
   AdminAnalyticsTestsResponse,
@@ -23,7 +26,8 @@ import type {
 } from "../types";
 
 const DEFAULT_MARTS_DATASET = "marts";
-const TOP_ROWS_LIMIT = 10;
+const OVERVIEW_TOP_ROWS_LIMIT = 10;
+const TENANTS_TOP_ROWS_LIMIT = 20;
 const ALERTS_LIMIT = 20;
 const FRESHNESS_CACHE_TTL_MS = 60_000;
 
@@ -386,7 +390,7 @@ const buildTopTestsQuery = (
       WHERE test_id IS NOT NULL
         AND test_id != '__unallocated__'
       ORDER BY net_revenue_eur DESC, purchase_conversion DESC, test_id ASC
-      LIMIT ${TOP_ROWS_LIMIT}
+      LIMIT ${OVERVIEW_TOP_ROWS_LIMIT}
     `,
     params: mergeParams(funnelFilter.params, pnlFilter.params)
   };
@@ -437,7 +441,265 @@ const buildTopTenantsQuery = (
       WHERE tenant_id IS NOT NULL
         AND tenant_id != '__unallocated__'
       ORDER BY net_revenue_eur DESC, tenant_id ASC
-      LIMIT ${TOP_ROWS_LIMIT}
+      LIMIT ${OVERVIEW_TOP_ROWS_LIMIT}
+    `,
+    params: mergeParams(funnelFilter.params, pnlFilter.params)
+  };
+};
+
+const buildTenantsListQuery = (
+  projectId: string,
+  datasets: BigQueryAdminAnalyticsDatasets,
+  filters: AdminAnalyticsFilters
+): BigQueryQuery => {
+  const funnelFilter = buildMartFilterClause(filters);
+  const pnlFilter = buildMartFilterClause(filters);
+  const topTestFilter = buildMartFilterClause(filters);
+  const funnelTable = `\`${projectId}.${datasets.marts}.mart_funnel_daily\``;
+  const pnlTable = `\`${projectId}.${datasets.marts}.mart_pnl_daily\``;
+
+  return {
+    query: `
+      WITH funnel_by_tenant AS (
+        SELECT
+          tenant_id,
+          COALESCE(SUM(visits), 0) AS sessions,
+          COALESCE(SUM(test_starts), 0) AS test_starts,
+          COALESCE(SUM(test_completes), 0) AS test_completes,
+          COALESCE(SUM(purchases), 0) AS purchases,
+          MAX(date) AS last_funnel_date
+        FROM ${funnelTable}
+        ${funnelFilter.whereSql}
+        GROUP BY tenant_id
+      ),
+      pnl_by_tenant AS (
+        SELECT
+          tenant_id,
+          COALESCE(SUM(net_revenue_eur), 0) AS net_revenue_eur,
+          COALESCE(SUM(refunds_eur), 0) AS refunds_eur,
+          MAX(date) AS last_pnl_date
+        FROM ${pnlTable}
+        ${pnlFilter.whereSql}
+        GROUP BY tenant_id
+      ),
+      top_test_revenue AS (
+        SELECT
+          tenant_id,
+          test_id,
+          COALESCE(SUM(net_revenue_eur), 0) AS net_revenue_eur
+        FROM ${pnlTable}
+        ${topTestFilter.whereSql}
+        GROUP BY tenant_id, test_id
+      ),
+      ranked_top_tests AS (
+        SELECT
+          tenant_id,
+          test_id,
+          ROW_NUMBER() OVER (
+            PARTITION BY tenant_id
+            ORDER BY net_revenue_eur DESC, test_id ASC
+          ) AS row_num
+        FROM top_test_revenue
+        WHERE test_id IS NOT NULL
+          AND test_id != '__unallocated__'
+      ),
+      merged AS (
+        SELECT
+          COALESCE(funnel_by_tenant.tenant_id, pnl_by_tenant.tenant_id) AS tenant_id,
+          COALESCE(funnel_by_tenant.sessions, 0) AS sessions,
+          COALESCE(funnel_by_tenant.test_starts, 0) AS test_starts,
+          COALESCE(funnel_by_tenant.test_completes, 0) AS test_completes,
+          COALESCE(funnel_by_tenant.purchases, 0) AS purchases,
+          SAFE_DIVIDE(
+            COALESCE(funnel_by_tenant.purchases, 0),
+            NULLIF(COALESCE(funnel_by_tenant.sessions, 0), 0)
+          ) AS paid_conversion,
+          COALESCE(pnl_by_tenant.net_revenue_eur, 0) AS net_revenue_eur,
+          COALESCE(pnl_by_tenant.refunds_eur, 0) AS refunds_eur,
+          ranked_top_tests.test_id AS top_test_id,
+          CASE
+            WHEN funnel_by_tenant.last_funnel_date IS NULL AND pnl_by_tenant.last_pnl_date IS NULL THEN NULL
+            ELSE CAST(
+              GREATEST(
+                COALESCE(funnel_by_tenant.last_funnel_date, DATE '1970-01-01'),
+                COALESCE(pnl_by_tenant.last_pnl_date, DATE '1970-01-01')
+              ) AS STRING
+            )
+          END AS last_activity_date
+        FROM funnel_by_tenant
+        FULL OUTER JOIN pnl_by_tenant
+          ON funnel_by_tenant.tenant_id = pnl_by_tenant.tenant_id
+        LEFT JOIN ranked_top_tests
+          ON ranked_top_tests.tenant_id = COALESCE(funnel_by_tenant.tenant_id, pnl_by_tenant.tenant_id)
+          AND ranked_top_tests.row_num = 1
+      ),
+      filtered AS (
+        SELECT
+          tenant_id,
+          sessions,
+          test_starts,
+          test_completes,
+          purchases,
+          paid_conversion,
+          net_revenue_eur,
+          refunds_eur,
+          top_test_id,
+          last_activity_date
+        FROM merged
+        WHERE tenant_id IS NOT NULL
+          AND tenant_id != '__unallocated__'
+      )
+      SELECT
+        tenant_id,
+        sessions,
+        test_starts,
+        test_completes,
+        purchases,
+        paid_conversion,
+        net_revenue_eur,
+        refunds_eur,
+        top_test_id,
+        last_activity_date,
+        COUNT(*) OVER () AS total_rows
+      FROM filtered
+      ORDER BY net_revenue_eur DESC, purchases DESC, tenant_id ASC
+      LIMIT ${TENANTS_TOP_ROWS_LIMIT}
+    `,
+    params: mergeParams(funnelFilter.params, pnlFilter.params, topTestFilter.params)
+  };
+};
+
+const buildTenantTopTestsQuery = (
+  projectId: string,
+  datasets: BigQueryAdminAnalyticsDatasets,
+  filters: AdminAnalyticsFilters
+): BigQueryQuery => {
+  const funnelFilter = buildMartFilterClause(filters);
+  const pnlFilter = buildMartFilterClause(filters);
+  const funnelTable = `\`${projectId}.${datasets.marts}.mart_funnel_daily\``;
+  const pnlTable = `\`${projectId}.${datasets.marts}.mart_pnl_daily\``;
+
+  return {
+    query: `
+      WITH funnel_by_test AS (
+        SELECT
+          test_id,
+          COALESCE(SUM(visits), 0) AS sessions,
+          COALESCE(SUM(test_starts), 0) AS test_starts,
+          COALESCE(SUM(test_completes), 0) AS test_completes,
+          COALESCE(SUM(purchases), 0) AS purchases
+        FROM ${funnelTable}
+        ${funnelFilter.whereSql}
+        GROUP BY test_id
+      ),
+      pnl_by_test AS (
+        SELECT
+          test_id,
+          COALESCE(SUM(net_revenue_eur), 0) AS net_revenue_eur,
+          COALESCE(SUM(refunds_eur), 0) AS refunds_eur
+        FROM ${pnlTable}
+        ${pnlFilter.whereSql}
+        GROUP BY test_id
+      ),
+      merged AS (
+        SELECT
+          COALESCE(funnel_by_test.test_id, pnl_by_test.test_id) AS test_id,
+          COALESCE(funnel_by_test.sessions, 0) AS sessions,
+          COALESCE(funnel_by_test.test_starts, 0) AS test_starts,
+          COALESCE(funnel_by_test.test_completes, 0) AS test_completes,
+          COALESCE(funnel_by_test.purchases, 0) AS purchases,
+          SAFE_DIVIDE(
+            COALESCE(funnel_by_test.purchases, 0),
+            NULLIF(COALESCE(funnel_by_test.sessions, 0), 0)
+          ) AS paid_conversion,
+          COALESCE(pnl_by_test.net_revenue_eur, 0) AS net_revenue_eur,
+          COALESCE(pnl_by_test.refunds_eur, 0) AS refunds_eur
+        FROM funnel_by_test
+        FULL OUTER JOIN pnl_by_test
+          ON funnel_by_test.test_id = pnl_by_test.test_id
+      )
+      SELECT
+        test_id,
+        sessions,
+        test_starts,
+        test_completes,
+        purchases,
+        paid_conversion,
+        net_revenue_eur,
+        refunds_eur,
+        COUNT(*) OVER () AS total_rows
+      FROM merged
+      WHERE test_id IS NOT NULL
+        AND test_id != '__unallocated__'
+      ORDER BY net_revenue_eur DESC, purchases DESC, test_id ASC
+      LIMIT ${TENANTS_TOP_ROWS_LIMIT}
+    `,
+    params: mergeParams(funnelFilter.params, pnlFilter.params)
+  };
+};
+
+const buildTenantLocaleBreakdownQuery = (
+  projectId: string,
+  datasets: BigQueryAdminAnalyticsDatasets,
+  filters: AdminAnalyticsFilters
+): BigQueryQuery => {
+  const funnelFilter = buildMartFilterClause(filters);
+  const pnlFilter = buildMartFilterClause(filters);
+  const funnelTable = `\`${projectId}.${datasets.marts}.mart_funnel_daily\``;
+  const pnlTable = `\`${projectId}.${datasets.marts}.mart_pnl_daily\``;
+
+  return {
+    query: `
+      WITH funnel_by_locale AS (
+        SELECT
+          COALESCE(locale, 'unknown') AS locale,
+          COALESCE(SUM(visits), 0) AS sessions,
+          COALESCE(SUM(test_starts), 0) AS test_starts,
+          COALESCE(SUM(test_completes), 0) AS test_completes,
+          COALESCE(SUM(purchases), 0) AS purchases
+        FROM ${funnelTable}
+        ${funnelFilter.whereSql}
+        GROUP BY locale
+      ),
+      pnl_by_locale AS (
+        SELECT
+          COALESCE(locale, 'unknown') AS locale,
+          COALESCE(SUM(net_revenue_eur), 0) AS net_revenue_eur,
+          COALESCE(SUM(refunds_eur), 0) AS refunds_eur
+        FROM ${pnlTable}
+        ${pnlFilter.whereSql}
+        GROUP BY locale
+      ),
+      merged AS (
+        SELECT
+          COALESCE(funnel_by_locale.locale, pnl_by_locale.locale) AS locale,
+          COALESCE(funnel_by_locale.sessions, 0) AS sessions,
+          COALESCE(funnel_by_locale.test_starts, 0) AS test_starts,
+          COALESCE(funnel_by_locale.test_completes, 0) AS test_completes,
+          COALESCE(funnel_by_locale.purchases, 0) AS purchases,
+          SAFE_DIVIDE(
+            COALESCE(funnel_by_locale.purchases, 0),
+            NULLIF(COALESCE(funnel_by_locale.sessions, 0), 0)
+          ) AS paid_conversion,
+          COALESCE(pnl_by_locale.net_revenue_eur, 0) AS net_revenue_eur,
+          COALESCE(pnl_by_locale.refunds_eur, 0) AS refunds_eur
+        FROM funnel_by_locale
+        FULL OUTER JOIN pnl_by_locale
+          ON funnel_by_locale.locale = pnl_by_locale.locale
+      )
+      SELECT
+        locale,
+        sessions,
+        test_starts,
+        test_completes,
+        purchases,
+        paid_conversion,
+        net_revenue_eur,
+        refunds_eur,
+        COUNT(*) OVER () AS total_rows
+      FROM merged
+      ORDER BY net_revenue_eur DESC, purchases DESC, locale ASC
+      LIMIT ${TENANTS_TOP_ROWS_LIMIT}
     `,
     params: mergeParams(funnelFilter.params, pnlFilter.params)
   };
@@ -653,6 +915,74 @@ export class BigQueryAdminAnalyticsProvider implements AdminAnalyticsProvider {
     }));
   }
 
+  private async fetchTenantsRows(
+    filters: AdminAnalyticsFilters
+  ): Promise<{ rows: AdminAnalyticsTenantsRow[]; totalRows: number }> {
+    const built = buildTenantsListQuery(this.projectId, this.datasets, filters);
+    const rows = await this.runQuery<BigQueryRow>(built.query, built.params);
+    const totalRows = rows.length > 0 ? asNumber(rows[0].total_rows) : 0;
+
+    return {
+      rows: rows.map((row) => ({
+        tenant_id: asNullableString(row.tenant_id) ?? "",
+        sessions: asNumber(row.sessions),
+        test_starts: asNumber(row.test_starts),
+        test_completions: asNumber(row.test_completes),
+        purchases: asNumber(row.purchases),
+        paid_conversion: asNumber(row.paid_conversion),
+        net_revenue_eur: asNumber(row.net_revenue_eur),
+        refunds_eur: asNumber(row.refunds_eur),
+        top_test_id: asNullableString(row.top_test_id),
+        last_activity_date: asNullableString(row.last_activity_date)
+      })),
+      totalRows
+    };
+  }
+
+  private async fetchTenantTopTests(
+    filters: AdminAnalyticsFilters
+  ): Promise<{ rows: AdminAnalyticsTenantTopTestRow[]; totalRows: number }> {
+    const built = buildTenantTopTestsQuery(this.projectId, this.datasets, filters);
+    const rows = await this.runQuery<BigQueryRow>(built.query, built.params);
+    const totalRows = rows.length > 0 ? asNumber(rows[0].total_rows) : 0;
+
+    return {
+      rows: rows.map((row) => ({
+        test_id: asNullableString(row.test_id) ?? "",
+        sessions: asNumber(row.sessions),
+        test_starts: asNumber(row.test_starts),
+        test_completions: asNumber(row.test_completes),
+        purchases: asNumber(row.purchases),
+        paid_conversion: asNumber(row.paid_conversion),
+        net_revenue_eur: asNumber(row.net_revenue_eur),
+        refunds_eur: asNumber(row.refunds_eur)
+      })),
+      totalRows
+    };
+  }
+
+  private async fetchTenantLocaleBreakdown(
+    filters: AdminAnalyticsFilters
+  ): Promise<{ rows: AdminAnalyticsTenantLocaleRow[]; totalRows: number }> {
+    const built = buildTenantLocaleBreakdownQuery(this.projectId, this.datasets, filters);
+    const rows = await this.runQuery<BigQueryRow>(built.query, built.params);
+    const totalRows = rows.length > 0 ? asNumber(rows[0].total_rows) : 0;
+
+    return {
+      rows: rows.map((row) => ({
+        locale: asNullableString(row.locale) ?? "unknown",
+        sessions: asNumber(row.sessions),
+        test_starts: asNumber(row.test_starts),
+        test_completions: asNumber(row.test_completes),
+        purchases: asNumber(row.purchases),
+        paid_conversion: asNumber(row.paid_conversion),
+        net_revenue_eur: asNumber(row.net_revenue_eur),
+        refunds_eur: asNumber(row.refunds_eur)
+      })),
+      totalRows
+    };
+  }
+
   private async fetchFreshnessRows(): Promise<AdminAnalyticsOverviewFreshnessRow[]> {
     const cacheKey = `${this.projectId}:${this.datasets.marts}`;
     const now = Date.now();
@@ -804,17 +1134,53 @@ export class BigQueryAdminAnalyticsProvider implements AdminAnalyticsProvider {
   }
 
   async getTenants(filters: AdminAnalyticsFilters): Promise<AdminAnalyticsTenantsResponse> {
-    void filters;
-    throw this.notImplemented("getTenants");
+    const tenants = await this.fetchTenantsRows(filters);
+
+    return {
+      filters,
+      generated_at_utc: new Date().toISOString(),
+      rows: tenants.rows,
+      total_rows: tenants.totalRows
+    };
   }
 
   async getTenantDetail(
     tenantId: string,
     filters: AdminAnalyticsFilters
   ): Promise<AdminAnalyticsTenantDetailResponse> {
-    void tenantId;
-    void filters;
-    throw this.notImplemented("getTenantDetail");
+    const scopedFilters: AdminAnalyticsFilters = {
+      ...filters,
+      tenant_id: tenantId
+    };
+
+    const [aggregate, sessionsTimeseries, revenueTimeseries, topTests, localeBreakdown] = await Promise.all([
+      this.fetchOverviewAggregate(scopedFilters),
+      this.fetchVisitsTimeseries(scopedFilters),
+      this.fetchRevenueTimeseries(scopedFilters),
+      this.fetchTenantTopTests(scopedFilters),
+      this.fetchTenantLocaleBreakdown(scopedFilters)
+    ]);
+
+    const hasData =
+      sessionsTimeseries.length > 0 ||
+      revenueTimeseries.length > 0 ||
+      topTests.totalRows > 0 ||
+      localeBreakdown.totalRows > 0;
+
+    return {
+      filters: scopedFilters,
+      generated_at_utc: new Date().toISOString(),
+      tenant_id: tenantId,
+      kpis: buildOverviewKpis(aggregate),
+      funnel: buildOverviewFunnel(aggregate),
+      sessions_timeseries: sessionsTimeseries,
+      revenue_timeseries: revenueTimeseries,
+      top_tests: topTests.rows,
+      top_tests_total: topTests.totalRows,
+      locale_breakdown: localeBreakdown.rows,
+      locale_breakdown_total: localeBreakdown.totalRows,
+      has_data: hasData
+    };
   }
 
   async getDistribution(filters: AdminAnalyticsFilters): Promise<AdminAnalyticsDistributionResponse> {

@@ -249,3 +249,223 @@ describe("BigQueryAdminAnalyticsProvider.getOverview", () => {
     expect(overview.alerts).toEqual([]);
   });
 });
+
+describe("BigQueryAdminAnalyticsProvider.getTenants", () => {
+  it("returns bounded tenant rows and total count", async () => {
+    const { provider, calls } = makeProvider((query) => {
+      if (query.includes("ranked_top_tests")) {
+        return [
+          {
+            tenant_id: "tenant-quizfactory-en",
+            sessions: 210,
+            test_starts: 150,
+            test_completes: 120,
+            purchases: 32,
+            paid_conversion: 0.1524,
+            net_revenue_eur: 1320.5,
+            refunds_eur: 42.2,
+            top_test_id: "test-focus-rhythm",
+            last_activity_date: "2026-02-07",
+            total_rows: 2
+          },
+          {
+            tenant_id: "tenant-quizfactory-es",
+            sessions: 180,
+            test_starts: 132,
+            test_completes: 101,
+            purchases: 20,
+            paid_conversion: 0.1111,
+            net_revenue_eur: 980.12,
+            refunds_eur: 31.9,
+            top_test_id: "test-energy-balance",
+            last_activity_date: "2026-02-07",
+            total_rows: 2
+          }
+        ];
+      }
+
+      return [];
+    });
+
+    const tenants = await provider.getTenants(FILTERS);
+
+    expect(tenants.total_rows).toBe(2);
+    expect(tenants.rows).toHaveLength(2);
+    expect(tenants.rows[0]).toEqual({
+      tenant_id: "tenant-quizfactory-en",
+      sessions: 210,
+      test_starts: 150,
+      test_completions: 120,
+      purchases: 32,
+      paid_conversion: 0.1524,
+      net_revenue_eur: 1320.5,
+      refunds_eur: 42.2,
+      top_test_id: "test-focus-rhythm",
+      last_activity_date: "2026-02-07"
+    });
+
+    const call = calls.find((candidate) => candidate.query.includes("ranked_top_tests"));
+    expect(call).toBeDefined();
+    expect(call?.params).toMatchObject({
+      start_date: FILTERS.start,
+      end_date: FILTERS.end,
+      tenant_id: FILTERS.tenant_id,
+      test_id: FILTERS.test_id,
+      locale: FILTERS.locale,
+      utm_source: FILTERS.utm_source
+    });
+  });
+});
+
+describe("BigQueryAdminAnalyticsProvider.getTenantDetail", () => {
+  it("returns tenant detail payload with KPI, funnel, series, and breakdown tables", async () => {
+    const { provider, calls } = makeProvider((query) => {
+      if (query.includes("funnel_agg")) {
+        return [
+          {
+            sessions: 90,
+            test_starts: 70,
+            test_completes: 55,
+            paywall_views: 40,
+            checkout_starts: 32,
+            purchases: 18,
+            paid_conversion: 0.2,
+            gross_revenue_eur: 810,
+            net_revenue_eur: 640,
+            refunds_eur: 22,
+            disputes_eur: 9,
+            payment_fees_eur: 31
+          }
+        ];
+      }
+
+      if (query.includes("COALESCE(SUM(visits), 0) AS value")) {
+        return [
+          { date: "2026-02-01", value: 40 },
+          { date: "2026-02-02", value: 50 }
+        ];
+      }
+
+      if (query.includes("COALESCE(SUM(net_revenue_eur), 0) AS value")) {
+        return [
+          { date: "2026-02-01", value: 300 },
+          { date: "2026-02-02", value: 340 }
+        ];
+      }
+
+      if (query.includes("funnel_by_test")) {
+        return [
+          {
+            test_id: "test-focus-rhythm",
+            sessions: 55,
+            test_starts: 45,
+            test_completes: 36,
+            purchases: 12,
+            paid_conversion: 0.2182,
+            net_revenue_eur: 420,
+            refunds_eur: 10,
+            total_rows: 2
+          },
+          {
+            test_id: "test-energy-balance",
+            sessions: 35,
+            test_starts: 25,
+            test_completes: 19,
+            purchases: 6,
+            paid_conversion: 0.1714,
+            net_revenue_eur: 220,
+            refunds_eur: 12,
+            total_rows: 2
+          }
+        ];
+      }
+
+      if (query.includes("funnel_by_locale")) {
+        return [
+          {
+            locale: "en",
+            sessions: 70,
+            test_starts: 54,
+            test_completes: 44,
+            purchases: 15,
+            paid_conversion: 0.2143,
+            net_revenue_eur: 480,
+            refunds_eur: 15,
+            total_rows: 2
+          },
+          {
+            locale: "es",
+            sessions: 20,
+            test_starts: 16,
+            test_completes: 11,
+            purchases: 3,
+            paid_conversion: 0.15,
+            net_revenue_eur: 160,
+            refunds_eur: 7,
+            total_rows: 2
+          }
+        ];
+      }
+
+      return [];
+    });
+
+    const detail = await provider.getTenantDetail("tenant-quizfactory-es", FILTERS);
+
+    expect(detail.filters.tenant_id).toBe("tenant-quizfactory-es");
+    expect(detail.kpis.length).toBeGreaterThan(0);
+    expect(detail.funnel.length).toBeGreaterThan(0);
+    expect(detail.sessions_timeseries).toEqual([
+      { date: "2026-02-01", value: 40 },
+      { date: "2026-02-02", value: 50 }
+    ]);
+    expect(detail.revenue_timeseries).toEqual([
+      { date: "2026-02-01", value: 300 },
+      { date: "2026-02-02", value: 340 }
+    ]);
+    expect(detail.top_tests_total).toBe(2);
+    expect(detail.locale_breakdown_total).toBe(2);
+    expect(detail.has_data).toBe(true);
+
+    const filterCall = calls.find((candidate) => candidate.query.includes("funnel_by_test"));
+    expect(filterCall).toBeDefined();
+    expect(filterCall?.params).toMatchObject({
+      tenant_id: "tenant-quizfactory-es",
+      start_date: FILTERS.start,
+      end_date: FILTERS.end
+    });
+  });
+
+  it("returns has_data=false when the tenant has no rows in range", async () => {
+    const { provider } = makeProvider((query) => {
+      if (query.includes("funnel_agg")) {
+        return [
+          {
+            sessions: 0,
+            test_starts: 0,
+            test_completes: 0,
+            paywall_views: 0,
+            checkout_starts: 0,
+            purchases: 0,
+            paid_conversion: 0,
+            gross_revenue_eur: 0,
+            net_revenue_eur: 0,
+            refunds_eur: 0,
+            disputes_eur: 0,
+            payment_fees_eur: 0
+          }
+        ];
+      }
+
+      return [];
+    });
+
+    const detail = await provider.getTenantDetail("tenant-missing", FILTERS);
+
+    expect(detail.has_data).toBe(false);
+    expect(detail.sessions_timeseries).toEqual([]);
+    expect(detail.revenue_timeseries).toEqual([]);
+    expect(detail.top_tests_total).toBe(0);
+    expect(detail.locale_breakdown_total).toBe(0);
+  });
+});
