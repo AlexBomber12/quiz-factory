@@ -175,6 +175,20 @@ describe("buildMartFilterClause", () => {
       utm_source: FILTERS.utm_source
     });
   });
+
+  it("adds device_type filter only when explicitly enabled", () => {
+    const withDeviceFilter = buildMartFilterClause(FILTERS, {
+      includeDeviceTypeFilter: true
+    });
+    const withoutDeviceFilter = buildMartFilterClause(FILTERS);
+
+    expect(withDeviceFilter.whereSql).toContain("device_type = @device_type");
+    expect(withDeviceFilter.params).toMatchObject({
+      device_type: FILTERS.device_type
+    });
+    expect(withoutDeviceFilter.whereSql).not.toContain("device_type = @device_type");
+    expect(withoutDeviceFilter.params).not.toHaveProperty("device_type");
+  });
 });
 
 describe("BigQueryAdminAnalyticsProvider.getOverview", () => {
@@ -1006,13 +1020,22 @@ describe("BigQueryAdminAnalyticsProvider.getTraffic", () => {
     const sourceCall = calls.find((call) => call.query.includes("traffic_channel_breakdown:utm_source"));
     expect(sourceCall).toBeDefined();
     expect(sourceCall?.query).toContain("LIMIT 25");
+    expect(sourceCall?.query).toContain("device_type = @device_type");
     expect(sourceCall?.params).toMatchObject({
       start_date: FILTERS.start,
       end_date: FILTERS.end,
       tenant_id: FILTERS.tenant_id,
       test_id: FILTERS.test_id,
       locale: FILTERS.locale,
-      utm_source: FILTERS.utm_source
+      utm_source: FILTERS.utm_source,
+      device_type: FILTERS.device_type
+    });
+
+    const referrerCall = calls.find((call) => call.query.includes("traffic_funnel_breakdown:referrer"));
+    expect(referrerCall).toBeDefined();
+    expect(referrerCall?.query).toContain("device_type = @device_type");
+    expect(referrerCall?.params).toMatchObject({
+      device_type: FILTERS.device_type
     });
 
     expect(calls.some((call) => call.query.includes("traffic_funnel_breakdown:country"))).toBe(false);

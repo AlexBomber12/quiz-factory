@@ -249,9 +249,11 @@ type MartFilterClauseOptions = {
   tenantColumn?: string;
   testColumn?: string;
   localeColumn?: string;
+  deviceColumn?: string;
   channelColumn?: string;
   includeTestFilter?: boolean;
   includeLocaleFilter?: boolean;
+  includeDeviceTypeFilter?: boolean;
   includeUtmSourceFilter?: boolean;
 };
 
@@ -263,9 +265,11 @@ export const buildMartFilterClause = (
   const tenantColumn = options.tenantColumn ?? "tenant_id";
   const testColumn = options.testColumn ?? "test_id";
   const localeColumn = options.localeColumn ?? "locale";
+  const deviceColumn = options.deviceColumn ?? "device_type";
   const channelColumn = options.channelColumn ?? "channel_key";
   const includeTestFilter = options.includeTestFilter ?? true;
   const includeLocaleFilter = options.includeLocaleFilter ?? true;
+  const includeDeviceTypeFilter = options.includeDeviceTypeFilter ?? false;
   const includeUtmSourceFilter = options.includeUtmSourceFilter ?? true;
 
   const conditions: string[] = [
@@ -289,6 +293,11 @@ export const buildMartFilterClause = (
   if (includeLocaleFilter && filters.locale !== "all") {
     conditions.push(`${localeColumn} = @locale`);
     params.locale = filters.locale;
+  }
+
+  if (includeDeviceTypeFilter && filters.device_type !== "all") {
+    conditions.push(`${deviceColumn} = @device_type`);
+    params.device_type = filters.device_type;
   }
 
   if (includeUtmSourceFilter && filters.utm_source) {
@@ -329,10 +338,18 @@ const buildTrafficChannelBreakdownQuery = (
   datasets: BigQueryAdminAnalyticsDatasets,
   filters: AdminAnalyticsFilters,
   breakdown: TrafficChannelBreakdown,
-  topN: number
+  topN: number,
+  options: {
+    includeFunnelDeviceTypeFilter?: boolean;
+    includePnlDeviceTypeFilter?: boolean;
+  } = {}
 ): BigQueryQuery => {
-  const funnelFilter = buildMartFilterClause(filters);
-  const pnlFilter = buildMartFilterClause(filters);
+  const funnelFilter = buildMartFilterClause(filters, {
+    includeDeviceTypeFilter: options.includeFunnelDeviceTypeFilter ?? false
+  });
+  const pnlFilter = buildMartFilterClause(filters, {
+    includeDeviceTypeFilter: options.includePnlDeviceTypeFilter ?? false
+  });
   const funnelTable = `\`${projectId}.${datasets.marts}.mart_funnel_daily\``;
   const pnlTable = `\`${projectId}.${datasets.marts}.mart_pnl_daily\``;
   const segmentExpression = buildTrafficChannelSegmentExpression(breakdown);
@@ -396,9 +413,14 @@ const buildTrafficFunnelDimensionBreakdownQuery = (
   datasets: BigQueryAdminAnalyticsDatasets,
   filters: AdminAnalyticsFilters,
   dimension: TrafficFunnelDimension,
-  topN: number
+  topN: number,
+  options: {
+    includeDeviceTypeFilter?: boolean;
+  } = {}
 ): BigQueryQuery => {
-  const funnelFilter = buildMartFilterClause(filters);
+  const funnelFilter = buildMartFilterClause(filters, {
+    includeDeviceTypeFilter: options.includeDeviceTypeFilter ?? false
+  });
   const funnelTable = `\`${projectId}.${datasets.marts}.mart_funnel_daily\``;
 
   return {
@@ -1955,12 +1977,25 @@ export class BigQueryAdminAnalyticsProvider implements AdminAnalyticsProvider {
     breakdown: TrafficChannelBreakdown,
     topN: number
   ): Promise<AdminAnalyticsTrafficSegmentRow[]> {
+    let includeFunnelDeviceTypeFilter = false;
+    let includePnlDeviceTypeFilter = false;
+    if (filters.device_type !== "all") {
+      [includeFunnelDeviceTypeFilter, includePnlDeviceTypeFilter] = await Promise.all([
+        this.hasMartColumn("mart_funnel_daily", "device_type"),
+        this.hasMartColumn("mart_pnl_daily", "device_type")
+      ]);
+    }
+
     const built = buildTrafficChannelBreakdownQuery(
       this.projectId,
       this.datasets,
       filters,
       breakdown,
-      topN
+      topN,
+      {
+        includeFunnelDeviceTypeFilter,
+        includePnlDeviceTypeFilter
+      }
     );
     const rows = await this.runQuery<BigQueryRow>(built.query, built.params);
     return this.mapTrafficRows(rows, true);
@@ -1971,9 +2006,16 @@ export class BigQueryAdminAnalyticsProvider implements AdminAnalyticsProvider {
     dimension: TrafficFunnelDimension,
     topN: number
   ): Promise<AdminAnalyticsTrafficSegmentRow[]> {
-    const hasColumn = await this.hasMartColumn("mart_funnel_daily", dimension);
-    if (!hasColumn) {
+    const hasDimensionColumn = await this.hasMartColumn("mart_funnel_daily", dimension);
+    if (!hasDimensionColumn) {
       return [];
+    }
+
+    let includeDeviceTypeFilter = false;
+    if (filters.device_type !== "all") {
+      includeDeviceTypeFilter = dimension === "device_type"
+        ? hasDimensionColumn
+        : await this.hasMartColumn("mart_funnel_daily", "device_type");
     }
 
     const built = buildTrafficFunnelDimensionBreakdownQuery(
@@ -1981,7 +2023,10 @@ export class BigQueryAdminAnalyticsProvider implements AdminAnalyticsProvider {
       this.datasets,
       filters,
       dimension,
-      topN
+      topN,
+      {
+        includeDeviceTypeFilter
+      }
     );
     const rows = await this.runQuery<BigQueryRow>(built.query, built.params);
     return this.mapTrafficRows(rows, false);
