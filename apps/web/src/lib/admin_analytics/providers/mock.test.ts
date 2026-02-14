@@ -31,6 +31,10 @@ describe("MockAdminAnalyticsProvider", () => {
     expect(overview.kpis.length).toBeGreaterThan(0);
     expect(overview.funnel.length).toBeGreaterThan(0);
     expect(overview.visits_timeseries.length).toBe(7);
+    expect(overview.top_tests.length).toBeGreaterThan(0);
+    expect(overview.top_tenants.length).toBeGreaterThan(0);
+    expect(overview.data_freshness.length).toBeGreaterThan(0);
+    expect(typeof overview.alerts_available).toBe("boolean");
 
     const tests = await provider.getTests(FILTERS);
     expect(tests.rows.length).toBeGreaterThan(0);

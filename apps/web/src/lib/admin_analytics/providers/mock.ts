@@ -8,7 +8,11 @@ import type {
   AdminAnalyticsDistributionResponse,
   AdminAnalyticsDistributionRow,
   AdminAnalyticsFilters,
+  AdminAnalyticsOverviewAlertRow,
+  AdminAnalyticsOverviewFreshnessRow,
   AdminAnalyticsOverviewResponse,
+  AdminAnalyticsOverviewTopTenantRow,
+  AdminAnalyticsOverviewTopTestRow,
   AdminAnalyticsRevenueByOfferRow,
   AdminAnalyticsRevenueDailyRow,
   AdminAnalyticsRevenueResponse,
@@ -440,6 +444,70 @@ const buildTenantsRows = (
     .sort((left, right) => right.revenue_eur - left.revenue_eur || left.tenant_id.localeCompare(right.tenant_id));
 };
 
+const buildOverviewTopTests = (filters: AdminAnalyticsFilters): AdminAnalyticsOverviewTopTestRow[] => {
+  return buildTestsRows(filters, "overview-top-tests")
+    .slice(0, 5)
+    .map((row) => ({
+      test_id: row.test_id,
+      net_revenue_eur: row.revenue_eur,
+      purchase_conversion: row.purchase_conversion,
+      purchases: row.purchase_success_count
+    }));
+};
+
+const buildOverviewTopTenants = (filters: AdminAnalyticsFilters): AdminAnalyticsOverviewTopTenantRow[] => {
+  return buildTenantsRows(filters, "overview-top-tenants")
+    .slice(0, 5)
+    .map((row) => ({
+      tenant_id: row.tenant_id,
+      net_revenue_eur: row.revenue_eur,
+      purchases: row.purchase_success_count
+    }));
+};
+
+const buildOverviewFreshness = (filters: AdminAnalyticsFilters): AdminAnalyticsOverviewFreshnessRow[] => {
+  const endDate = parseDateYYYYMMDD(filters.end);
+  const fallbackDate = "2026-01-01";
+  const anchor = endDate ? new Date(endDate.getTime()) : parseDateYYYYMMDD(fallbackDate) ?? new Date();
+
+  return [
+    {
+      table: "mart_funnel_daily",
+      max_date: new Date(anchor.getTime() - DAY_IN_MS).toISOString().slice(0, 10),
+      available: true
+    },
+    {
+      table: "mart_pnl_daily",
+      max_date: new Date(anchor.getTime() - DAY_IN_MS).toISOString().slice(0, 10),
+      available: true
+    },
+    {
+      table: "mart_unit_econ_daily",
+      max_date: new Date(anchor.getTime() - 2 * DAY_IN_MS).toISOString().slice(0, 10),
+      available: true
+    }
+  ];
+};
+
+const buildOverviewAlerts = (filters: AdminAnalyticsFilters): AdminAnalyticsOverviewAlertRow[] => {
+  const seed = seedFromFilters(filters, "overview-alerts");
+  const endDate = parseDateYYYYMMDD(filters.end);
+  const detectedAt = endDate
+    ? new Date(endDate.getTime() + 14 * 60 * 60 * 1000)
+    : new Date(Date.UTC(2026, 1, 1, 14, 0, 0));
+
+  return [
+    {
+      detected_at_utc: detectedAt.toISOString(),
+      alert_name: "conversion_drop",
+      severity: "warn",
+      tenant_id: filters.tenant_id ?? "tenant-quizfactory-en",
+      metric_value: roundRatio(0.12 + (seed % 5) * 0.01),
+      threshold_value: 0.15
+    }
+  ];
+};
+
 export class MockAdminAnalyticsProvider implements AdminAnalyticsProvider {
   async getOverview(filters: AdminAnalyticsFilters): Promise<AdminAnalyticsOverviewResponse> {
     const daily = buildDailySeries(filters, "overview");
@@ -451,7 +519,12 @@ export class MockAdminAnalyticsProvider implements AdminAnalyticsProvider {
       kpis: buildOverviewKpis(daily, summary),
       funnel: buildFunnel(summary),
       visits_timeseries: toVisitsSeries(daily),
-      revenue_timeseries: toRevenueSeries(daily)
+      revenue_timeseries: toRevenueSeries(daily),
+      top_tests: buildOverviewTopTests(filters),
+      top_tenants: buildOverviewTopTenants(filters),
+      data_freshness: buildOverviewFreshness(filters),
+      alerts_available: true,
+      alerts: buildOverviewAlerts(filters)
     };
   }
 
