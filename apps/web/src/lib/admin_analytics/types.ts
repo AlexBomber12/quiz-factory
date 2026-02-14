@@ -79,13 +79,16 @@ export type TableRow = Record<string, TableCellValue>;
 
 export type AdminAnalyticsTestsRow = TableRow & {
   test_id: string;
-  title: string;
-  visits: number;
-  test_starts: number;
-  test_completions: number;
-  purchase_success_count: number;
-  purchase_conversion: number;
-  revenue_eur: number;
+  slug?: string;
+  sessions: number;
+  starts: number;
+  completes: number;
+  purchases: number;
+  paid_conversion: number;
+  net_revenue_eur: number;
+  refunds_eur: number;
+  top_tenant_id: string | null;
+  last_activity_date: string | null;
 };
 
 export type AdminAnalyticsTenantsRow = TableRow & {
@@ -224,16 +227,55 @@ export type AdminAnalyticsTestsResponse = {
   rows: AdminAnalyticsTestsRow[];
 };
 
+export type AdminAnalyticsTestTimeseriesRow = TableRow & {
+  date: string;
+  sessions: number;
+  completes: number;
+  purchases: number;
+  net_revenue_eur: number;
+};
+
+export type AdminAnalyticsTestTenantRow = TableRow & {
+  tenant_id: string;
+  sessions: number;
+  starts: number;
+  completes: number;
+  purchases: number;
+  paid_conversion: number;
+  net_revenue_eur: number;
+  refunds_eur: number;
+};
+
+export type AdminAnalyticsTestLocaleRow = TableRow & {
+  locale: string;
+  sessions: number;
+  starts: number;
+  completes: number;
+  purchases: number;
+  paid_conversion: number;
+  net_revenue_eur: number;
+  refunds_eur: number;
+};
+
+export type AdminAnalyticsTestPaywallMetrics = {
+  views: number;
+  checkout_starts: number;
+  checkout_success: number;
+  checkout_start_rate: number;
+  checkout_success_rate: number;
+};
+
 export type AdminAnalyticsTestDetailResponse = {
   filters: AdminAnalyticsFilters;
   generated_at_utc: string;
   test_id: string;
   kpis: KpiCard[];
   funnel: FunnelStep[];
-  visits_timeseries: TimeseriesPoint[];
-  revenue_timeseries: TimeseriesPoint[];
-  locale_breakdown: AdminAnalyticsBreakdownRow[];
-  device_breakdown: AdminAnalyticsBreakdownRow[];
+  timeseries: AdminAnalyticsTestTimeseriesRow[];
+  tenant_breakdown: AdminAnalyticsTestTenantRow[];
+  locale_breakdown: AdminAnalyticsTestLocaleRow[];
+  paywall_metrics_available: boolean;
+  paywall_metrics: AdminAnalyticsTestPaywallMetrics | null;
 };
 
 export type AdminAnalyticsTenantsResponse = {

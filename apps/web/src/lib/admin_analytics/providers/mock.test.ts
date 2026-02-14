@@ -40,15 +40,24 @@ describe("MockAdminAnalyticsProvider", () => {
     expect(tests.rows.length).toBeGreaterThan(0);
     expect(tests.rows[0]).toMatchObject({
       test_id: expect.any(String),
-      title: expect.any(String),
-      visits: expect.any(Number)
+      sessions: expect.any(Number),
+      starts: expect.any(Number),
+      purchases: expect.any(Number),
+      top_tenant_id: expect.any(String)
     });
 
     const testId = tests.rows[0]?.test_id ?? "test-focus-rhythm";
     const testDetail = await provider.getTestDetail(testId, FILTERS);
     expect(testDetail.test_id).toBe(testId);
+    expect(testDetail.timeseries.length).toBeGreaterThan(0);
+    expect(testDetail.tenant_breakdown.length).toBeGreaterThan(0);
     expect(testDetail.locale_breakdown.length).toBeGreaterThan(0);
-    expect(testDetail.device_breakdown.length).toBeGreaterThan(0);
+    expect(testDetail.paywall_metrics_available).toBe(true);
+    expect(testDetail.paywall_metrics).toMatchObject({
+      views: expect.any(Number),
+      checkout_starts: expect.any(Number),
+      checkout_success: expect.any(Number)
+    });
 
     const tenants = await provider.getTenants(FILTERS);
     expect(tenants.rows.length).toBeGreaterThan(0);

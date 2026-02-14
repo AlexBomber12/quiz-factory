@@ -65,3 +65,34 @@ describe("parseRouteIdentifier tenant_id validation", () => {
     }
   });
 });
+
+describe("parseRouteIdentifier test_id validation", () => {
+  it("accepts and trims a valid test_id", () => {
+    const parsed = parseRouteIdentifier(" test-focus-rhythm ", "test_id");
+
+    expect(parsed).toEqual({
+      ok: true,
+      value: "test-focus-rhythm"
+    });
+  });
+
+  it("returns 400 when test_id does not match expected pattern", async () => {
+    const parsed = parseRouteIdentifier("test_Focus", "test_id");
+
+    expect(parsed.ok).toBe(false);
+    if (parsed.ok) {
+      return;
+    }
+
+    expect(parsed.response.status).toBe(400);
+    await expect(parsed.response.json()).resolves.toEqual({
+      error: "invalid_path_param",
+      details: [
+        {
+          field: "test_id",
+          message: "must match test-[a-z0-9-]+"
+        }
+      ]
+    });
+  });
+});
