@@ -510,7 +510,7 @@ Queue (in order)
 - Depends on: PR-ADMIN-CONSOLE-03
 
 91) PR-ADMIN-CONSOLE-05: Tenants Registry + Tenant Detail (Publications)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-ADMIN-CONSOLE-05.md
 - Depends on: PR-ADMIN-CONSOLE-04
 
