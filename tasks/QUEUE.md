@@ -565,6 +565,36 @@ Queue (in order)
 - Tasks file: tasks/PR-ADMIN-ANALYTICS-08.md
 - Depends on: PR-ADMIN-ANALYTICS-07
 
+102) PR-ADMIN-CONSOLE-08: Admin UX Finishing (Deep Links)
+- Status: TODO
+- Tasks file: tasks/PR-ADMIN-CONSOLE-08.md
+- Depends on: PR-ADMIN-ANALYTICS-08
+
+103) PR-ADMIN-CONSOLE-09: Publications Registry (Tenant x Test Matrix)
+- Status: TODO
+- Tasks file: tasks/PR-ADMIN-CONSOLE-09.md
+- Depends on: PR-ADMIN-CONSOLE-08
+
+104) PR-CONTENT-DB-03: Analytics Events Store (Content DB)
+- Status: TODO
+- Tasks file: tasks/PR-CONTENT-DB-03.md
+- Depends on: PR-CONTENT-DB-02
+
+105) PR-CONTENT-DB-04: Stripe Facts Store (Content DB)
+- Status: TODO
+- Tasks file: tasks/PR-CONTENT-DB-04.md
+- Depends on: PR-CONTENT-DB-03
+
+106) PR-ADMIN-ANALYTICS-09: Content DB Analytics Provider + Mode Override
+- Status: TODO
+- Tasks file: tasks/PR-ADMIN-ANALYTICS-09.md
+- Depends on: PR-ADMIN-ANALYTICS-08 and PR-CONTENT-DB-04
+
+107) PR-OPS-RUNBOOK-01: Ops Runbook Finishing (standalone, analytics mode, verify)
+- Status: TODO
+- Tasks file: tasks/PR-OPS-RUNBOOK-01.md
+- Depends on: PR-ADMIN-ANALYTICS-09
+
 Execution rules (apply to every PR)
 - Work on exactly 1 PR at a time.
 - Create a new branch from main named as specified in the selected tasks file (single source of truth).
