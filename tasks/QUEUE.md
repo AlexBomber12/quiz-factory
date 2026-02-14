@@ -526,7 +526,7 @@ Queue (in order)
 
 
 94) PR-ADMIN-ANALYTICS-01: Analytics UI Skeleton + Global FilterBar
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-ADMIN-ANALYTICS-01.md
 - Depends on: PR-ADMIN-CONSOLE-07
 
