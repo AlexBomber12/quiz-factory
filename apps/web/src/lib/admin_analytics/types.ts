@@ -52,6 +52,38 @@ export type AdminAnalyticsFilterParseResult =
   | { ok: true; value: AdminAnalyticsFilters }
   | { ok: false; errors: AdminAnalyticsValidationIssue[] };
 
+export const ADMIN_ANALYTICS_DISTRIBUTION_DEFAULT_LIMIT = 20;
+export const ADMIN_ANALYTICS_DISTRIBUTION_MAX_LIMIT = 50;
+
+export type AdminAnalyticsDistributionOptions = {
+  top_tenants: number;
+  top_tests: number;
+};
+
+const normalizeDistributionLimit = (
+  value: number | null | undefined
+): number => {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return ADMIN_ANALYTICS_DISTRIBUTION_DEFAULT_LIMIT;
+  }
+
+  const rounded = Math.floor(value);
+  if (rounded < 1) {
+    return 1;
+  }
+
+  return Math.min(rounded, ADMIN_ANALYTICS_DISTRIBUTION_MAX_LIMIT);
+};
+
+export const resolveAdminAnalyticsDistributionOptions = (
+  options?: Partial<AdminAnalyticsDistributionOptions>
+): AdminAnalyticsDistributionOptions => {
+  return {
+    top_tenants: normalizeDistributionLimit(options?.top_tenants),
+    top_tests: normalizeDistributionLimit(options?.top_tests)
+  };
+};
+
 export type KpiCardUnit = "count" | "currency_eur" | "ratio" | "percent";
 
 export type KpiCard = {
@@ -126,13 +158,25 @@ export type AdminAnalyticsTenantLocaleRow = TableRow & {
   refunds_eur: number;
 };
 
-export type AdminAnalyticsDistributionRow = TableRow & {
+export type AdminAnalyticsDistributionCell = {
   tenant_id: string;
   test_id: string;
-  visits: number;
-  test_completions: number;
-  purchase_success_count: number;
-  revenue_eur: number;
+  is_published: boolean;
+  version_id: string | null;
+  enabled: boolean | null;
+  net_revenue_eur_7d: number;
+  paid_conversion_7d: number;
+};
+
+export type AdminAnalyticsDistributionRow = {
+  tenant_id: string;
+  net_revenue_eur_7d: number;
+  cells: Record<string, AdminAnalyticsDistributionCell>;
+};
+
+export type AdminAnalyticsDistributionColumn = {
+  test_id: string;
+  net_revenue_eur_7d: number;
 };
 
 export type AdminAnalyticsBreakdownRow = TableRow & {
@@ -303,7 +347,12 @@ export type AdminAnalyticsTenantDetailResponse = {
 export type AdminAnalyticsDistributionResponse = {
   filters: AdminAnalyticsFilters;
   generated_at_utc: string;
-  rows: AdminAnalyticsDistributionRow[];
+  top_tenants: number;
+  top_tests: number;
+  row_order: string[];
+  column_order: string[];
+  rows: Record<string, AdminAnalyticsDistributionRow>;
+  columns: Record<string, AdminAnalyticsDistributionColumn>;
 };
 
 export type AdminAnalyticsTrafficResponse = {

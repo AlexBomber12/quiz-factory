@@ -551,7 +551,7 @@ Queue (in order)
 - Depends on: PR-ADMIN-ANALYTICS-04
 
 99) PR-ADMIN-ANALYTICS-06: Distribution Matrix (Tenant x Test) + Quick Metrics
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-ADMIN-ANALYTICS-06.md
 - Depends on: PR-ADMIN-ANALYTICS-05
 

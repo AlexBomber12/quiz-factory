@@ -4,29 +4,34 @@ import {
   AdminAnalyticsNotImplementedError,
   type AdminAnalyticsProvider
 } from "../provider";
-import type {
-  AdminAnalyticsDataResponse,
-  AdminAnalyticsDistributionResponse,
-  AdminAnalyticsFilters,
-  AdminAnalyticsOverviewAlertRow,
-  AdminAnalyticsOverviewFreshnessRow,
-  AdminAnalyticsOverviewResponse,
-  AdminAnalyticsRevenueResponse,
-  AdminAnalyticsTenantDetailResponse,
-  AdminAnalyticsTenantLocaleRow,
-  AdminAnalyticsTenantTopTestRow,
-  AdminAnalyticsTenantsRow,
-  AdminAnalyticsTenantsResponse,
-  AdminAnalyticsTestLocaleRow,
-  AdminAnalyticsTestDetailResponse,
-  AdminAnalyticsTestPaywallMetrics,
-  AdminAnalyticsTestTenantRow,
-  AdminAnalyticsTestTimeseriesRow,
-  AdminAnalyticsTestsResponse,
-  AdminAnalyticsTrafficResponse,
-  FunnelStep,
-  KpiCard,
-  TimeseriesPoint
+import { getContentDbPool, hasContentDatabaseUrl } from "../../content_db/pool";
+import {
+  resolveAdminAnalyticsDistributionOptions,
+  type AdminAnalyticsDataResponse,
+  type AdminAnalyticsDistributionCell,
+  type AdminAnalyticsDistributionColumn,
+  type AdminAnalyticsDistributionOptions,
+  type AdminAnalyticsDistributionResponse,
+  type AdminAnalyticsFilters,
+  type AdminAnalyticsOverviewAlertRow,
+  type AdminAnalyticsOverviewFreshnessRow,
+  type AdminAnalyticsOverviewResponse,
+  type AdminAnalyticsRevenueResponse,
+  type AdminAnalyticsTenantDetailResponse,
+  type AdminAnalyticsTenantLocaleRow,
+  type AdminAnalyticsTenantTopTestRow,
+  type AdminAnalyticsTenantsRow,
+  type AdminAnalyticsTenantsResponse,
+  type AdminAnalyticsTestLocaleRow,
+  type AdminAnalyticsTestDetailResponse,
+  type AdminAnalyticsTestPaywallMetrics,
+  type AdminAnalyticsTestTenantRow,
+  type AdminAnalyticsTestTimeseriesRow,
+  type AdminAnalyticsTestsResponse,
+  type AdminAnalyticsTrafficResponse,
+  type FunnelStep,
+  type KpiCard,
+  type TimeseriesPoint
 } from "../types";
 
 const DEFAULT_MARTS_DATASET = "marts";
@@ -90,6 +95,36 @@ type FreshnessCacheEntry = {
   rows: AdminAnalyticsOverviewFreshnessRow[];
 };
 
+type DistributionTopTenantRow = {
+  tenant_id: string;
+  net_revenue_eur_7d: number;
+};
+
+type DistributionTopTestRow = {
+  test_id: string;
+  net_revenue_eur_7d: number;
+};
+
+type DistributionMetricRow = {
+  tenant_id: string;
+  test_id: string;
+  net_revenue_eur_7d: number;
+  paid_conversion_7d: number;
+};
+
+type DistributionPublicationState = {
+  is_published: boolean;
+  version_id: string | null;
+  enabled: boolean | null;
+};
+
+type DistributionPublicationRow = {
+  tenant_id: string | null;
+  test_id: string | null;
+  is_enabled: boolean | null;
+  version_id: string | null;
+};
+
 const freshnessCache = new Map<string, FreshnessCacheEntry>();
 
 const asNumber = (value: unknown): number => {
@@ -133,6 +168,16 @@ const asNullableString = (value: unknown): string | null => {
   return String(value);
 };
 
+const asNonEmptyString = (value: unknown): string | null => {
+  const normalized = asNullableString(value);
+  if (!normalized) {
+    return null;
+  }
+
+  const trimmed = normalized.trim();
+  return trimmed.length > 0 ? trimmed : null;
+};
+
 const asIsoTimestamp = (value: unknown): string => {
   if (value instanceof Date) {
     return value.toISOString();
@@ -172,6 +217,10 @@ const isNotFoundError = (error: unknown): boolean => {
 
   const message = typeof candidate.message === "string" ? candidate.message.toLowerCase() : "";
   return message.includes("not found");
+};
+
+const distributionCellKey = (tenantId: string, testId: string): string => {
+  return `${tenantId}::${testId}`;
 };
 
 const mergeParams = (...parts: Array<Record<string, unknown>>): Record<string, unknown> => {
@@ -708,6 +757,179 @@ const buildTenantLocaleBreakdownQuery = (
       LIMIT ${TENANTS_TOP_ROWS_LIMIT}
     `,
     params: mergeParams(funnelFilter.params, pnlFilter.params)
+  };
+};
+
+const buildDistributionTopTenantsQuery = (
+  projectId: string,
+  datasets: BigQueryAdminAnalyticsDatasets,
+  filters: AdminAnalyticsFilters,
+  topTenants: number
+): BigQueryQuery => {
+  const funnelFilter = buildMartFilterClause(filters);
+  const pnlFilter = buildMartFilterClause(filters);
+  const funnelTable = `\`${projectId}.${datasets.marts}.mart_funnel_daily\``;
+  const pnlTable = `\`${projectId}.${datasets.marts}.mart_pnl_daily\``;
+
+  return {
+    query: `
+      WITH funnel_by_tenant AS (
+        SELECT
+          tenant_id,
+          COALESCE(SUM(purchases), 0) AS purchases
+        FROM ${funnelTable}
+        ${funnelFilter.whereSql}
+        GROUP BY tenant_id
+      ),
+      pnl_by_tenant AS (
+        SELECT
+          tenant_id,
+          COALESCE(SUM(net_revenue_eur), 0) AS net_revenue_eur_7d
+        FROM ${pnlTable}
+        ${pnlFilter.whereSql}
+        GROUP BY tenant_id
+      ),
+      merged AS (
+        SELECT
+          COALESCE(funnel_by_tenant.tenant_id, pnl_by_tenant.tenant_id) AS tenant_id,
+          COALESCE(pnl_by_tenant.net_revenue_eur_7d, 0) AS net_revenue_eur_7d,
+          COALESCE(funnel_by_tenant.purchases, 0) AS purchases
+        FROM funnel_by_tenant
+        FULL OUTER JOIN pnl_by_tenant
+          ON funnel_by_tenant.tenant_id = pnl_by_tenant.tenant_id
+      )
+      SELECT
+        tenant_id,
+        net_revenue_eur_7d
+      FROM merged
+      WHERE tenant_id IS NOT NULL
+        AND tenant_id != '__unallocated__'
+      ORDER BY net_revenue_eur_7d DESC, purchases DESC, tenant_id ASC
+      LIMIT ${topTenants}
+    `,
+    params: mergeParams(funnelFilter.params, pnlFilter.params)
+  };
+};
+
+const buildDistributionTopTestsQuery = (
+  projectId: string,
+  datasets: BigQueryAdminAnalyticsDatasets,
+  filters: AdminAnalyticsFilters,
+  topTests: number
+): BigQueryQuery => {
+  const funnelFilter = buildMartFilterClause(filters);
+  const pnlFilter = buildMartFilterClause(filters);
+  const funnelTable = `\`${projectId}.${datasets.marts}.mart_funnel_daily\``;
+  const pnlTable = `\`${projectId}.${datasets.marts}.mart_pnl_daily\``;
+
+  return {
+    query: `
+      WITH funnel_by_test AS (
+        SELECT
+          test_id,
+          COALESCE(SUM(purchases), 0) AS purchases
+        FROM ${funnelTable}
+        ${funnelFilter.whereSql}
+        GROUP BY test_id
+      ),
+      pnl_by_test AS (
+        SELECT
+          test_id,
+          COALESCE(SUM(net_revenue_eur), 0) AS net_revenue_eur_7d
+        FROM ${pnlTable}
+        ${pnlFilter.whereSql}
+        GROUP BY test_id
+      ),
+      merged AS (
+        SELECT
+          COALESCE(funnel_by_test.test_id, pnl_by_test.test_id) AS test_id,
+          COALESCE(pnl_by_test.net_revenue_eur_7d, 0) AS net_revenue_eur_7d,
+          COALESCE(funnel_by_test.purchases, 0) AS purchases
+        FROM funnel_by_test
+        FULL OUTER JOIN pnl_by_test
+          ON funnel_by_test.test_id = pnl_by_test.test_id
+      )
+      SELECT
+        test_id,
+        net_revenue_eur_7d
+      FROM merged
+      WHERE test_id IS NOT NULL
+        AND test_id != '__unallocated__'
+      ORDER BY net_revenue_eur_7d DESC, purchases DESC, test_id ASC
+      LIMIT ${topTests}
+    `,
+    params: mergeParams(funnelFilter.params, pnlFilter.params)
+  };
+};
+
+const buildDistributionMatrixMetricsQuery = (
+  projectId: string,
+  datasets: BigQueryAdminAnalyticsDatasets,
+  filters: AdminAnalyticsFilters,
+  tenantIds: string[],
+  testIds: string[]
+): BigQueryQuery => {
+  const funnelFilter = buildMartFilterClause(filters);
+  const pnlFilter = buildMartFilterClause(filters);
+  const funnelTable = `\`${projectId}.${datasets.marts}.mart_funnel_daily\``;
+  const pnlTable = `\`${projectId}.${datasets.marts}.mart_pnl_daily\``;
+  const scopeParams = {
+    tenant_ids: tenantIds,
+    test_ids: testIds
+  };
+
+  return {
+    query: `
+      WITH selected_tenants AS (
+        SELECT tenant_id, tenant_order
+        FROM UNNEST(@tenant_ids) AS tenant_id WITH OFFSET AS tenant_order
+      ),
+      selected_tests AS (
+        SELECT test_id, test_order
+        FROM UNNEST(@test_ids) AS test_id WITH OFFSET AS test_order
+      ),
+      funnel_by_cell AS (
+        SELECT
+          tenant_id,
+          test_id,
+          COALESCE(SUM(visits), 0) AS visits,
+          COALESCE(SUM(purchases), 0) AS purchases
+        FROM ${funnelTable}
+        ${funnelFilter.whereSql}
+          AND tenant_id IN UNNEST(@tenant_ids)
+          AND test_id IN UNNEST(@test_ids)
+        GROUP BY tenant_id, test_id
+      ),
+      pnl_by_cell AS (
+        SELECT
+          tenant_id,
+          test_id,
+          COALESCE(SUM(net_revenue_eur), 0) AS net_revenue_eur_7d
+        FROM ${pnlTable}
+        ${pnlFilter.whereSql}
+          AND tenant_id IN UNNEST(@tenant_ids)
+          AND test_id IN UNNEST(@test_ids)
+        GROUP BY tenant_id, test_id
+      )
+      SELECT
+        selected_tenants.tenant_id,
+        selected_tests.test_id,
+        COALESCE(pnl_by_cell.net_revenue_eur_7d, 0) AS net_revenue_eur_7d,
+        SAFE_DIVIDE(
+          COALESCE(funnel_by_cell.purchases, 0),
+          NULLIF(COALESCE(funnel_by_cell.visits, 0), 0)
+        ) AS paid_conversion_7d
+      FROM selected_tenants
+      CROSS JOIN selected_tests
+      LEFT JOIN funnel_by_cell
+        ON funnel_by_cell.tenant_id = selected_tenants.tenant_id
+        AND funnel_by_cell.test_id = selected_tests.test_id
+      LEFT JOIN pnl_by_cell
+        ON pnl_by_cell.tenant_id = selected_tenants.tenant_id
+        AND pnl_by_cell.test_id = selected_tests.test_id
+      ORDER BY selected_tenants.tenant_order ASC, selected_tests.test_order ASC
+    `,
+    params: mergeParams(funnelFilter.params, pnlFilter.params, scopeParams)
   };
 };
 
@@ -1416,6 +1638,145 @@ export class BigQueryAdminAnalyticsProvider implements AdminAnalyticsProvider {
     };
   }
 
+  private async fetchDistributionTopTenants(
+    filters: AdminAnalyticsFilters,
+    topTenants: number
+  ): Promise<DistributionTopTenantRow[]> {
+    const built = buildDistributionTopTenantsQuery(
+      this.projectId,
+      this.datasets,
+      filters,
+      topTenants
+    );
+    const rows = await this.runQuery<BigQueryRow>(built.query, built.params);
+    return rows
+      .map((row) => {
+        const tenantId = asNonEmptyString(row.tenant_id);
+        if (!tenantId) {
+          return null;
+        }
+
+        return {
+          tenant_id: tenantId,
+          net_revenue_eur_7d: asNumber(row.net_revenue_eur_7d)
+        };
+      })
+      .filter((row): row is DistributionTopTenantRow => row !== null);
+  }
+
+  private async fetchDistributionTopTests(
+    filters: AdminAnalyticsFilters,
+    topTests: number
+  ): Promise<DistributionTopTestRow[]> {
+    const built = buildDistributionTopTestsQuery(
+      this.projectId,
+      this.datasets,
+      filters,
+      topTests
+    );
+    const rows = await this.runQuery<BigQueryRow>(built.query, built.params);
+    return rows
+      .map((row) => {
+        const testId = asNonEmptyString(row.test_id);
+        if (!testId) {
+          return null;
+        }
+
+        return {
+          test_id: testId,
+          net_revenue_eur_7d: asNumber(row.net_revenue_eur_7d)
+        };
+      })
+      .filter((row): row is DistributionTopTestRow => row !== null);
+  }
+
+  private async fetchDistributionMetrics(
+    filters: AdminAnalyticsFilters,
+    tenantIds: string[],
+    testIds: string[]
+  ): Promise<Map<string, DistributionMetricRow>> {
+    if (tenantIds.length === 0 || testIds.length === 0) {
+      return new Map();
+    }
+
+    const built = buildDistributionMatrixMetricsQuery(
+      this.projectId,
+      this.datasets,
+      filters,
+      tenantIds,
+      testIds
+    );
+    const rows = await this.runQuery<BigQueryRow>(built.query, built.params);
+    const byCell = new Map<string, DistributionMetricRow>();
+
+    for (const row of rows) {
+      const tenantId = asNonEmptyString(row.tenant_id);
+      const testId = asNonEmptyString(row.test_id);
+      if (!tenantId || !testId) {
+        continue;
+      }
+
+      byCell.set(distributionCellKey(tenantId, testId), {
+        tenant_id: tenantId,
+        test_id: testId,
+        net_revenue_eur_7d: asNumber(row.net_revenue_eur_7d),
+        paid_conversion_7d: asNumber(row.paid_conversion_7d)
+      });
+    }
+
+    return byCell;
+  }
+
+  private async fetchDistributionPublicationState(
+    tenantIds: string[],
+    testIds: string[]
+  ): Promise<Map<string, DistributionPublicationState>> {
+    if (!hasContentDatabaseUrl() || tenantIds.length === 0 || testIds.length === 0) {
+      return new Map();
+    }
+
+    const pool = getContentDbPool();
+
+    try {
+      const { rows } = await pool.query<DistributionPublicationRow>(
+        `
+          SELECT
+            tt.tenant_id,
+            t.test_id,
+            tt.is_enabled,
+            tt.published_version_id AS version_id
+          FROM tenant_tests tt
+          JOIN tests t
+            ON t.id = tt.test_id
+          WHERE tt.tenant_id = ANY($1::text[])
+            AND t.test_id = ANY($2::text[])
+        `,
+        [tenantIds, testIds]
+      );
+
+      const result = new Map<string, DistributionPublicationState>();
+      for (const row of rows) {
+        const tenantId = asNonEmptyString(row.tenant_id);
+        const testId = asNonEmptyString(row.test_id);
+        if (!tenantId || !testId) {
+          continue;
+        }
+
+        const versionId = asNonEmptyString(row.version_id);
+        const enabled = typeof row.is_enabled === "boolean" ? row.is_enabled : null;
+        result.set(distributionCellKey(tenantId, testId), {
+          is_published: Boolean(versionId && enabled),
+          version_id: versionId,
+          enabled
+        });
+      }
+
+      return result;
+    } catch {
+      return new Map();
+    }
+  }
+
   private async fetchFreshnessRows(): Promise<AdminAnalyticsOverviewFreshnessRow[]> {
     const cacheKey = `${this.projectId}:${this.datasets.marts}`;
     const now = Date.now();
@@ -1643,9 +2004,68 @@ export class BigQueryAdminAnalyticsProvider implements AdminAnalyticsProvider {
     };
   }
 
-  async getDistribution(filters: AdminAnalyticsFilters): Promise<AdminAnalyticsDistributionResponse> {
-    void filters;
-    throw this.notImplemented("getDistribution");
+  async getDistribution(
+    filters: AdminAnalyticsFilters,
+    options: AdminAnalyticsDistributionOptions
+  ): Promise<AdminAnalyticsDistributionResponse> {
+    const resolvedOptions = resolveAdminAnalyticsDistributionOptions(options);
+    const [topTenants, topTests] = await Promise.all([
+      this.fetchDistributionTopTenants(filters, resolvedOptions.top_tenants),
+      this.fetchDistributionTopTests(filters, resolvedOptions.top_tests)
+    ]);
+
+    const rowOrder = topTenants.map((row) => row.tenant_id);
+    const columnOrder = topTests.map((row) => row.test_id);
+    const [metricsByCell, publicationByCell] = await Promise.all([
+      this.fetchDistributionMetrics(filters, rowOrder, columnOrder),
+      this.fetchDistributionPublicationState(rowOrder, columnOrder)
+    ]);
+
+    const columns: Record<string, AdminAnalyticsDistributionColumn> = {};
+    for (const column of topTests) {
+      columns[column.test_id] = {
+        test_id: column.test_id,
+        net_revenue_eur_7d: column.net_revenue_eur_7d
+      };
+    }
+
+    const rows: AdminAnalyticsDistributionResponse["rows"] = {};
+    for (const tenant of topTenants) {
+      const cells: Record<string, AdminAnalyticsDistributionCell> = {};
+
+      for (const testId of columnOrder) {
+        const cellKey = distributionCellKey(tenant.tenant_id, testId);
+        const metrics = metricsByCell.get(cellKey);
+        const publication = publicationByCell.get(cellKey);
+
+        cells[testId] = {
+          tenant_id: tenant.tenant_id,
+          test_id: testId,
+          is_published: publication?.is_published ?? false,
+          version_id: publication?.version_id ?? null,
+          enabled: publication?.enabled ?? null,
+          net_revenue_eur_7d: metrics?.net_revenue_eur_7d ?? 0,
+          paid_conversion_7d: metrics?.paid_conversion_7d ?? 0
+        };
+      }
+
+      rows[tenant.tenant_id] = {
+        tenant_id: tenant.tenant_id,
+        net_revenue_eur_7d: tenant.net_revenue_eur_7d,
+        cells
+      };
+    }
+
+    return {
+      filters,
+      generated_at_utc: new Date().toISOString(),
+      top_tenants: resolvedOptions.top_tenants,
+      top_tests: resolvedOptions.top_tests,
+      row_order: rowOrder,
+      column_order: columnOrder,
+      rows,
+      columns
+    };
   }
 
   async getTraffic(filters: AdminAnalyticsFilters): Promise<AdminAnalyticsTrafficResponse> {

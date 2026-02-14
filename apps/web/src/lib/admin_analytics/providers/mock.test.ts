@@ -82,12 +82,26 @@ describe("MockAdminAnalyticsProvider", () => {
     expect(tenantDetail.locale_breakdown_total).toBeGreaterThan(0);
     expect(tenantDetail.has_data).toBe(true);
 
-    const distribution = await provider.getDistribution(FILTERS);
-    expect(distribution.rows.length).toBeGreaterThan(0);
-    expect(distribution.rows[0]).toMatchObject({
+    const distribution = await provider.getDistribution(FILTERS, {
+      top_tenants: 3,
+      top_tests: 2
+    });
+    expect(distribution.row_order.length).toBeGreaterThan(0);
+    expect(distribution.column_order.length).toBeGreaterThan(0);
+    const firstTenantId = distribution.row_order[0] ?? "";
+    const firstTestId = distribution.column_order[0] ?? "";
+    const firstRow = distribution.rows[firstTenantId];
+    const firstCell = firstRow?.cells[firstTestId];
+    expect(firstRow).toMatchObject({
+      tenant_id: expect.any(String),
+      net_revenue_eur_7d: expect.any(Number)
+    });
+    expect(firstCell).toMatchObject({
       tenant_id: expect.any(String),
       test_id: expect.any(String),
-      visits: expect.any(Number)
+      is_published: expect.any(Boolean),
+      net_revenue_eur_7d: expect.any(Number),
+      paid_conversion_7d: expect.any(Number)
     });
 
     const traffic = await provider.getTraffic(FILTERS);

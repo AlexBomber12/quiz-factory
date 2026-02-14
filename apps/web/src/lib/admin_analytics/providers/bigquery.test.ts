@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   BigQueryAdminAnalyticsProvider,
@@ -733,5 +733,133 @@ describe("BigQueryAdminAnalyticsProvider.getTenantDetail", () => {
     expect(detail.revenue_timeseries).toEqual([]);
     expect(detail.top_tests_total).toBe(0);
     expect(detail.locale_breakdown_total).toBe(0);
+  });
+});
+
+describe("BigQueryAdminAnalyticsProvider.getDistribution", () => {
+  const originalContentDatabaseUrl = process.env.CONTENT_DATABASE_URL;
+
+  beforeEach(() => {
+    delete process.env.CONTENT_DATABASE_URL;
+  });
+
+  afterEach(() => {
+    if (originalContentDatabaseUrl) {
+      process.env.CONTENT_DATABASE_URL = originalContentDatabaseUrl;
+      return;
+    }
+
+    delete process.env.CONTENT_DATABASE_URL;
+  });
+
+  it("returns tenant x test matrix rows and validates query bindings", async () => {
+    const { provider, calls } = makeProvider((query) => {
+      if (query.includes("ORDER BY net_revenue_eur_7d DESC, purchases DESC, tenant_id ASC")) {
+        return [
+          {
+            tenant_id: "tenant-quizfactory-en",
+            net_revenue_eur_7d: 1800
+          },
+          {
+            tenant_id: "tenant-quizfactory-es",
+            net_revenue_eur_7d: 900
+          }
+        ];
+      }
+
+      if (query.includes("ORDER BY net_revenue_eur_7d DESC, purchases DESC, test_id ASC")) {
+        return [
+          {
+            test_id: "test-focus-rhythm",
+            net_revenue_eur_7d: 1600
+          },
+          {
+            test_id: "test-energy-balance",
+            net_revenue_eur_7d: 1100
+          }
+        ];
+      }
+
+      if (query.includes("CROSS JOIN selected_tests")) {
+        return [
+          {
+            tenant_id: "tenant-quizfactory-en",
+            test_id: "test-focus-rhythm",
+            net_revenue_eur_7d: 1000,
+            paid_conversion_7d: 0.21
+          },
+          {
+            tenant_id: "tenant-quizfactory-en",
+            test_id: "test-energy-balance",
+            net_revenue_eur_7d: 800,
+            paid_conversion_7d: 0.16
+          },
+          {
+            tenant_id: "tenant-quizfactory-es",
+            test_id: "test-focus-rhythm",
+            net_revenue_eur_7d: 600,
+            paid_conversion_7d: 0.14
+          },
+          {
+            tenant_id: "tenant-quizfactory-es",
+            test_id: "test-energy-balance",
+            net_revenue_eur_7d: 300,
+            paid_conversion_7d: 0.1
+          }
+        ];
+      }
+
+      return [];
+    });
+
+    const distribution = await provider.getDistribution(FILTERS, {
+      top_tenants: 2,
+      top_tests: 2
+    });
+
+    expect(distribution.top_tenants).toBe(2);
+    expect(distribution.top_tests).toBe(2);
+    expect(distribution.row_order).toEqual([
+      "tenant-quizfactory-en",
+      "tenant-quizfactory-es"
+    ]);
+    expect(distribution.column_order).toEqual([
+      "test-focus-rhythm",
+      "test-energy-balance"
+    ]);
+    expect(distribution.rows["tenant-quizfactory-en"]?.cells["test-focus-rhythm"]).toEqual({
+      tenant_id: "tenant-quizfactory-en",
+      test_id: "test-focus-rhythm",
+      is_published: false,
+      version_id: null,
+      enabled: null,
+      net_revenue_eur_7d: 1000,
+      paid_conversion_7d: 0.21
+    });
+
+    const topTenantCall = calls.find((call) =>
+      call.query.includes("ORDER BY net_revenue_eur_7d DESC, purchases DESC, tenant_id ASC")
+    );
+    expect(topTenantCall).toBeDefined();
+    expect(topTenantCall?.query).toContain("LIMIT 2");
+
+    const topTestCall = calls.find((call) =>
+      call.query.includes("ORDER BY net_revenue_eur_7d DESC, purchases DESC, test_id ASC")
+    );
+    expect(topTestCall).toBeDefined();
+    expect(topTestCall?.query).toContain("LIMIT 2");
+
+    const matrixCall = calls.find((call) => call.query.includes("CROSS JOIN selected_tests"));
+    expect(matrixCall).toBeDefined();
+    expect(matrixCall?.params).toMatchObject({
+      start_date: FILTERS.start,
+      end_date: FILTERS.end,
+      tenant_id: FILTERS.tenant_id,
+      test_id: FILTERS.test_id,
+      locale: FILTERS.locale,
+      utm_source: FILTERS.utm_source,
+      tenant_ids: ["tenant-quizfactory-en", "tenant-quizfactory-es"],
+      test_ids: ["test-focus-rhythm", "test-energy-balance"]
+    });
   });
 });
