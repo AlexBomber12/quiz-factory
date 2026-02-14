@@ -32,6 +32,10 @@ const FILTER_KEYS = [
 ] as const;
 
 const numberFormatter = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
+const alertMetricFormatter = new Intl.NumberFormat("en-US", {
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 4
+});
 const currencyFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "EUR",
@@ -126,6 +130,14 @@ const formatUtcDate = (value: string | null): string => {
   return parsed.toISOString();
 };
 
+const formatAlertMetric = (value: number | null): string => {
+  if (value === null) {
+    return "N/A";
+  }
+
+  return alertMetricFormatter.format(value);
+};
+
 const fetchOverview = async (
   searchParams: PageProps["searchParams"]
 ): Promise<{ payload: AdminAnalyticsOverviewResponse | null; error: string | null }> => {
@@ -186,10 +198,10 @@ const renderAlerts = (alerts: AdminAnalyticsOverviewAlertRow[]) => {
               <td className="px-2 py-2">{row.severity}</td>
               <td className="px-2 py-2">{row.tenant_id ?? "all"}</td>
               <td className="px-2 py-2">
-                {row.metric_value === null ? "N/A" : numberFormatter.format(row.metric_value)}
+                {formatAlertMetric(row.metric_value)}
               </td>
               <td className="px-2 py-2">
-                {row.threshold_value === null ? "N/A" : numberFormatter.format(row.threshold_value)}
+                {formatAlertMetric(row.threshold_value)}
               </td>
             </tr>
           ))}

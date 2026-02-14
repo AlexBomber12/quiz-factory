@@ -37,8 +37,9 @@ export const GET = async (request: Request): Promise<Response> => {
 
   return executeProviderCall(async (provider) => {
     const payload = await provider.getOverview(parsed.filters);
+    const cachedAt = Date.now();
     overviewCache.set(cacheKey, {
-      expiresAt: now + OVERVIEW_CACHE_TTL_MS,
+      expiresAt: cachedAt + OVERVIEW_CACHE_TTL_MS,
       payload
     });
     return payload;
