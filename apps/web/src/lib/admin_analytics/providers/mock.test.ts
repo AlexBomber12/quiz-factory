@@ -54,14 +54,24 @@ describe("MockAdminAnalyticsProvider", () => {
     expect(tenants.rows.length).toBeGreaterThan(0);
     expect(tenants.rows[0]).toMatchObject({
       tenant_id: expect.any(String),
-      domain: expect.any(String),
-      visits: expect.any(Number)
+      sessions: expect.any(Number),
+      test_starts: expect.any(Number),
+      purchases: expect.any(Number),
+      net_revenue_eur: expect.any(Number),
+      top_test_id: expect.any(String)
     });
+    expect(tenants.total_rows).toBeGreaterThan(0);
 
     const tenantId = tenants.rows[0]?.tenant_id ?? "tenant-quizfactory-en";
     const tenantDetail = await provider.getTenantDetail(tenantId, FILTERS);
     expect(tenantDetail.tenant_id).toBe(tenantId);
+    expect(tenantDetail.funnel.length).toBeGreaterThan(0);
+    expect(tenantDetail.sessions_timeseries.length).toBeGreaterThan(0);
     expect(tenantDetail.top_tests.length).toBeGreaterThan(0);
+    expect(tenantDetail.top_tests_total).toBeGreaterThan(0);
+    expect(tenantDetail.locale_breakdown.length).toBeGreaterThan(0);
+    expect(tenantDetail.locale_breakdown_total).toBeGreaterThan(0);
+    expect(tenantDetail.has_data).toBe(true);
 
     const distribution = await provider.getDistribution(FILTERS);
     expect(distribution.rows.length).toBeGreaterThan(0);
@@ -138,5 +148,20 @@ describe("MockAdminAnalyticsProvider", () => {
     expect(costRow?.status).toBe("ok");
     expect(costCheck?.status).toBe("ok");
     expect(costCheck?.detail).toContain("raw_costs.ad_spend_daily");
+  });
+
+  it("returns an empty tenant detail payload for unknown tenant_id", async () => {
+    const provider = createMockAdminAnalyticsProvider();
+
+    const detail = await provider.getTenantDetail("tenant-does-not-exist", FILTERS);
+
+    expect(detail.tenant_id).toBe("tenant-does-not-exist");
+    expect(detail.has_data).toBe(false);
+    expect(detail.kpis).toEqual([]);
+    expect(detail.funnel).toEqual([]);
+    expect(detail.sessions_timeseries).toEqual([]);
+    expect(detail.revenue_timeseries).toEqual([]);
+    expect(detail.top_tests_total).toBe(0);
+    expect(detail.locale_breakdown_total).toBe(0);
   });
 });
