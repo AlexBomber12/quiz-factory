@@ -6,6 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../..
 import { listAdminTenantsWithCounts, type AdminTenantWithCount } from "../../../lib/admin/tenants";
 import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "../../../lib/admin/session";
 
+const inlineLinkClassName = "text-primary underline underline-offset-4 hover:no-underline";
+
 export default async function AdminTenantsPage() {
   const cookieStore = await cookies();
   const session = await verifyAdminSession(cookieStore.get(ADMIN_SESSION_COOKIE)?.value);
@@ -51,7 +53,7 @@ export default async function AdminTenantsPage() {
                   <th className="px-2 py-2 font-semibold">domains</th>
                   <th className="px-2 py-2 font-semibold">default_locale</th>
                   <th className="px-2 py-2 font-semibold">published tests</th>
-                  <th className="px-2 py-2 font-semibold">link</th>
+                  <th className="px-2 py-2 font-semibold">actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -65,12 +67,33 @@ export default async function AdminTenantsPage() {
                       <td className="px-2 py-2">{record.default_locale}</td>
                       <td className="px-2 py-2">{record.published_count}</td>
                       <td className="px-2 py-2">
-                        <Link
-                          className="text-primary underline underline-offset-4 hover:no-underline"
-                          href={`/admin/tenants/${encodeURIComponent(record.tenant_id)}`}
-                        >
-                          Open
-                        </Link>
+                        <div className="flex flex-wrap gap-x-1 gap-y-1">
+                          <Link
+                            className={inlineLinkClassName}
+                            href={`/admin/tenants/${encodeURIComponent(record.tenant_id)}`}
+                          >
+                            Open
+                          </Link>
+                          <span aria-hidden="true" className="text-muted-foreground">
+                            |
+                          </span>
+                          <Link
+                            className={inlineLinkClassName}
+                            href={`/admin/analytics/tenants/${encodeURIComponent(record.tenant_id)}`}
+                          >
+                            Analytics
+                          </Link>
+                          {record.domains.length > 0 ? (
+                            <>
+                              <span aria-hidden="true" className="text-muted-foreground">
+                                |
+                              </span>
+                              <Link className={inlineLinkClassName} href={`https://${record.domains[0]}/tests`}>
+                                Public
+                              </Link>
+                            </>
+                          ) : null}
+                        </div>
                       </td>
                     </tr>
                   ))

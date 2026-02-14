@@ -19,6 +19,8 @@ const resolveParams = async (
   return Promise.resolve(params);
 };
 
+const inlineLinkClassName = "text-primary underline underline-offset-4 hover:no-underline";
+
 export default async function AdminTenantDetailPage({ params }: PageProps) {
   const cookieStore = await cookies();
   const session = await verifyAdminSession(cookieStore.get(ADMIN_SESSION_COOKIE)?.value);
@@ -70,6 +72,7 @@ export default async function AdminTenantDetailPage({ params }: PageProps) {
     );
   }
 
+  const tenant = detail.tenant;
   return (
     <section className="mx-auto flex w-full flex-col gap-6 py-2">
       <Card>
@@ -77,14 +80,26 @@ export default async function AdminTenantDetailPage({ params }: PageProps) {
           <CardTitle>Tenant detail</CardTitle>
           <CardDescription className="space-y-1">
             <span className="block">
-              tenant_id: <code>{detail.tenant.tenant_id}</code>
+              tenant_id: <code>{tenant.tenant_id}</code>
             </span>
-            <span className="block">domains: {detail.tenant.domains.length > 0 ? detail.tenant.domains.join(", ") : "-"}</span>
-            <span className="block">default_locale: {detail.tenant.default_locale}</span>
-            <span className="block">enabled published tests: {detail.tenant.published_count}</span>
+            <span className="block">domains: {tenant.domains.length > 0 ? tenant.domains.join(", ") : "-"}</span>
+            <span className="block">default_locale: {tenant.default_locale}</span>
+            <span className="block">enabled published tests: {tenant.published_count}</span>
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex flex-wrap gap-2">
+          <Button asChild type="button" variant="outline">
+            <Link href={`/admin/analytics/tenants/${encodeURIComponent(tenant.tenant_id)}`}>
+              Analytics tenant
+            </Link>
+          </Button>
+          {tenant.domains.map((domain) => (
+            <Button asChild key={domain} type="button" variant="outline">
+              <Link href={`https://${domain}/tests`} rel="noreferrer" target="_blank">
+                Public /tests ({domain})
+              </Link>
+            </Button>
+          ))}
           <Button asChild type="button" variant="ghost">
             <Link href="/admin/tenants">Back to tenants registry</Link>
           </Button>
@@ -106,6 +121,7 @@ export default async function AdminTenantDetailPage({ params }: PageProps) {
                   <th className="px-2 py-2 font-semibold">published_version_id</th>
                   <th className="px-2 py-2 font-semibold">enabled</th>
                   <th className="px-2 py-2 font-semibold">link</th>
+                  <th className="px-2 py-2 font-semibold">public</th>
                 </tr>
               </thead>
               <tbody>
@@ -121,18 +137,27 @@ export default async function AdminTenantDetailPage({ params }: PageProps) {
                       </td>
                       <td className="px-2 py-2">{record.enabled ? "true" : "false"}</td>
                       <td className="px-2 py-2">
-                        <Link
-                          className="text-primary underline underline-offset-4 hover:no-underline"
-                          href={`/admin/tests/${encodeURIComponent(record.test_id)}`}
-                        >
+                        <Link className={inlineLinkClassName} href={`/admin/tests/${encodeURIComponent(record.test_id)}`}>
                           Open test
                         </Link>
+                      </td>
+                      <td className="px-2 py-2">
+                        {tenant.domains.length > 0 ? (
+                          <Link
+                            className={inlineLinkClassName}
+                            href={`https://${tenant.domains[0]}/t/${encodeURIComponent(record.slug)}`}
+                          >
+                            Open public
+                          </Link>
+                        ) : (
+                          "-"
+                        )}
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td className="px-2 py-4 text-muted-foreground" colSpan={5}>
+                    <td className="px-2 py-4 text-muted-foreground" colSpan={6}>
                       No published tests found for this tenant.
                     </td>
                   </tr>
