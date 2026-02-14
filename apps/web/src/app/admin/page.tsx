@@ -19,6 +19,7 @@ import {
 } from "../../lib/admin/publish";
 import { ADMIN_CSRF_FORM_FIELD } from "../../lib/admin/csrf";
 import { getAdminCsrfTokenForRender } from "../../lib/admin/csrf_server";
+import { readAdminDiagnostics } from "../../lib/admin/diagnostics";
 import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "../../lib/admin/session";
 
 type SearchParams = {
@@ -87,7 +88,7 @@ const buildErrorMessage = (errorCode: string | null, detail: string | null): str
     case "rate_limited":
       return `Too many publish requests${suffix}.`;
     case "invalid_payload":
-      return "Publish payload is invalid.";
+      return `Publish payload is invalid${suffix}.`;
     case "invalid_test_id":
     case "invalid_version_id":
     case "invalid_tenant_ids":
@@ -149,10 +150,13 @@ const tenantCurrentVersionLabel = (
 const renderPublishCard = (
   testRecord: AdminPublishTest,
   tenantCount: number,
-  csrfToken: string
+  csrfToken: string,
+  publishActionsEnabled: boolean,
+  publishActionsDisabledReason: string | null
 ) => {
   const hasVersions = testRecord.versions.length > 0;
   const latestVersionId = testRecord.versions[0]?.id ?? "";
+  const actionsDisabled = !publishActionsEnabled;
 
   return (
     <Card key={testRecord.test_id}>
@@ -165,6 +169,12 @@ const renderPublishCard = (
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6 text-sm">
+        {actionsDisabled ? (
+          <div className="rounded border border-amber-400 bg-amber-50 px-3 py-2 text-sm text-amber-900" role="alert">
+            {publishActionsDisabledReason ?? "Publish and rollback are disabled for this environment."}
+          </div>
+        ) : null}
+
         <div className="overflow-x-auto">
           <table className="w-full min-w-[760px] border-collapse text-left text-sm">
             <thead>
@@ -249,7 +259,7 @@ const renderPublishCard = (
             </div>
           </fieldset>
 
-          <Button disabled={!hasVersions || tenantCount === 0} type="submit">
+          <Button disabled={!hasVersions || tenantCount === 0 || actionsDisabled} type="submit">
             Publish selected version to selected tenants
           </Button>
         </form>
@@ -297,7 +307,12 @@ const renderPublishCard = (
                             </option>
                           ))}
                         </select>
-                        <Button disabled={!hasVersions} size="sm" type="submit" variant="outline">
+                        <Button
+                          disabled={!hasVersions || actionsDisabled}
+                          size="sm"
+                          type="submit"
+                          variant="outline"
+                        >
                           Rollback
                         </Button>
                       </form>
@@ -314,7 +329,7 @@ const renderPublishCard = (
                           value={tenantState.is_enabled ? "false" : "true"}
                         />
                         <Button
-                          disabled={!toggleVersionId}
+                          disabled={!toggleVersionId || actionsDisabled}
                           size="sm"
                           type="submit"
                           variant={tenantState.is_enabled ? "destructive" : "secondary"}
@@ -360,6 +375,7 @@ export default async function AdminPage({ searchParams }: PageProps) {
   }
 
   const tenantRegistry = listTenantRegistry();
+  const diagnostics = await readAdminDiagnostics();
   const csrfToken = await getAdminCsrfTokenForRender();
 
   return (
@@ -404,6 +420,55 @@ export default async function AdminPage({ searchParams }: PageProps) {
           <Button asChild type="button">
             <Link href="/admin/imports/new">Create import bundle</Link>
           </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Diagnostics</CardTitle>
+          <CardDescription>Operational checks for publish and rollback safety.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4 text-sm">
+          <dl className="grid gap-2 sm:grid-cols-[260px_minmax(0,1fr)]">
+            <dt className="font-medium text-muted-foreground">NODE_ENV</dt>
+            <dd>
+              <code>{diagnostics.nodeEnv}</code>
+            </dd>
+
+            {diagnostics.commitSha ? (
+              <>
+                <dt className="font-medium text-muted-foreground">COMMIT_SHA</dt>
+                <dd>
+                  <code>{diagnostics.commitSha}</code>
+                </dd>
+              </>
+            ) : null}
+
+            <dt className="font-medium text-muted-foreground">CONTENT_SOURCE (resolved)</dt>
+            <dd>
+              <code>{diagnostics.contentSource}</code>
+            </dd>
+
+            <dt className="font-medium text-muted-foreground">CONTENT_DATABASE_URL configured</dt>
+            <dd>{diagnostics.contentDatabaseUrlConfigured ? "yes" : "no"}</dd>
+
+            <dt className="font-medium text-muted-foreground">Tenants registry count</dt>
+            <dd>{diagnostics.tenantRegistryCount}</dd>
+
+            <dt className="font-medium text-muted-foreground">Content DB migrations applied</dt>
+            <dd>{diagnostics.contentDbMigrationsApplied ? "yes" : "no"}</dd>
+          </dl>
+
+          {diagnostics.criticalWarnings.length > 0 ? (
+            <div className="rounded border border-amber-400 bg-amber-50 px-3 py-2 text-amber-900" role="alert">
+              <p className="font-medium">Warning: publish guardrails are not fully satisfied.</p>
+              <ul className="list-disc pl-5">
+                {diagnostics.criticalWarnings.map((warning) => (
+                  <li key={warning}>{warning}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
         </CardContent>
       </Card>
 
@@ -461,7 +526,15 @@ export default async function AdminPage({ searchParams }: PageProps) {
               Manage versions and tenant enablement state for each test.
             </p>
           </div>
-          {publishTests.map((testRecord) => renderPublishCard(testRecord, tenantRegistry.length, csrfToken))}
+          {publishTests.map((testRecord) =>
+            renderPublishCard(
+              testRecord,
+              tenantRegistry.length,
+              csrfToken,
+              diagnostics.publishActionsEnabled,
+              diagnostics.publishActionsDisabledReason
+            )
+          )}
         </section>
       ) : null}
     </section>

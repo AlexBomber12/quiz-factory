@@ -17,6 +17,10 @@ import {
   isPublishWorkflowError,
   rollbackVersionForTenant
 } from "../../../../lib/admin/publish";
+import {
+  isPublishGuardrailValidationError,
+  validateRollbackGuardrails
+} from "../../../../lib/admin/publish_guardrails";
 import { logAdminEvent } from "../../../../lib/admin/audit";
 import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "../../../../lib/admin/session";
 
@@ -184,6 +188,20 @@ export const POST = async (request: Request): Promise<Response> => {
       429,
       rateLimitResult.retryAfterSeconds ? String(rateLimitResult.retryAfterSeconds) : null
     );
+  }
+
+  try {
+    await validateRollbackGuardrails({
+      test_id: parsedRequest.payload.test_id,
+      version_id: parsedRequest.payload.version_id,
+      tenant_id: parsedRequest.payload.tenant_id
+    });
+  } catch (error) {
+    if (isPublishGuardrailValidationError(error)) {
+      return handleRequestError(request, "invalid_payload", 400, error.message);
+    }
+
+    return handleRequestError(request, "rollback_failed", 500);
   }
 
   try {

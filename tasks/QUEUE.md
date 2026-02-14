@@ -520,7 +520,7 @@ Queue (in order)
 - Depends on: PR-ADMIN-CONSOLE-05
 
 93) PR-ADMIN-CONSOLE-07: Admin Guardrails (Diagnostics + Publish Safety)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-ADMIN-CONSOLE-07.md
 - Depends on: PR-ADMIN-CONSOLE-06
 

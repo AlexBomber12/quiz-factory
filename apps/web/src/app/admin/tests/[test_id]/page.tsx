@@ -6,6 +6,7 @@ import TestPublishPanel from "../../../../components/admin/TestPublishPanel";
 import { Button } from "../../../../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../../components/ui/card";
 import { getAdminCsrfTokenForRender } from "../../../../lib/admin/csrf_server";
+import { readAdminDiagnostics } from "../../../../lib/admin/diagnostics";
 import { listTenantRegistry } from "../../../../lib/admin/publish";
 import { getAdminTestDetail, type AdminTestDetailPublication } from "../../../../lib/admin/tests";
 import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "../../../../lib/admin/session";
@@ -130,6 +131,7 @@ export default async function AdminTestDetailPage({ params }: PageProps) {
 
   const publicationData = buildPublicationRows(detail.publications);
   const csrfToken = await getAdminCsrfTokenForRender();
+  const diagnostics = await readAdminDiagnostics();
 
   return (
     <section className="mx-auto flex w-full flex-col gap-6 py-2">
@@ -208,6 +210,8 @@ export default async function AdminTestDetailPage({ params }: PageProps) {
       <TestPublishPanel
         csrfToken={csrfToken}
         publications={publicationData.panelPublications}
+        publishActionsDisabledMessage={diagnostics.publishActionsDisabledReason}
+        publishActionsEnabled={diagnostics.publishActionsEnabled}
         tenants={publicationData.knownTenants}
         testId={detail.test.test_id}
         versions={detail.versions.map((version) => ({
