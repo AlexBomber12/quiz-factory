@@ -1,12 +1,19 @@
 import { BigQuery } from "@google-cloud/bigquery";
 
 import {
-  AdminAnalyticsNotImplementedError,
+  combineHealthStatus,
+  evaluateFreshnessStatus,
+  resolveFreshnessThresholds
+} from "../data_health";
+import {
   type AdminAnalyticsProvider
 } from "../provider";
 import { getContentDbPool, hasContentDatabaseUrl } from "../../content_db/pool";
 import {
   resolveAdminAnalyticsDistributionOptions,
+  type AdminAnalyticsDataAlertRow,
+  type AdminAnalyticsDataDbtRunMarker,
+  type AdminAnalyticsDataFreshnessRow,
   type AdminAnalyticsDataResponse,
   type AdminAnalyticsDistributionCell,
   type AdminAnalyticsDistributionColumn,
@@ -16,6 +23,10 @@ import {
   type AdminAnalyticsOverviewAlertRow,
   type AdminAnalyticsOverviewFreshnessRow,
   type AdminAnalyticsOverviewResponse,
+  type AdminAnalyticsRevenueByOfferRow,
+  type AdminAnalyticsRevenueByTenantRow,
+  type AdminAnalyticsRevenueByTestRow,
+  type AdminAnalyticsRevenueReconciliation,
   type AdminAnalyticsRevenueResponse,
   type AdminAnalyticsTenantDetailResponse,
   type AdminAnalyticsTenantLocaleRow,
@@ -44,6 +55,8 @@ const TESTS_TOP_ROWS_LIMIT = 50;
 const TEST_BREAKDOWN_ROWS_LIMIT = 50;
 const ALERTS_LIMIT = 20;
 const FRESHNESS_CACHE_TTL_MS = 60_000;
+const REVENUE_TOP_ROWS_LIMIT = 10;
+const REVENUE_BY_OFFER_ROWS_LIMIT = 20;
 
 type BigQueryAdminAnalyticsDatasets = {
   stripe: string;
@@ -211,6 +224,35 @@ const safeRatio = (numerator: number, denominator: number): number => {
   return Math.round((numerator / denominator) * 10_000) / 10_000;
 };
 
+const reconciliationDiffPct = (
+  diff: number,
+  stripeTotal: number,
+  internalTotal: number
+): number => {
+  if (Math.abs(stripeTotal) > 0) {
+    return safeRatio(diff, stripeTotal);
+  }
+
+  if (Math.abs(internalTotal) > 0) {
+    return safeRatio(diff, internalTotal);
+  }
+
+  return 0;
+};
+
+const toHealthStatusFromAlertSeverity = (severity: string): "ok" | "warn" | "error" => {
+  const normalized = severity.trim().toLowerCase();
+  if (normalized.includes("error") || normalized.includes("critical")) {
+    return "error";
+  }
+
+  if (normalized.includes("warn")) {
+    return "warn";
+  }
+
+  return "ok";
+};
+
 const isNotFoundError = (error: unknown): boolean => {
   if (!error || typeof error !== "object") {
     return false;
@@ -240,6 +282,11 @@ const mergeParams = (...parts: Array<Record<string, unknown>>): Record<string, u
 };
 
 type MartFilterClause = {
+  whereSql: string;
+  params: Record<string, unknown>;
+};
+
+type StripeFilterClause = {
   whereSql: string;
   params: Record<string, unknown>;
 };
@@ -304,6 +351,43 @@ export const buildMartFilterClause = (
     conditions.push(
       `(CASE WHEN STRPOS(${channelColumn}, ':') > 0 THEN SPLIT(${channelColumn}, ':')[SAFE_OFFSET(0)] ELSE ${channelColumn} END) = @utm_source`
     );
+    params.utm_source = filters.utm_source;
+  }
+
+  return {
+    whereSql: `WHERE ${conditions.join(" AND ")}`,
+    params
+  };
+};
+
+const buildStripeFilterClause = (
+  filters: AdminAnalyticsFilters
+): StripeFilterClause => {
+  const conditions: string[] = [
+    "DATE(created_utc) BETWEEN DATE(@start_date) AND DATE(@end_date)"
+  ];
+  const params: Record<string, unknown> = {
+    start_date: filters.start,
+    end_date: filters.end
+  };
+
+  if (filters.tenant_id) {
+    conditions.push("tenant_id = @tenant_id");
+    params.tenant_id = filters.tenant_id;
+  }
+
+  if (filters.test_id) {
+    conditions.push("test_id = @test_id");
+    params.test_id = filters.test_id;
+  }
+
+  if (filters.locale !== "all") {
+    conditions.push("locale = @locale");
+    params.locale = filters.locale;
+  }
+
+  if (filters.utm_source) {
+    conditions.push("utm_source = @utm_source");
     params.utm_source = filters.utm_source;
   }
 
@@ -1530,12 +1614,6 @@ export class BigQueryAdminAnalyticsProvider implements AdminAnalyticsProvider {
     private readonly datasets: BigQueryAdminAnalyticsDatasets
   ) {}
 
-  private notImplemented(method: string): AdminAnalyticsNotImplementedError {
-    return new AdminAnalyticsNotImplementedError(
-      `BigQuery admin analytics method '${method}' is not implemented (project=${this.projectId}, datasets=${JSON.stringify(this.datasets)}).`
-    );
-  }
-
   private table(table: string): string {
     return `\`${this.projectId}.${this.datasets.marts}.${table}\``;
   }
@@ -1589,6 +1667,35 @@ export class BigQueryAdminAnalyticsProvider implements AdminAnalyticsProvider {
     return rows.map((row) => ({
       date: asNullableString(row.date) ?? "",
       value: asNumber(row.value)
+    }));
+  }
+
+  private async fetchRevenueDailyRows(
+    filters: AdminAnalyticsFilters
+  ): Promise<AdminAnalyticsRevenueResponse["daily"]> {
+    const martFilter = buildMartFilterClause(filters);
+    const table = `\`${this.projectId}.${this.datasets.marts}.mart_pnl_daily\``;
+    const query = `
+      SELECT
+        CAST(date AS STRING) AS date,
+        COALESCE(SUM(gross_revenue_eur), 0) AS gross_revenue_eur,
+        COALESCE(SUM(refunds_eur), 0) AS refunds_eur,
+        COALESCE(SUM(disputes_eur), 0) AS disputes_fees_eur,
+        COALESCE(SUM(payment_fees_eur), 0) AS payment_fees_eur,
+        COALESCE(SUM(net_revenue_eur), 0) AS net_revenue_eur
+      FROM ${table}
+      ${martFilter.whereSql}
+      GROUP BY date
+      ORDER BY date ASC
+    `;
+    const rows = await this.runQuery<BigQueryRow>(query, martFilter.params);
+    return rows.map((row) => ({
+      date: asNullableString(row.date) ?? "",
+      gross_revenue_eur: asNumber(row.gross_revenue_eur),
+      refunds_eur: asNumber(row.refunds_eur),
+      disputes_fees_eur: asNumber(row.disputes_fees_eur),
+      payment_fees_eur: asNumber(row.payment_fees_eur),
+      net_revenue_eur: asNumber(row.net_revenue_eur)
     }));
   }
 
@@ -2134,6 +2241,436 @@ export class BigQueryAdminAnalyticsProvider implements AdminAnalyticsProvider {
     }
   }
 
+  private async fetchRevenueByOffer(
+    filters: AdminAnalyticsFilters
+  ): Promise<AdminAnalyticsRevenueByOfferRow[]> {
+    const martFilter = buildMartFilterClause(filters);
+    const table = `\`${this.projectId}.${this.datasets.marts}.mart_offer_daily\``;
+    const query = `
+      SELECT
+        COALESCE(offer_type, 'unknown') AS offer_type,
+        COALESCE(pricing_variant, 'unknown') AS pricing_variant,
+        COALESCE(SUM(purchases), 0) AS purchases,
+        COALESCE(SUM(gross_revenue_eur), 0) AS gross_revenue_eur,
+        COALESCE(SUM(refunds_eur), 0) AS refunds_eur,
+        COALESCE(SUM(disputes_eur), 0) AS disputes_fees_eur,
+        COALESCE(SUM(payment_fees_eur), 0) AS payment_fees_eur,
+        COALESCE(SUM(net_revenue_eur), 0) AS net_revenue_eur
+      FROM ${table}
+      ${martFilter.whereSql}
+      GROUP BY offer_type, pricing_variant
+      ORDER BY net_revenue_eur DESC, purchases DESC, offer_type ASC, pricing_variant ASC
+      LIMIT ${REVENUE_BY_OFFER_ROWS_LIMIT}
+    `;
+
+    try {
+      const rows = await this.runQuery<BigQueryRow>(query, martFilter.params);
+      return rows.map((row) => {
+        const rawOfferType = asNonEmptyString(row.offer_type) ?? "unknown";
+        const offerType: AdminAnalyticsRevenueByOfferRow["offer_type"] =
+          rawOfferType === "single" ||
+            rawOfferType === "pack_5" ||
+            rawOfferType === "pack_10"
+            ? rawOfferType
+            : "unknown";
+        const pricingVariant = asNonEmptyString(row.pricing_variant) ?? "unknown";
+        const offerKey = offerType === "pack_5"
+          ? "pack5"
+          : offerType === "pack_10"
+            ? "pack10"
+            : offerType === "single"
+              ? pricingVariant === "intro"
+                ? "single_intro"
+                : "single_base"
+              : "unknown";
+
+        return {
+          offer_type: offerType,
+          offer_key: offerKey,
+          pricing_variant: pricingVariant,
+          purchases: asNumber(row.purchases),
+          gross_revenue_eur: asNumber(row.gross_revenue_eur),
+          refunds_eur: asNumber(row.refunds_eur),
+          disputes_fees_eur: asNumber(row.disputes_fees_eur),
+          payment_fees_eur: asNumber(row.payment_fees_eur),
+          net_revenue_eur: asNumber(row.net_revenue_eur)
+        };
+      });
+    } catch (error) {
+      if (isNotFoundError(error)) {
+        return [];
+      }
+
+      throw error;
+    }
+  }
+
+  private async fetchRevenueByDimension(
+    filters: AdminAnalyticsFilters,
+    dimension: "tenant_id" | "test_id"
+  ): Promise<Array<{
+    dimension_value: string;
+    purchases: number;
+    gross_revenue_eur: number;
+    refunds_eur: number;
+    disputes_fees_eur: number;
+    payment_fees_eur: number;
+    net_revenue_eur: number;
+  }>> {
+    const funnelFilter = buildMartFilterClause(filters);
+    const pnlFilter = buildMartFilterClause(filters);
+    const funnelTable = `\`${this.projectId}.${this.datasets.marts}.mart_funnel_daily\``;
+    const pnlTable = `\`${this.projectId}.${this.datasets.marts}.mart_pnl_daily\``;
+    const query = `
+      WITH funnel AS (
+        SELECT
+          ${dimension} AS dimension_value,
+          COALESCE(SUM(purchases), 0) AS purchases
+        FROM ${funnelTable}
+        ${funnelFilter.whereSql}
+        GROUP BY ${dimension}
+      ),
+      pnl AS (
+        SELECT
+          ${dimension} AS dimension_value,
+          COALESCE(SUM(gross_revenue_eur), 0) AS gross_revenue_eur,
+          COALESCE(SUM(refunds_eur), 0) AS refunds_eur,
+          COALESCE(SUM(disputes_eur), 0) AS disputes_fees_eur,
+          COALESCE(SUM(payment_fees_eur), 0) AS payment_fees_eur,
+          COALESCE(SUM(net_revenue_eur), 0) AS net_revenue_eur
+        FROM ${pnlTable}
+        ${pnlFilter.whereSql}
+        GROUP BY ${dimension}
+      )
+      SELECT
+        COALESCE(funnel.dimension_value, pnl.dimension_value) AS dimension_value,
+        COALESCE(funnel.purchases, 0) AS purchases,
+        COALESCE(pnl.gross_revenue_eur, 0) AS gross_revenue_eur,
+        COALESCE(pnl.refunds_eur, 0) AS refunds_eur,
+        COALESCE(pnl.disputes_fees_eur, 0) AS disputes_fees_eur,
+        COALESCE(pnl.payment_fees_eur, 0) AS payment_fees_eur,
+        COALESCE(pnl.net_revenue_eur, 0) AS net_revenue_eur
+      FROM funnel
+      FULL OUTER JOIN pnl
+        ON funnel.dimension_value = pnl.dimension_value
+      WHERE COALESCE(funnel.dimension_value, pnl.dimension_value) IS NOT NULL
+        AND COALESCE(funnel.dimension_value, pnl.dimension_value) != '__unallocated__'
+      ORDER BY net_revenue_eur DESC, purchases DESC, dimension_value ASC
+      LIMIT ${REVENUE_TOP_ROWS_LIMIT}
+    `;
+    const rows = await this.runQuery<BigQueryRow>(
+      query,
+      mergeParams(funnelFilter.params, pnlFilter.params)
+    );
+
+    return rows
+      .map((row) => {
+        const dimensionValue = asNonEmptyString(row.dimension_value);
+        if (!dimensionValue) {
+          return null;
+        }
+
+        return {
+          dimension_value: dimensionValue,
+          purchases: asNumber(row.purchases),
+          gross_revenue_eur: asNumber(row.gross_revenue_eur),
+          refunds_eur: asNumber(row.refunds_eur),
+          disputes_fees_eur: asNumber(row.disputes_fees_eur),
+          payment_fees_eur: asNumber(row.payment_fees_eur),
+          net_revenue_eur: asNumber(row.net_revenue_eur)
+        };
+      })
+      .filter((row): row is {
+        dimension_value: string;
+        purchases: number;
+        gross_revenue_eur: number;
+        refunds_eur: number;
+        disputes_fees_eur: number;
+        payment_fees_eur: number;
+        net_revenue_eur: number;
+      } => row !== null);
+  }
+
+  private async fetchRevenueByTenant(
+    filters: AdminAnalyticsFilters
+  ): Promise<AdminAnalyticsRevenueByTenantRow[]> {
+    const rows = await this.fetchRevenueByDimension(filters, "tenant_id");
+    return rows.map((row) => ({
+      tenant_id: row.dimension_value,
+      purchases: row.purchases,
+      gross_revenue_eur: row.gross_revenue_eur,
+      refunds_eur: row.refunds_eur,
+      disputes_fees_eur: row.disputes_fees_eur,
+      payment_fees_eur: row.payment_fees_eur,
+      net_revenue_eur: row.net_revenue_eur
+    }));
+  }
+
+  private async fetchRevenueByTest(
+    filters: AdminAnalyticsFilters
+  ): Promise<AdminAnalyticsRevenueByTestRow[]> {
+    const rows = await this.fetchRevenueByDimension(filters, "test_id");
+    return rows.map((row) => ({
+      test_id: row.dimension_value,
+      purchases: row.purchases,
+      gross_revenue_eur: row.gross_revenue_eur,
+      refunds_eur: row.refunds_eur,
+      disputes_fees_eur: row.disputes_fees_eur,
+      payment_fees_eur: row.payment_fees_eur,
+      net_revenue_eur: row.net_revenue_eur
+    }));
+  }
+
+  private async fetchRevenueReconciliation(
+    filters: AdminAnalyticsFilters,
+    aggregate: OverviewAggregateRow
+  ): Promise<AdminAnalyticsRevenueReconciliation> {
+    const stripeFilter = buildStripeFilterClause(filters);
+    const table = `\`${this.projectId}.${this.datasets.stripe}.purchases\``;
+    const query = `
+      SELECT
+        COALESCE(COUNT(1), 0) AS stripe_purchase_count,
+        COALESCE(SUM(amount_eur), 0) AS stripe_gross_revenue_eur
+      FROM ${table}
+      ${stripeFilter.whereSql}
+    `;
+
+    try {
+      const [row] = await this.runQuery<BigQueryRow>(query, stripeFilter.params);
+      const stripePurchaseCount = asNumber(row?.stripe_purchase_count);
+      const stripeGrossRevenue = asNumber(row?.stripe_gross_revenue_eur);
+      const internalPurchaseCount = aggregate.purchases;
+      const internalGrossRevenue = aggregate.gross_revenue_eur;
+      const purchaseDiff = stripePurchaseCount - internalPurchaseCount;
+      const grossDiff = stripeGrossRevenue - internalGrossRevenue;
+      const purchaseDiffPct = reconciliationDiffPct(
+        purchaseDiff,
+        stripePurchaseCount,
+        internalPurchaseCount
+      );
+      const grossDiffPct = reconciliationDiffPct(
+        grossDiff,
+        stripeGrossRevenue,
+        internalGrossRevenue
+      );
+      const withinTolerance =
+        Math.abs(purchaseDiffPct) <= 0.03 &&
+        Math.abs(grossDiffPct) <= 0.03;
+
+      return {
+        available: true,
+        detail: withinTolerance
+          ? "Stripe and internal purchase_success signals are within tolerance."
+          : "Reconciliation drift exceeds tolerance. Inspect webhook lag and attribution joins.",
+        stripe_purchase_count: stripePurchaseCount,
+        internal_purchase_count: internalPurchaseCount,
+        purchase_count_diff: purchaseDiff,
+        purchase_count_diff_pct: purchaseDiffPct,
+        stripe_gross_revenue_eur: stripeGrossRevenue,
+        internal_gross_revenue_eur: internalGrossRevenue,
+        gross_revenue_diff_eur: grossDiff,
+        gross_revenue_diff_pct: grossDiffPct
+      };
+    } catch (error) {
+      if (isNotFoundError(error)) {
+        return {
+          available: false,
+          detail: "raw_stripe.purchases is unavailable; reconciliation signals are omitted.",
+          stripe_purchase_count: null,
+          internal_purchase_count: aggregate.purchases,
+          purchase_count_diff: null,
+          purchase_count_diff_pct: null,
+          stripe_gross_revenue_eur: null,
+          internal_gross_revenue_eur: aggregate.gross_revenue_eur,
+          gross_revenue_diff_eur: null,
+          gross_revenue_diff_pct: null
+        };
+      }
+
+      throw error;
+    }
+  }
+
+  private async fetchMartFreshnessRow(
+    tableName: "mart_funnel_daily" | "mart_pnl_daily"
+  ): Promise<AdminAnalyticsDataFreshnessRow> {
+    const thresholds = resolveFreshnessThresholds("marts", tableName);
+    const query = `
+      SELECT
+        MAX(TIMESTAMP(date)) AS last_loaded_utc,
+        TIMESTAMP_DIFF(CURRENT_TIMESTAMP(), MAX(TIMESTAMP(date)), MINUTE) AS lag_minutes
+      FROM ${this.table(tableName)}
+    `;
+
+    try {
+      const [row] = await this.runQuery<BigQueryRow>(query, {});
+      const hasTimestamp = row?.last_loaded_utc !== null && row?.last_loaded_utc !== undefined;
+      const lagMinutes = hasTimestamp ? asNumber(row?.lag_minutes) : null;
+
+      return {
+        dataset: "marts",
+        table: tableName,
+        last_loaded_utc: hasTimestamp ? asIsoTimestamp(row?.last_loaded_utc) : null,
+        lag_minutes: lagMinutes,
+        warn_after_minutes: thresholds.warn_after_minutes,
+        error_after_minutes: thresholds.error_after_minutes,
+        status: evaluateFreshnessStatus(lagMinutes, thresholds)
+      };
+    } catch (error) {
+      if (isNotFoundError(error)) {
+        return {
+          dataset: "marts",
+          table: tableName,
+          last_loaded_utc: null,
+          lag_minutes: null,
+          warn_after_minutes: thresholds.warn_after_minutes,
+          error_after_minutes: thresholds.error_after_minutes,
+          status: "error"
+        };
+      }
+
+      throw error;
+    }
+  }
+
+  private async fetchStripeFreshnessRow(): Promise<AdminAnalyticsDataFreshnessRow | null> {
+    const table = `\`${this.projectId}.${this.datasets.stripe}.purchases\``;
+    const query = `
+      SELECT
+        MAX(created_utc) AS last_loaded_utc,
+        TIMESTAMP_DIFF(CURRENT_TIMESTAMP(), MAX(created_utc), MINUTE) AS lag_minutes
+      FROM ${table}
+    `;
+
+    try {
+      const [row] = await this.runQuery<BigQueryRow>(query, {});
+      const thresholds = resolveFreshnessThresholds("raw_stripe", "purchases");
+      const hasTimestamp = row?.last_loaded_utc !== null && row?.last_loaded_utc !== undefined;
+      const lagMinutes = hasTimestamp ? asNumber(row?.lag_minutes) : null;
+
+      return {
+        dataset: "raw_stripe",
+        table: "purchases",
+        last_loaded_utc: hasTimestamp ? asIsoTimestamp(row?.last_loaded_utc) : null,
+        lag_minutes: lagMinutes,
+        warn_after_minutes: thresholds.warn_after_minutes,
+        error_after_minutes: thresholds.error_after_minutes,
+        status: evaluateFreshnessStatus(lagMinutes, thresholds)
+      };
+    } catch (error) {
+      if (isNotFoundError(error)) {
+        return null;
+      }
+
+      throw error;
+    }
+  }
+
+  private async fetchDataFreshnessRows(): Promise<AdminAnalyticsDataFreshnessRow[]> {
+    const [funnel, pnl, stripe] = await Promise.all([
+      this.fetchMartFreshnessRow("mart_funnel_daily"),
+      this.fetchMartFreshnessRow("mart_pnl_daily"),
+      this.fetchStripeFreshnessRow()
+    ]);
+
+    return stripe ? [funnel, pnl, stripe] : [funnel, pnl];
+  }
+
+  private async fetchDbtRunMarker(): Promise<AdminAnalyticsDataDbtRunMarker | null> {
+    const query = `
+      SELECT
+        TIMESTAMP_MILLIS(MAX(last_modified_time)) AS finished_at_utc
+      FROM \`${this.projectId}.${this.datasets.marts}.INFORMATION_SCHEMA.TABLES\`
+      WHERE table_name IN (
+        'mart_funnel_daily',
+        'mart_pnl_daily',
+        'mart_offer_daily',
+        'mart_unit_econ_daily'
+      )
+    `;
+
+    try {
+      const [row] = await this.runQuery<BigQueryRow>(query, {});
+      const finishedAt = asNonEmptyString(asIsoTimestamp(row?.finished_at_utc));
+      if (!finishedAt) {
+        return null;
+      }
+
+      return {
+        finished_at_utc: finishedAt,
+        invocation_id: null,
+        model_count: null
+      };
+    } catch (error) {
+      if (isNotFoundError(error)) {
+        return null;
+      }
+
+      throw error;
+    }
+  }
+
+  private buildDataHealthChecks(
+    freshnessRows: AdminAnalyticsDataFreshnessRow[],
+    alertsAvailable: boolean,
+    alerts: AdminAnalyticsDataAlertRow[],
+    dbtRunMarker: AdminAnalyticsDataDbtRunMarker | null
+  ): AdminAnalyticsDataResponse["checks"] {
+    const freshnessChecks: AdminAnalyticsDataResponse["checks"] = freshnessRows.map((row) => {
+      const fullName = `${row.dataset}.${row.table}`;
+      const detail = row.status === "ok"
+        ? `${fullName} freshness is within configured thresholds.`
+        : row.status === "warn"
+          ? `${fullName} lag crossed warning threshold.`
+          : `${fullName} is stale or unavailable.`;
+
+      return {
+        key: `freshness_${row.dataset}_${row.table}`,
+        label: `${fullName} freshness`,
+        status: row.status,
+        detail,
+        hint: row.status === "ok"
+          ? null
+          : `Check upstream ingestion for ${fullName} and rerun dbt models after upstream recovery.`,
+        last_updated_utc: row.last_loaded_utc
+      };
+    });
+
+    const alertStatuses = alerts.map((alert) => toHealthStatusFromAlertSeverity(alert.severity));
+    const alertStatus = !alertsAvailable
+      ? "warn"
+      : combineHealthStatus(alertStatuses.length > 0 ? alertStatuses : ["ok"]);
+    freshnessChecks.push({
+      key: "alert_events_freshness",
+      label: "Alert events availability",
+      status: alertStatus,
+      detail: !alertsAvailable
+        ? "marts.alert_events is unavailable."
+        : alerts.length > 0
+          ? "Recent alert events detected."
+          : "No recent alert events in selected range.",
+      hint: !alertsAvailable
+        ? "Verify marts.alert_events scheduled query and permissions."
+        : alertStatus === "ok"
+          ? null
+          : "Review marts.alert_events entries and resolve highlighted anomalies.",
+      last_updated_utc: alerts[0]?.detected_at_utc ?? null
+    });
+
+    freshnessChecks.push({
+      key: "dbt_last_run_marker",
+      label: "dbt last run marker",
+      status: dbtRunMarker ? "ok" : "warn",
+      detail: dbtRunMarker
+        ? "Recent marts table updates are available."
+        : "No dbt run marker detected.",
+      hint: dbtRunMarker ? null : "Confirm dbt build scheduling and artifact publication.",
+      last_updated_utc: dbtRunMarker?.finished_at_utc ?? null
+    });
+
+    return freshnessChecks;
+  }
+
   async getOverview(filters: AdminAnalyticsFilters): Promise<AdminAnalyticsOverviewResponse> {
     const [
       aggregate,
@@ -2359,13 +2896,95 @@ export class BigQueryAdminAnalyticsProvider implements AdminAnalyticsProvider {
   }
 
   async getRevenue(filters: AdminAnalyticsFilters): Promise<AdminAnalyticsRevenueResponse> {
-    void filters;
-    throw this.notImplemented("getRevenue");
+    const [aggregate, dailyRows, byOffer, byTenant, byTest] = await Promise.all([
+      this.fetchOverviewAggregate(filters),
+      this.fetchRevenueDailyRows(filters),
+      this.fetchRevenueByOffer(filters),
+      this.fetchRevenueByTenant(filters),
+      this.fetchRevenueByTest(filters)
+    ]);
+
+    const reconciliation = await this.fetchRevenueReconciliation(filters, aggregate);
+
+    return {
+      filters,
+      generated_at_utc: new Date().toISOString(),
+      kpis: [
+        {
+          key: "purchase_success_count",
+          label: "Purchases",
+          value: aggregate.purchases,
+          unit: "count",
+          delta: null
+        },
+        {
+          key: "gross_revenue_eur",
+          label: "Gross revenue (EUR)",
+          value: aggregate.gross_revenue_eur,
+          unit: "currency_eur",
+          delta: null
+        },
+        {
+          key: "payment_fees_eur",
+          label: "Payment fees (EUR)",
+          value: aggregate.payment_fees_eur,
+          unit: "currency_eur",
+          delta: null
+        },
+        {
+          key: "refunds_eur",
+          label: "Refunds (EUR)",
+          value: aggregate.refunds_eur,
+          unit: "currency_eur",
+          delta: null
+        },
+        {
+          key: "disputes_fees_eur",
+          label: "Disputes fees (EUR)",
+          value: aggregate.disputes_eur,
+          unit: "currency_eur",
+          delta: null
+        },
+        {
+          key: "net_revenue_eur",
+          label: "Net revenue (EUR)",
+          value: aggregate.net_revenue_eur,
+          unit: "currency_eur",
+          delta: null
+        }
+      ],
+      daily: dailyRows,
+      by_offer: byOffer,
+      by_tenant: byTenant,
+      by_test: byTest,
+      reconciliation
+    };
   }
 
   async getDataHealth(filters: AdminAnalyticsFilters): Promise<AdminAnalyticsDataResponse> {
-    void filters;
-    throw this.notImplemented("getDataHealth");
+    const [freshness, alerts, dbtRunMarker] = await Promise.all([
+      this.fetchDataFreshnessRows(),
+      this.fetchAlerts(filters),
+      this.fetchDbtRunMarker()
+    ]);
+    const checks = this.buildDataHealthChecks(
+      freshness,
+      alerts.available,
+      alerts.rows,
+      dbtRunMarker
+    );
+    const statuses = checks.map((check) => check.status);
+
+    return {
+      filters,
+      generated_at_utc: new Date().toISOString(),
+      status: combineHealthStatus(statuses.length > 0 ? statuses : ["ok"]),
+      checks,
+      freshness,
+      alerts_available: alerts.available,
+      alerts: alerts.rows,
+      dbt_last_run: dbtRunMarker
+    };
   }
 }
 

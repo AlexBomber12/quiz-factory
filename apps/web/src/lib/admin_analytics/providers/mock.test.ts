@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { evaluateFreshnessStatus } from "../data_health";
 import { createMockAdminAnalyticsProvider } from "./mock";
 import type { AdminAnalyticsFilters } from "../types";
 
@@ -117,63 +118,58 @@ describe("MockAdminAnalyticsProvider", () => {
     expect(revenue.kpis.length).toBeGreaterThan(0);
     expect(revenue.daily.length).toBe(7);
     expect(revenue.by_offer).toHaveLength(3);
+    expect(revenue.by_offer[0]).toMatchObject({
+      offer_type: expect.any(String),
+      offer_key: expect.any(String),
+      pricing_variant: expect.any(String),
+      purchases: expect.any(Number),
+      gross_revenue_eur: expect.any(Number),
+      refunds_eur: expect.any(Number),
+      disputes_fees_eur: expect.any(Number),
+      payment_fees_eur: expect.any(Number),
+      net_revenue_eur: expect.any(Number)
+    });
+    expect(revenue.by_tenant.length).toBeGreaterThan(0);
+    expect(revenue.by_test.length).toBeGreaterThan(0);
+    expect(revenue.reconciliation).toMatchObject({
+      available: expect.any(Boolean),
+      detail: expect.any(String),
+      stripe_purchase_count: expect.any(Number),
+      internal_purchase_count: expect.any(Number),
+      purchase_count_diff_pct: expect.any(Number),
+      stripe_gross_revenue_eur: expect.any(Number),
+      internal_gross_revenue_eur: expect.any(Number),
+      gross_revenue_diff_pct: expect.any(Number)
+    });
 
     const dataHealth = await provider.getDataHealth(FILTERS);
+    expect(["ok", "warn", "error"]).toContain(dataHealth.status);
     expect(dataHealth.checks.length).toBeGreaterThan(0);
     expect(dataHealth.freshness.length).toBeGreaterThan(0);
+    expect(typeof dataHealth.alerts_available).toBe("boolean");
+    expect(dataHealth.alerts.length).toBeGreaterThan(0);
+    expect(dataHealth.dbt_last_run).not.toBeNull();
     expect(dataHealth.freshness[0]).toMatchObject({
       dataset: expect.any(String),
       table: expect.any(String),
-      lag_minutes: expect.any(Number)
+      lag_minutes: expect.any(Number),
+      warn_after_minutes: expect.any(Number),
+      error_after_minutes: expect.any(Number)
     });
   });
 
-  it("scopes cost_ingestion status to raw_costs.ad_spend_daily freshness", async () => {
+  it("evaluates freshness status using configured thresholds", async () => {
     const provider = createMockAdminAnalyticsProvider();
+    const dataHealth = await provider.getDataHealth(FILTERS);
 
-    let sampledDataHealth: Awaited<ReturnType<typeof provider.getDataHealth>> | null = null;
-    for (let dayOffset = 0; dayOffset < 120; dayOffset += 1) {
-      const date = new Date(Date.UTC(2026, 1, 1 + dayOffset));
-      const day = date.toISOString().slice(0, 10);
-      const filters: AdminAnalyticsFilters = {
-        ...FILTERS,
-        start: day,
-        end: day,
-        utm_source: `source-${dayOffset}`
-      };
-
-      const candidate = await provider.getDataHealth(filters);
-      const costRow = candidate.freshness.find(
-        (row) => row.dataset === "raw_costs" && row.table === "ad_spend_daily"
+    for (const row of dataHealth.freshness) {
+      expect(row.status).toBe(
+        evaluateFreshnessStatus(row.lag_minutes, {
+          warn_after_minutes: row.warn_after_minutes,
+          error_after_minutes: row.error_after_minutes
+        })
       );
-      const pnlRow = candidate.freshness.find(
-        (row) => row.dataset === "marts" && row.table === "mart_pnl_daily"
-      );
-      const costCheck = candidate.checks.find((check) => check.key === "cost_ingestion");
-
-      if (!costRow || !pnlRow || !costCheck) {
-        continue;
-      }
-
-      if (pnlRow.status !== "ok" && costRow.status === "ok") {
-        sampledDataHealth = candidate;
-        break;
-      }
     }
-
-    expect(sampledDataHealth).not.toBeNull();
-    if (!sampledDataHealth) {
-      return;
-    }
-
-    const costRow = sampledDataHealth.freshness.find(
-      (row) => row.dataset === "raw_costs" && row.table === "ad_spend_daily"
-    );
-    const costCheck = sampledDataHealth.checks.find((check) => check.key === "cost_ingestion");
-
-    expect(costRow?.status).toBe("ok");
-    expect(costCheck?.status).toBe("ok");
-    expect(costCheck?.detail).toContain("raw_costs.ad_spend_daily");
   });
 
   it("returns an empty tenant detail payload for unknown tenant_id", async () => {

@@ -1041,3 +1041,352 @@ describe("BigQueryAdminAnalyticsProvider.getTraffic", () => {
     expect(calls.some((call) => call.query.includes("traffic_funnel_breakdown:country"))).toBe(false);
   });
 });
+
+describe("BigQueryAdminAnalyticsProvider.getRevenue", () => {
+  it("returns revenue KPIs, breakdowns, and reconciliation", async () => {
+    const { provider, calls } = makeProvider((query) => {
+      if (query.includes("funnel_agg")) {
+        return [
+          {
+            sessions: 180,
+            test_starts: 140,
+            test_completes: 110,
+            paywall_views: 80,
+            checkout_starts: 60,
+            purchases: 28,
+            paid_conversion: 0.1556,
+            gross_revenue_eur: 1400,
+            net_revenue_eur: 1080,
+            refunds_eur: 90,
+            disputes_eur: 35,
+            payment_fees_eur: 195
+          }
+        ];
+      }
+
+      if (query.includes("COALESCE(SUM(gross_revenue_eur), 0) AS gross_revenue_eur") && query.includes("GROUP BY date")) {
+        return [
+          {
+            date: "2026-02-01",
+            gross_revenue_eur: 620,
+            refunds_eur: 40,
+            disputes_fees_eur: 15,
+            payment_fees_eur: 80,
+            net_revenue_eur: 485
+          },
+          {
+            date: "2026-02-02",
+            gross_revenue_eur: 780,
+            refunds_eur: 50,
+            disputes_fees_eur: 20,
+            payment_fees_eur: 115,
+            net_revenue_eur: 595
+          }
+        ];
+      }
+
+      if (query.includes("FROM `quiz-factory-analytics.marts.mart_offer_daily`")) {
+        return [
+          {
+            offer_type: "single",
+            pricing_variant: "intro",
+            purchases: 11,
+            gross_revenue_eur: 550,
+            refunds_eur: 30,
+            disputes_fees_eur: 10,
+            payment_fees_eur: 70,
+            net_revenue_eur: 440
+          },
+          {
+            offer_type: "pack_5",
+            pricing_variant: "base",
+            purchases: 10,
+            gross_revenue_eur: 500,
+            refunds_eur: 34,
+            disputes_fees_eur: 13,
+            payment_fees_eur: 63,
+            net_revenue_eur: 390
+          }
+        ];
+      }
+
+      if (query.includes("GROUP BY tenant_id") && query.includes("dimension_value")) {
+        return [
+          {
+            dimension_value: "tenant-quizfactory-en",
+            purchases: 16,
+            gross_revenue_eur: 820,
+            refunds_eur: 48,
+            disputes_fees_eur: 21,
+            payment_fees_eur: 102,
+            net_revenue_eur: 649
+          }
+        ];
+      }
+
+      if (query.includes("GROUP BY test_id") && query.includes("dimension_value")) {
+        return [
+          {
+            dimension_value: "test-focus-rhythm",
+            purchases: 14,
+            gross_revenue_eur: 760,
+            refunds_eur: 42,
+            disputes_fees_eur: 17,
+            payment_fees_eur: 95,
+            net_revenue_eur: 606
+          }
+        ];
+      }
+
+      if (query.includes("FROM `quiz-factory-analytics.raw_stripe.purchases`") && query.includes("stripe_purchase_count")) {
+        return [
+          {
+            stripe_purchase_count: 29,
+            stripe_gross_revenue_eur: 1410
+          }
+        ];
+      }
+
+      return [];
+    });
+
+    const revenue = await provider.getRevenue(FILTERS);
+
+    expect(revenue.kpis.some((kpi) => kpi.key === "purchase_success_count")).toBe(true);
+    expect(revenue.daily).toHaveLength(2);
+    expect(revenue.by_offer[0]).toMatchObject({
+      offer_type: "single",
+      offer_key: "single_intro",
+      pricing_variant: "intro",
+      purchases: 11
+    });
+    expect(revenue.by_tenant).toEqual([
+      {
+        tenant_id: "tenant-quizfactory-en",
+        purchases: 16,
+        gross_revenue_eur: 820,
+        refunds_eur: 48,
+        disputes_fees_eur: 21,
+        payment_fees_eur: 102,
+        net_revenue_eur: 649
+      }
+    ]);
+    expect(revenue.by_test).toEqual([
+      {
+        test_id: "test-focus-rhythm",
+        purchases: 14,
+        gross_revenue_eur: 760,
+        refunds_eur: 42,
+        disputes_fees_eur: 17,
+        payment_fees_eur: 95,
+        net_revenue_eur: 606
+      }
+    ]);
+    expect(revenue.reconciliation).toMatchObject({
+      available: true,
+      stripe_purchase_count: 29,
+      internal_purchase_count: 28
+    });
+
+    const reconciliationCall = calls.find((call) =>
+      call.query.includes("FROM `quiz-factory-analytics.raw_stripe.purchases`") &&
+      call.query.includes("stripe_purchase_count")
+    );
+    expect(reconciliationCall?.params).toMatchObject({
+      start_date: FILTERS.start,
+      end_date: FILTERS.end,
+      tenant_id: FILTERS.tenant_id,
+      test_id: FILTERS.test_id,
+      locale: FILTERS.locale,
+      utm_source: FILTERS.utm_source
+    });
+  });
+
+  it("reports drift when Stripe totals are zero but internal totals are non-zero", async () => {
+    const { provider } = makeProvider((query) => {
+      if (query.includes("funnel_agg")) {
+        return [
+          {
+            sessions: 40,
+            test_starts: 30,
+            test_completes: 25,
+            paywall_views: 20,
+            checkout_starts: 15,
+            purchases: 5,
+            paid_conversion: 0.125,
+            gross_revenue_eur: 250,
+            net_revenue_eur: 180,
+            refunds_eur: 20,
+            disputes_eur: 10,
+            payment_fees_eur: 40
+          }
+        ];
+      }
+
+      if (query.includes("COALESCE(SUM(gross_revenue_eur), 0) AS gross_revenue_eur") && query.includes("GROUP BY date")) {
+        return [];
+      }
+
+      if (query.includes("FROM `quiz-factory-analytics.raw_stripe.purchases`") && query.includes("stripe_purchase_count")) {
+        return [
+          {
+            stripe_purchase_count: 0,
+            stripe_gross_revenue_eur: 0
+          }
+        ];
+      }
+
+      return [];
+    });
+
+    const revenue = await provider.getRevenue(FILTERS);
+
+    expect(revenue.reconciliation).toMatchObject({
+      available: true,
+      stripe_purchase_count: 0,
+      internal_purchase_count: 5,
+      purchase_count_diff: -5,
+      purchase_count_diff_pct: -1,
+      stripe_gross_revenue_eur: 0,
+      internal_gross_revenue_eur: 250,
+      gross_revenue_diff_eur: -250,
+      gross_revenue_diff_pct: -1
+    });
+    expect(revenue.reconciliation.detail).toContain("drift exceeds tolerance");
+  });
+});
+
+describe("BigQueryAdminAnalyticsProvider.getDataHealth", () => {
+  it("returns freshness rows, checks, alerts, and dbt marker", async () => {
+    const { provider } = makeProvider((query) => {
+      if (query.includes("FROM `quiz-factory-analytics.marts.mart_funnel_daily`") && query.includes("MAX(TIMESTAMP(date))")) {
+        return [
+          {
+            last_loaded_utc: "2026-02-06T23:00:00.000Z",
+            lag_minutes: 1400
+          }
+        ];
+      }
+
+      if (query.includes("FROM `quiz-factory-analytics.marts.mart_pnl_daily`") && query.includes("MAX(TIMESTAMP(date))")) {
+        return [
+          {
+            last_loaded_utc: "2026-02-06T14:00:00.000Z",
+            lag_minutes: 1900
+          }
+        ];
+      }
+
+      if (query.includes("FROM `quiz-factory-analytics.raw_stripe.purchases`") && query.includes("MAX(created_utc)")) {
+        return [
+          {
+            last_loaded_utc: "2026-02-07T11:00:00.000Z",
+            lag_minutes: 70
+          }
+        ];
+      }
+
+      if (query.includes("FROM `quiz-factory-analytics.marts.alert_events`")) {
+        return [
+          {
+            detected_at_utc: "2026-02-07T12:00:00.000Z",
+            alert_name: "pnl_lag",
+            severity: "warn",
+            tenant_id: "tenant-quizfactory-en",
+            metric_value: 1900,
+            threshold_value: 1800
+          }
+        ];
+      }
+
+      if (query.includes("INFORMATION_SCHEMA.TABLES") && query.includes("last_modified_time")) {
+        return [
+          {
+            finished_at_utc: "2026-02-07T12:15:00.000Z"
+          }
+        ];
+      }
+
+      return [];
+    });
+
+    const dataHealth = await provider.getDataHealth(FILTERS);
+
+    expect(dataHealth.freshness).toHaveLength(3);
+    expect(dataHealth.freshness[0]).toMatchObject({
+      dataset: "marts",
+      table: "mart_funnel_daily",
+      warn_after_minutes: expect.any(Number),
+      error_after_minutes: expect.any(Number)
+    });
+    expect(dataHealth.status).toBe("warn");
+    expect(dataHealth.alerts_available).toBe(true);
+    expect(dataHealth.alerts).toHaveLength(1);
+    expect(dataHealth.dbt_last_run).toEqual({
+      finished_at_utc: "2026-02-07T12:15:00.000Z",
+      invocation_id: null,
+      model_count: null
+    });
+    expect(dataHealth.checks.length).toBeGreaterThanOrEqual(4);
+  });
+
+  it("surfaces missing required marts tables as error freshness rows", async () => {
+    const { provider } = makeProvider((query) => {
+      if (query.includes("FROM `quiz-factory-analytics.marts.mart_funnel_daily`") && query.includes("MAX(TIMESTAMP(date))")) {
+        const error = new Error("Not found: Table quiz-factory-analytics:marts.mart_funnel_daily");
+        (error as Error & { code: number }).code = 404;
+        throw error;
+      }
+
+      if (query.includes("FROM `quiz-factory-analytics.marts.mart_pnl_daily`") && query.includes("MAX(TIMESTAMP(date))")) {
+        return [
+          {
+            last_loaded_utc: "2026-02-07T00:10:00.000Z",
+            lag_minutes: 1650
+          }
+        ];
+      }
+
+      if (query.includes("FROM `quiz-factory-analytics.raw_stripe.purchases`") && query.includes("MAX(created_utc)")) {
+        return [
+          {
+            last_loaded_utc: "2026-02-07T11:00:00.000Z",
+            lag_minutes: 70
+          }
+        ];
+      }
+
+      if (query.includes("FROM `quiz-factory-analytics.marts.alert_events`")) {
+        return [];
+      }
+
+      if (query.includes("INFORMATION_SCHEMA.TABLES") && query.includes("last_modified_time")) {
+        return [
+          {
+            finished_at_utc: "2026-02-07T12:15:00.000Z"
+          }
+        ];
+      }
+
+      return [];
+    });
+
+    const dataHealth = await provider.getDataHealth(FILTERS);
+    const missingMartRow = dataHealth.freshness.find(
+      (row) => row.dataset === "marts" && row.table === "mart_funnel_daily"
+    );
+    const missingMartCheck = dataHealth.checks.find(
+      (check) => check.key === "freshness_marts_mart_funnel_daily"
+    );
+
+    expect(missingMartRow).toMatchObject({
+      dataset: "marts",
+      table: "mart_funnel_daily",
+      last_loaded_utc: null,
+      lag_minutes: null,
+      status: "error"
+    });
+    expect(missingMartCheck?.status).toBe("error");
+    expect(dataHealth.status).toBe("error");
+  });
+});
