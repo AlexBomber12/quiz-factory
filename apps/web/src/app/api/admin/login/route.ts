@@ -117,7 +117,7 @@ export const POST = async (request: Request): Promise<Response> => {
     expires: session.expiresAt
   });
 
-  await logAdminEvent({
+  void logAdminEvent({
     actor: role,
     action: "admin_login",
     entity_type: "tenant",
@@ -125,7 +125,7 @@ export const POST = async (request: Request): Promise<Response> => {
     metadata: {
       host: requestUrl.hostname
     }
-  });
+  }).catch(() => undefined);
 
   return response;
 };
