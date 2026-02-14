@@ -463,6 +463,8 @@ describe("BigQueryAdminAnalyticsProvider.getTenantDetail", () => {
     const detail = await provider.getTenantDetail("tenant-missing", FILTERS);
 
     expect(detail.has_data).toBe(false);
+    expect(detail.kpis).toEqual([]);
+    expect(detail.funnel).toEqual([]);
     expect(detail.sessions_timeseries).toEqual([]);
     expect(detail.revenue_timeseries).toEqual([]);
     expect(detail.top_tests_total).toBe(0);

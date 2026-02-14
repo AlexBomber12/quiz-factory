@@ -25,7 +25,7 @@ const SORT_FIELDS = [
   "tenant_id",
   "sessions",
   "test_starts",
-  "test_completes",
+  "test_completions",
   "purchases",
   "paid_conversion",
   "net_revenue_eur",
@@ -184,8 +184,8 @@ const sortRows = (
       case "test_starts":
         comparison = Number(left.test_starts) - Number(right.test_starts);
         break;
-      case "test_completes":
-        comparison = Number(left.test_completes) - Number(right.test_completes);
+      case "test_completions":
+        comparison = Number(left.test_completions) - Number(right.test_completions);
         break;
       case "purchases":
         comparison = Number(left.purchases) - Number(right.purchases);
@@ -327,9 +327,9 @@ export default async function AdminAnalyticsTenantsPage({ searchParams }: PagePr
                   <th className="px-2 py-2 font-semibold">
                     <Link
                       className="underline underline-offset-4 hover:no-underline"
-                      href={buildSortHref(queryString, field, direction, "test_completes")}
+                      href={buildSortHref(queryString, field, direction, "test_completions")}
                     >
-                      completes{getSortIndicator(field, direction, "test_completes")}
+                      completes{getSortIndicator(field, direction, "test_completions")}
                     </Link>
                   </th>
                   <th className="px-2 py-2 font-semibold">
@@ -390,7 +390,7 @@ export default async function AdminAnalyticsTenantsPage({ searchParams }: PagePr
                       </td>
                       <td className="px-2 py-2">{numberFormatter.format(Number(row.sessions))}</td>
                       <td className="px-2 py-2">{numberFormatter.format(Number(row.test_starts))}</td>
-                      <td className="px-2 py-2">{numberFormatter.format(Number(row.test_completes))}</td>
+                      <td className="px-2 py-2">{numberFormatter.format(Number(row.test_completions))}</td>
                       <td className="px-2 py-2">{numberFormatter.format(Number(row.purchases))}</td>
                       <td className="px-2 py-2">{percentFormatter.format(Number(row.paid_conversion))}</td>
                       <td className="px-2 py-2">{currencyFormatter.format(Number(row.net_revenue_eur))}</td>
