@@ -1,10 +1,14 @@
 import { parseDateYYYYMMDD } from "../../admin/analytics_dates";
 import type { AdminAnalyticsProvider } from "../provider";
-import type {
+import {
+  resolveAdminAnalyticsDistributionOptions,
+  type AdminAnalyticsDistributionCell,
+  type AdminAnalyticsDistributionOptions,
   AdminAnalyticsBreakdownRow,
   AdminAnalyticsDataFreshnessRow,
   AdminAnalyticsDataHealthCheck,
   AdminAnalyticsDataResponse,
+  AdminAnalyticsDistributionColumn,
   AdminAnalyticsDistributionResponse,
   AdminAnalyticsDistributionRow,
   AdminAnalyticsFilters,
@@ -727,6 +731,70 @@ const buildOverviewAlerts = (filters: AdminAnalyticsFilters): AdminAnalyticsOver
   ];
 };
 
+const getMockPublicationState = (
+  tenantId: string,
+  testId: string
+): { is_published: boolean; version_id: string | null; enabled: boolean | null } => {
+  const seed = stableHash(`publication:${tenantId}:${testId}`);
+  const hasVersion = seed % 5 !== 0;
+  const enabled = hasVersion ? seed % 7 !== 0 : null;
+  const versionId = hasVersion ? `version-${((seed % 13) + 1).toString().padStart(2, "0")}` : null;
+
+  return {
+    is_published: Boolean(versionId && enabled),
+    version_id: versionId,
+    enabled
+  };
+};
+
+const selectTopTenantsForDistribution = (
+  filters: AdminAnalyticsFilters,
+  topTenants: number
+): Array<{ tenant_id: string; net_revenue_eur_7d: number }> => {
+  return resolveTenantIds(filters)
+    .map((tenantId) => {
+      const scopedFilters: AdminAnalyticsFilters = {
+        ...filters,
+        tenant_id: tenantId
+      };
+      const summary = summarizeSeries(buildDailySeries(scopedFilters, `distribution-top-tenant:${tenantId}`));
+      return {
+        tenant_id: tenantId,
+        net_revenue_eur_7d: summary.net_revenue_eur
+      };
+    })
+    .sort(
+      (left, right) =>
+        right.net_revenue_eur_7d - left.net_revenue_eur_7d ||
+        left.tenant_id.localeCompare(right.tenant_id)
+    )
+    .slice(0, topTenants);
+};
+
+const selectTopTestsForDistribution = (
+  filters: AdminAnalyticsFilters,
+  topTests: number
+): Array<{ test_id: string; net_revenue_eur_7d: number }> => {
+  return resolveTestIds(filters)
+    .map((testId) => {
+      const scopedFilters: AdminAnalyticsFilters = {
+        ...filters,
+        test_id: testId
+      };
+      const summary = summarizeSeries(buildDailySeries(scopedFilters, `distribution-top-test:${testId}`));
+      return {
+        test_id: testId,
+        net_revenue_eur_7d: summary.net_revenue_eur
+      };
+    })
+    .sort(
+      (left, right) =>
+        right.net_revenue_eur_7d - left.net_revenue_eur_7d ||
+        left.test_id.localeCompare(right.test_id)
+    )
+    .slice(0, topTests);
+};
+
 export class MockAdminAnalyticsProvider implements AdminAnalyticsProvider {
   async getOverview(filters: AdminAnalyticsFilters): Promise<AdminAnalyticsOverviewResponse> {
     const daily = buildDailySeries(filters, "overview");
@@ -847,43 +915,67 @@ export class MockAdminAnalyticsProvider implements AdminAnalyticsProvider {
     };
   }
 
-  async getDistribution(filters: AdminAnalyticsFilters): Promise<AdminAnalyticsDistributionResponse> {
-    const tenantIds = resolveTenantIds(filters).slice(0, 3);
-    const testIds = resolveTestIds(filters).slice(0, 3);
-    const rows: AdminAnalyticsDistributionRow[] = [];
+  async getDistribution(
+    filters: AdminAnalyticsFilters,
+    options: AdminAnalyticsDistributionOptions
+  ): Promise<AdminAnalyticsDistributionResponse> {
+    const resolvedOptions = resolveAdminAnalyticsDistributionOptions(options);
+    const topTenants = selectTopTenantsForDistribution(filters, resolvedOptions.top_tenants);
+    const topTests = selectTopTestsForDistribution(filters, resolvedOptions.top_tests);
 
-    for (const tenantId of tenantIds) {
-      for (const testId of testIds) {
-        const scopedFilters: AdminAnalyticsFilters = {
-          ...filters,
-          tenant_id: tenantId,
-          test_id: testId
-        };
-        const daily = buildDailySeries(scopedFilters, `distribution:${tenantId}:${testId}`);
-        const summary = summarizeSeries(daily);
+    const rowOrder = topTenants.map((entry) => entry.tenant_id);
+    const columnOrder = topTests.map((entry) => entry.test_id);
 
-        rows.push({
-          tenant_id: tenantId,
-          test_id: testId,
-          visits: summary.visits,
-          test_completions: summary.test_completions,
-          purchase_success_count: summary.purchase_success_count,
-          revenue_eur: summary.net_revenue_eur
-        });
-      }
+    const columns: Record<string, AdminAnalyticsDistributionColumn> = {};
+    for (const column of topTests) {
+      columns[column.test_id] = {
+        test_id: column.test_id,
+        net_revenue_eur_7d: column.net_revenue_eur_7d
+      };
     }
 
-    rows.sort(
-      (left, right) =>
-        right.revenue_eur - left.revenue_eur ||
-        left.tenant_id.localeCompare(right.tenant_id) ||
-        left.test_id.localeCompare(right.test_id)
-    );
+    const rows: Record<string, AdminAnalyticsDistributionRow> = {};
+    for (const row of topTenants) {
+      const cells: Record<string, AdminAnalyticsDistributionCell> = {};
+
+      for (const testId of columnOrder) {
+        const scopedFilters: AdminAnalyticsFilters = {
+          ...filters,
+          tenant_id: row.tenant_id,
+          test_id: testId
+        };
+        const summary = summarizeSeries(
+          buildDailySeries(scopedFilters, `distribution:${row.tenant_id}:${testId}`)
+        );
+        const publication = getMockPublicationState(row.tenant_id, testId);
+
+        cells[testId] = {
+          tenant_id: row.tenant_id,
+          test_id: testId,
+          is_published: publication.is_published,
+          version_id: publication.version_id,
+          enabled: publication.enabled,
+          net_revenue_eur_7d: summary.net_revenue_eur,
+          paid_conversion_7d: divide(summary.purchase_success_count, summary.visits)
+        };
+      }
+
+      rows[row.tenant_id] = {
+        tenant_id: row.tenant_id,
+        net_revenue_eur_7d: row.net_revenue_eur_7d,
+        cells
+      };
+    }
 
     return {
       filters,
       generated_at_utc: generatedAtUtc(filters),
-      rows
+      top_tenants: resolvedOptions.top_tenants,
+      top_tests: resolvedOptions.top_tests,
+      row_order: rowOrder,
+      column_order: columnOrder,
+      rows,
+      columns
     };
   }
 

@@ -1,5 +1,6 @@
 import type {
   AdminAnalyticsDataResponse,
+  AdminAnalyticsDistributionOptions,
   AdminAnalyticsDistributionResponse,
   AdminAnalyticsFilters,
   AdminAnalyticsOverviewResponse,
@@ -25,7 +26,10 @@ export interface AdminAnalyticsProvider {
     tenantId: string,
     filters: AdminAnalyticsFilters
   ): Promise<AdminAnalyticsTenantDetailResponse>;
-  getDistribution(filters: AdminAnalyticsFilters): Promise<AdminAnalyticsDistributionResponse>;
+  getDistribution(
+    filters: AdminAnalyticsFilters,
+    options: AdminAnalyticsDistributionOptions
+  ): Promise<AdminAnalyticsDistributionResponse>;
   getTraffic(filters: AdminAnalyticsFilters): Promise<AdminAnalyticsTrafficResponse>;
   getRevenue(filters: AdminAnalyticsFilters): Promise<AdminAnalyticsRevenueResponse>;
   getDataHealth(filters: AdminAnalyticsFilters): Promise<AdminAnalyticsDataResponse>;
