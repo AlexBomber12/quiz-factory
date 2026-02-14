@@ -1,8 +1,15 @@
 import { parseDateYYYYMMDD } from "../../admin/analytics_dates";
+import {
+  combineHealthStatus,
+  evaluateFreshnessStatus,
+  resolveFreshnessThresholds
+} from "../data_health";
 import type { AdminAnalyticsProvider } from "../provider";
 import {
   resolveAdminAnalyticsDistributionOptions,
   resolveAdminAnalyticsTrafficOptions,
+  AdminAnalyticsDataAlertRow,
+  AdminAnalyticsDataDbtRunMarker,
   type AdminAnalyticsDistributionCell,
   type AdminAnalyticsDistributionOptions,
   type AdminAnalyticsTrafficOptions,
@@ -19,7 +26,10 @@ import {
   AdminAnalyticsOverviewTopTenantRow,
   AdminAnalyticsOverviewTopTestRow,
   AdminAnalyticsRevenueByOfferRow,
+  AdminAnalyticsRevenueByTenantRow,
+  AdminAnalyticsRevenueByTestRow,
   AdminAnalyticsRevenueDailyRow,
+  AdminAnalyticsRevenueReconciliation,
   AdminAnalyticsRevenueResponse,
   AdminAnalyticsTenantDetailResponse,
   AdminAnalyticsTenantLocaleRow,
@@ -63,6 +73,7 @@ const DEFAULT_LOCALES = ["en", "es", "pt-BR"] as const;
 const DEFAULT_COUNTRIES = ["US", "ES", "BR", "MX"] as const;
 const OFFER_TYPES = ["single", "pack_5", "pack_10"] as const;
 const TENANT_TABLE_LIMIT = 20;
+const REVENUE_TOP_ROWS_LIMIT = 10;
 
 type DailyMetrics = {
   date: string;
@@ -739,6 +750,226 @@ const buildOverviewAlerts = (filters: AdminAnalyticsFilters): AdminAnalyticsOver
   ];
 };
 
+const buildRevenueByOfferRows = (filters: AdminAnalyticsFilters): AdminAnalyticsRevenueByOfferRow[] => {
+  const daily = buildDailySeries(filters, "revenue-by-offer");
+  const summary = summarizeSeries(daily);
+  const seed = seedFromFilters(filters, "revenue-by-offer-seed");
+  const offerWeights = OFFER_TYPES.map((_, index) => ((seed + index * 17) % 10) + 2);
+  const purchasesByOffer = allocateByWeights(summary.purchase_success_count, offerWeights);
+  const grossByOffer = allocateByWeights(Math.round(summary.gross_revenue_eur * 100), offerWeights).map(
+    (value) => roundCurrency(value / 100)
+  );
+  const refundsByOffer = allocateByWeights(Math.round(summary.refunds_eur * 100), offerWeights).map(
+    (value) => roundCurrency(value / 100)
+  );
+  const disputesByOffer = allocateByWeights(Math.round(summary.disputes_fees_eur * 100), offerWeights).map(
+    (value) => roundCurrency(value / 100)
+  );
+  const paymentFeesByOffer = allocateByWeights(Math.round(summary.payment_fees_eur * 100), offerWeights).map(
+    (value) => roundCurrency(value / 100)
+  );
+  const netByOffer = allocateByWeights(Math.round(summary.net_revenue_eur * 100), offerWeights).map(
+    (value) => roundCurrency(value / 100)
+  );
+
+  return OFFER_TYPES.map((offerType, index) => {
+    const pricingVariant = offerType === "single" && (seed + index) % 2 === 0 ? "intro" : "base";
+    const offerKey = offerType === "single"
+      ? "single_base_299"
+      : offerType === "pack_5"
+        ? "pack5"
+        : "pack10";
+
+    return {
+      offer_type: offerType,
+      offer_key: offerKey,
+      pricing_variant: pricingVariant,
+      purchases: purchasesByOffer[index] ?? 0,
+      gross_revenue_eur: grossByOffer[index] ?? 0,
+      refunds_eur: refundsByOffer[index] ?? 0,
+      disputes_fees_eur: disputesByOffer[index] ?? 0,
+      payment_fees_eur: paymentFeesByOffer[index] ?? 0,
+      net_revenue_eur: netByOffer[index] ?? 0
+    };
+  }).sort((left, right) => right.net_revenue_eur - left.net_revenue_eur);
+};
+
+const buildRevenueByTenantRows = (filters: AdminAnalyticsFilters): AdminAnalyticsRevenueByTenantRow[] => {
+  return resolveTenantIds(filters)
+    .map((tenantId) => {
+      const scopedFilters: AdminAnalyticsFilters = {
+        ...filters,
+        tenant_id: tenantId
+      };
+      const summary = summarizeSeries(buildDailySeries(scopedFilters, `revenue-tenant:${tenantId}`));
+
+      return {
+        tenant_id: tenantId,
+        purchases: summary.purchase_success_count,
+        gross_revenue_eur: summary.gross_revenue_eur,
+        refunds_eur: summary.refunds_eur,
+        disputes_fees_eur: summary.disputes_fees_eur,
+        payment_fees_eur: summary.payment_fees_eur,
+        net_revenue_eur: summary.net_revenue_eur
+      };
+    })
+    .sort(
+      (left, right) =>
+        right.net_revenue_eur - left.net_revenue_eur ||
+        right.purchases - left.purchases ||
+        left.tenant_id.localeCompare(right.tenant_id)
+    )
+    .slice(0, REVENUE_TOP_ROWS_LIMIT);
+};
+
+const buildRevenueByTestRows = (filters: AdminAnalyticsFilters): AdminAnalyticsRevenueByTestRow[] => {
+  return resolveTestIds(filters)
+    .map((testId) => {
+      const scopedFilters: AdminAnalyticsFilters = {
+        ...filters,
+        test_id: testId
+      };
+      const summary = summarizeSeries(buildDailySeries(scopedFilters, `revenue-test:${testId}`));
+
+      return {
+        test_id: testId,
+        purchases: summary.purchase_success_count,
+        gross_revenue_eur: summary.gross_revenue_eur,
+        refunds_eur: summary.refunds_eur,
+        disputes_fees_eur: summary.disputes_fees_eur,
+        payment_fees_eur: summary.payment_fees_eur,
+        net_revenue_eur: summary.net_revenue_eur
+      };
+    })
+    .sort(
+      (left, right) =>
+        right.net_revenue_eur - left.net_revenue_eur ||
+        right.purchases - left.purchases ||
+        left.test_id.localeCompare(right.test_id)
+    )
+    .slice(0, REVENUE_TOP_ROWS_LIMIT);
+};
+
+const buildRevenueReconciliation = (
+  filters: AdminAnalyticsFilters,
+  summary: MetricsSummary
+): AdminAnalyticsRevenueReconciliation => {
+  const seed = seedFromFilters(filters, "revenue-reconciliation");
+  const purchaseDrift = (seed % 5) - 2;
+  const grossDrift = roundCurrency(((seed % 7) - 3) * 4.25);
+  const internalPurchaseCount = summary.purchase_success_count;
+  const stripePurchaseCount = Math.max(0, internalPurchaseCount + purchaseDrift);
+  const internalGrossRevenue = summary.gross_revenue_eur;
+  const stripeGrossRevenue = Math.max(0, roundCurrency(internalGrossRevenue + grossDrift));
+  const purchaseDiff = stripePurchaseCount - internalPurchaseCount;
+  const grossDiff = roundCurrency(stripeGrossRevenue - internalGrossRevenue);
+  const purchaseDiffPct = divide(purchaseDiff, stripePurchaseCount);
+  const grossDiffPct = divide(grossDiff, stripeGrossRevenue);
+  const isAligned =
+    Math.abs(purchaseDiffPct) <= 0.03 &&
+    Math.abs(grossDiffPct) <= 0.03;
+
+  return {
+    available: true,
+    detail: isAligned
+      ? "Stripe and internal purchase_success signals are within tolerance."
+      : "Reconciliation drift exceeds tolerance. Validate webhook delivery and attribution joins.",
+    stripe_purchase_count: stripePurchaseCount,
+    internal_purchase_count: internalPurchaseCount,
+    purchase_count_diff: purchaseDiff,
+    purchase_count_diff_pct: purchaseDiffPct,
+    stripe_gross_revenue_eur: stripeGrossRevenue,
+    internal_gross_revenue_eur: internalGrossRevenue,
+    gross_revenue_diff_eur: grossDiff,
+    gross_revenue_diff_pct: grossDiffPct
+  };
+};
+
+const buildDataFreshnessRows = (filters: AdminAnalyticsFilters): AdminAnalyticsDataFreshnessRow[] => {
+  const seed = seedFromFilters(filters, "data-health");
+  const endDate = parseDateYYYYMMDD(filters.end);
+  const anchor = endDate
+    ? new Date(endDate.getTime() + 15 * 60 * 60 * 1000)
+    : new Date(Date.UTC(2026, 0, 1, 15, 0, 0));
+  const lagByKey = {
+    "marts.mart_funnel_daily": 24 * 60 + (seed % 120),
+    "marts.mart_pnl_daily": 30 * 60 + (seed % 180),
+    "raw_stripe.purchases": 20 + (seed % 170)
+  } as const;
+  const rows = [
+    { dataset: "marts", table: "mart_funnel_daily" },
+    { dataset: "marts", table: "mart_pnl_daily" },
+    { dataset: "raw_stripe", table: "purchases" }
+  ];
+
+  return rows.map((row) => {
+    const thresholds = resolveFreshnessThresholds(row.dataset, row.table);
+    const lagMinutes = lagByKey[`${row.dataset}.${row.table}` as keyof typeof lagByKey] ?? null;
+    const status = evaluateFreshnessStatus(lagMinutes, thresholds);
+
+    return {
+      dataset: row.dataset,
+      table: row.table,
+      last_loaded_utc: lagMinutes === null
+        ? null
+        : new Date(anchor.getTime() - lagMinutes * 60_000).toISOString(),
+      lag_minutes: lagMinutes,
+      warn_after_minutes: thresholds.warn_after_minutes,
+      error_after_minutes: thresholds.error_after_minutes,
+      status
+    };
+  });
+};
+
+const buildDataAlerts = (filters: AdminAnalyticsFilters): AdminAnalyticsDataAlertRow[] => {
+  return buildOverviewAlerts(filters).map((row) => ({
+    detected_at_utc: row.detected_at_utc,
+    alert_name: row.alert_name,
+    severity: row.severity,
+    tenant_id: row.tenant_id,
+    metric_value: row.metric_value,
+    threshold_value: row.threshold_value
+  }));
+};
+
+const buildDbtRunMarker = (filters: AdminAnalyticsFilters): AdminAnalyticsDataDbtRunMarker => {
+  const endDate = parseDateYYYYMMDD(filters.end);
+  const seed = seedFromFilters(filters, "dbt-marker");
+  const anchor = endDate
+    ? new Date(endDate.getTime() + 20 * 60 * 60 * 1000)
+    : new Date(Date.UTC(2026, 0, 1, 20, 0, 0));
+
+  return {
+    finished_at_utc: new Date(anchor.getTime() - (seed % 240) * 60_000).toISOString(),
+    invocation_id: `mock-inv-${seed.toString(16)}`,
+    model_count: 20 + (seed % 25)
+  };
+};
+
+const buildDataChecks = (
+  freshness: AdminAnalyticsDataFreshnessRow[]
+): AdminAnalyticsDataHealthCheck[] => {
+  return freshness.map((row) => {
+    const fullName = `${row.dataset}.${row.table}`;
+    const detail = row.status === "ok"
+      ? `${fullName} freshness is within configured thresholds.`
+      : row.status === "warn"
+        ? `${fullName} lag crossed warning threshold.`
+        : `${fullName} is stale or unavailable.`;
+
+    return {
+      key: `freshness_${row.dataset}_${row.table}`,
+      label: `${fullName} freshness`,
+      status: row.status,
+      detail,
+      hint: row.status === "ok"
+        ? null
+        : `Check ingestion for ${fullName} and rerun dbt models if upstream data arrived late.`,
+      last_updated_utc: row.last_loaded_utc
+    };
+  });
+};
+
 const getMockPublicationState = (
   tenantId: string,
   testId: string
@@ -1078,23 +1309,6 @@ export class MockAdminAnalyticsProvider implements AdminAnalyticsProvider {
   async getRevenue(filters: AdminAnalyticsFilters): Promise<AdminAnalyticsRevenueResponse> {
     const daily = buildDailySeries(filters, "revenue");
     const summary = summarizeSeries(daily);
-    const offerWeights = OFFER_TYPES.map((_, index) => ((seedFromFilters(filters, "offers") + index * 17) % 10) + 2);
-
-    const purchasesByOffer = allocateByWeights(summary.purchase_success_count, offerWeights);
-    const grossByOffer = allocateByWeights(Math.round(summary.gross_revenue_eur * 100), offerWeights).map(
-      (value) => roundCurrency(value / 100)
-    );
-    const netByOffer = allocateByWeights(Math.round(summary.net_revenue_eur * 100), offerWeights).map(
-      (value) => roundCurrency(value / 100)
-    );
-
-    const byOffer: AdminAnalyticsRevenueByOfferRow[] = OFFER_TYPES.map((offerType, index) => ({
-      offer_type: offerType,
-      purchases: purchasesByOffer[index],
-      gross_revenue_eur: grossByOffer[index],
-      net_revenue_eur: netByOffer[index]
-    }));
-
     const dailyRows: AdminAnalyticsRevenueDailyRow[] = daily.map((row) => ({
       date: row.date,
       gross_revenue_eur: row.gross_revenue_eur,
@@ -1108,6 +1322,13 @@ export class MockAdminAnalyticsProvider implements AdminAnalyticsProvider {
       filters,
       generated_at_utc: generatedAtUtc(filters),
       kpis: [
+        {
+          key: "purchase_success_count",
+          label: "Purchases",
+          value: summary.purchase_success_count,
+          unit: "count",
+          delta: trendDelta(daily, (row) => row.purchase_success_count)
+        },
         {
           key: "gross_revenue_eur",
           label: "Gross revenue (EUR)",
@@ -1145,95 +1366,37 @@ export class MockAdminAnalyticsProvider implements AdminAnalyticsProvider {
         }
       ],
       daily: dailyRows,
-      by_offer: byOffer
+      by_offer: buildRevenueByOfferRows(filters),
+      by_tenant: buildRevenueByTenantRows(filters),
+      by_test: buildRevenueByTestRows(filters),
+      reconciliation: buildRevenueReconciliation(filters, summary)
     };
   }
 
   async getDataHealth(filters: AdminAnalyticsFilters): Promise<AdminAnalyticsDataResponse> {
-    const seed = seedFromFilters(filters, "data-health");
-    const endDate = parseDateYYYYMMDD(filters.end);
-    const anchor = endDate
-      ? new Date(endDate.getTime() + 15 * 60 * 60 * 1000)
-      : new Date(Date.UTC(2026, 0, 1, 15, 0, 0));
-
-    const freshnessRows: AdminAnalyticsDataFreshnessRow[] = [
-      {
-        dataset: "marts",
-        table: "mart_funnel_daily",
-        last_loaded_utc: new Date(anchor.getTime() - ((seed % 45) + 10) * 60_000).toISOString(),
-        lag_minutes: (seed % 45) + 10,
-        status: "ok"
-      },
-      {
-        dataset: "marts",
-        table: "mart_pnl_daily",
-        last_loaded_utc: new Date(anchor.getTime() - ((seed % 80) + 35) * 60_000).toISOString(),
-        lag_minutes: (seed % 80) + 35,
-        status: (seed % 80) + 35 > 90 ? "warn" : "ok"
-      },
-      {
-        dataset: "raw_stripe",
-        table: "purchases",
-        last_loaded_utc: new Date(anchor.getTime() - ((seed % 25) + 5) * 60_000).toISOString(),
-        lag_minutes: (seed % 25) + 5,
-        status: "ok"
-      },
-      {
-        dataset: "raw_costs",
-        table: "ad_spend_daily",
-        last_loaded_utc: new Date(anchor.getTime() - ((seed % 180) + 50) * 60_000).toISOString(),
-        lag_minutes: (seed % 180) + 50,
-        status: (seed % 180) + 50 > 180 ? "warn" : "ok"
-      }
-    ];
-
-    const costFreshnessRow =
-      freshnessRows.find(
-        (row) => row.dataset === "raw_costs" && row.table === "ad_spend_daily"
-      ) ?? freshnessRows[3];
-
-    const checks: AdminAnalyticsDataHealthCheck[] = [
-      {
-        key: "funnel_freshness",
-        label: "Funnel mart freshness",
-        status: freshnessRows[0].status,
-        detail: freshnessRows[0].status === "ok"
-          ? "mart_funnel_daily is fresh."
-          : "mart_funnel_daily lag is above expected threshold.",
-        last_updated_utc: freshnessRows[0].last_loaded_utc
-      },
-      {
-        key: "pnl_freshness",
-        label: "P&L mart freshness",
-        status: freshnessRows[1].status,
-        detail: freshnessRows[1].status === "ok"
-          ? "mart_pnl_daily is fresh."
-          : "mart_pnl_daily lag exceeded warning threshold.",
-        last_updated_utc: freshnessRows[1].last_loaded_utc
-      },
-      {
-        key: "stripe_ingestion",
-        label: "Stripe ingestion",
-        status: freshnessRows[2].status,
-        detail: "Stripe purchase facts are ingesting on schedule.",
-        last_updated_utc: freshnessRows[2].last_loaded_utc
-      },
-      {
-        key: "cost_ingestion",
-        label: "Ad spend ingestion",
-        status: costFreshnessRow.status,
-        detail: costFreshnessRow.status === "ok"
-          ? "raw_costs.ad_spend_daily is fresh."
-          : "raw_costs.ad_spend_daily lag exceeded warning threshold.",
-        last_updated_utc: costFreshnessRow.last_loaded_utc
-      }
-    ];
+    const freshnessRows = buildDataFreshnessRows(filters);
+    const alerts = buildDataAlerts(filters);
+    const alertStatus = alerts.some((alert) => alert.severity.toLowerCase().includes("error"))
+      ? "error"
+      : alerts.length > 0
+        ? "warn"
+        : "ok";
+    const checks = buildDataChecks(freshnessRows);
+    const dbtRunMarker = buildDbtRunMarker(filters);
+    const status = combineHealthStatus([
+      ...freshnessRows.map((row) => row.status),
+      alertStatus
+    ]);
 
     return {
       filters,
       generated_at_utc: generatedAtUtc(filters),
+      status,
       checks,
-      freshness: freshnessRows
+      freshness: freshnessRows,
+      alerts_available: true,
+      alerts,
+      dbt_last_run: dbtRunMarker
     };
   }
 }

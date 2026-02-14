@@ -561,7 +561,7 @@ Queue (in order)
 - Depends on: PR-ADMIN-ANALYTICS-06
 
 101) PR-ADMIN-ANALYTICS-08: Revenue + Data Health (Stripe + Freshness)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-ADMIN-ANALYTICS-08.md
 - Depends on: PR-ADMIN-ANALYTICS-07
 

@@ -236,10 +236,48 @@ export type AdminAnalyticsRevenueDailyRow = TableRow & {
 };
 
 export type AdminAnalyticsRevenueByOfferRow = TableRow & {
-  offer_type: "single" | "pack_5" | "pack_10";
+  offer_type: "single" | "pack_5" | "pack_10" | "unknown";
+  offer_key: string;
+  pricing_variant: string;
   purchases: number;
   gross_revenue_eur: number;
+  refunds_eur: number;
+  disputes_fees_eur: number;
+  payment_fees_eur: number;
   net_revenue_eur: number;
+};
+
+export type AdminAnalyticsRevenueByTenantRow = TableRow & {
+  tenant_id: string;
+  purchases: number;
+  gross_revenue_eur: number;
+  refunds_eur: number;
+  disputes_fees_eur: number;
+  payment_fees_eur: number;
+  net_revenue_eur: number;
+};
+
+export type AdminAnalyticsRevenueByTestRow = TableRow & {
+  test_id: string;
+  purchases: number;
+  gross_revenue_eur: number;
+  refunds_eur: number;
+  disputes_fees_eur: number;
+  payment_fees_eur: number;
+  net_revenue_eur: number;
+};
+
+export type AdminAnalyticsRevenueReconciliation = {
+  available: boolean;
+  detail: string | null;
+  stripe_purchase_count: number | null;
+  internal_purchase_count: number | null;
+  purchase_count_diff: number | null;
+  purchase_count_diff_pct: number | null;
+  stripe_gross_revenue_eur: number | null;
+  internal_gross_revenue_eur: number | null;
+  gross_revenue_diff_eur: number | null;
+  gross_revenue_diff_pct: number | null;
 };
 
 export type AdminAnalyticsDataHealthStatus = "ok" | "warn" | "error";
@@ -249,15 +287,33 @@ export type AdminAnalyticsDataHealthCheck = {
   label: string;
   status: AdminAnalyticsDataHealthStatus;
   detail: string;
+  hint: string | null;
   last_updated_utc: string | null;
 };
 
 export type AdminAnalyticsDataFreshnessRow = TableRow & {
   dataset: string;
   table: string;
-  last_loaded_utc: string;
-  lag_minutes: number;
+  last_loaded_utc: string | null;
+  lag_minutes: number | null;
+  warn_after_minutes: number;
+  error_after_minutes: number;
   status: AdminAnalyticsDataHealthStatus;
+};
+
+export type AdminAnalyticsDataAlertRow = TableRow & {
+  detected_at_utc: string;
+  alert_name: string;
+  severity: string;
+  tenant_id: string | null;
+  metric_value: number | null;
+  threshold_value: number | null;
+};
+
+export type AdminAnalyticsDataDbtRunMarker = {
+  finished_at_utc: string;
+  invocation_id: string | null;
+  model_count: number | null;
 };
 
 export type AdminAnalyticsOverviewTopTestRow = TableRow & {
@@ -410,13 +466,20 @@ export type AdminAnalyticsRevenueResponse = {
   kpis: KpiCard[];
   daily: AdminAnalyticsRevenueDailyRow[];
   by_offer: AdminAnalyticsRevenueByOfferRow[];
+  by_tenant: AdminAnalyticsRevenueByTenantRow[];
+  by_test: AdminAnalyticsRevenueByTestRow[];
+  reconciliation: AdminAnalyticsRevenueReconciliation;
 };
 
 export type AdminAnalyticsDataResponse = {
   filters: AdminAnalyticsFilters;
   generated_at_utc: string;
+  status: AdminAnalyticsDataHealthStatus;
   checks: AdminAnalyticsDataHealthCheck[];
   freshness: AdminAnalyticsDataFreshnessRow[];
+  alerts_available: boolean;
+  alerts: AdminAnalyticsDataAlertRow[];
+  dbt_last_run: AdminAnalyticsDataDbtRunMarker | null;
 };
 
 const normalizeOptionalFilter = (
