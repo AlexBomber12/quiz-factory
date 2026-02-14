@@ -1,9 +1,15 @@
-import { headers } from "next/headers";
 import Link from "next/link";
 
 import AdminAnalyticsPageScaffold from "../../../../components/admin/analytics/PageScaffold";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../../components/ui/card";
-import type { AdminAnalyticsDistributionResponse } from "../../../../lib/admin_analytics/types";
+import { getAdminAnalyticsProvider } from "../../../../lib/admin_analytics/provider";
+import {
+  ADMIN_ANALYTICS_DISTRIBUTION_DEFAULT_LIMIT,
+  ADMIN_ANALYTICS_DISTRIBUTION_MAX_LIMIT,
+  parseAdminAnalyticsFilters,
+  type AdminAnalyticsDistributionOptions,
+  type AdminAnalyticsDistributionResponse
+} from "../../../../lib/admin_analytics/types";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -21,6 +27,7 @@ const FILTER_KEYS = [
   "utm_source"
 ] as const;
 const QUERY_KEYS = [...FILTER_KEYS, "top_tenants", "top_tests"] as const;
+const INTEGER_PATTERN = /^\d+$/;
 
 const currencyFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -68,22 +75,46 @@ const buildQueryString = (resolved: SearchParams, keys: readonly string[]): stri
   return params.toString();
 };
 
-const readOrigin = async (): Promise<{ origin: string; cookieHeader: string | null }> => {
-  const headerStore = await headers();
-  const host = (headerStore.get("x-forwarded-host") ?? headerStore.get("host") ?? "").trim();
-  const forwardedProto = (headerStore.get("x-forwarded-proto") ?? "").split(",")[0]?.trim();
-  const protocol = forwardedProto || (process.env.NODE_ENV === "development" ? "http" : "https");
+const parseDistributionOptions = (
+  searchParams: URLSearchParams
+): { ok: true; value: AdminAnalyticsDistributionOptions } | { ok: false; error: string } => {
+  const parseLimit = (value: string | null): number | null => {
+    if (value === null || value.trim().length === 0) {
+      return ADMIN_ANALYTICS_DISTRIBUTION_DEFAULT_LIMIT;
+    }
 
-  if (host.length > 0) {
+    const normalized = value.trim();
+    if (!INTEGER_PATTERN.test(normalized)) {
+      return null;
+    }
+
+    const parsed = Number.parseInt(normalized, 10);
+    if (
+      !Number.isSafeInteger(parsed) ||
+      parsed < 1 ||
+      parsed > ADMIN_ANALYTICS_DISTRIBUTION_MAX_LIMIT
+    ) {
+      return null;
+    }
+
+    return parsed;
+  };
+
+  const topTenants = parseLimit(searchParams.get("top_tenants"));
+  const topTests = parseLimit(searchParams.get("top_tests"));
+  if (topTenants === null || topTests === null) {
     return {
-      origin: `${protocol}://${host}`,
-      cookieHeader: headerStore.get("cookie")
+      ok: false,
+      error: `top_tenants and top_tests must be integers between 1 and ${ADMIN_ANALYTICS_DISTRIBUTION_MAX_LIMIT}.`
     };
   }
 
   return {
-    origin: "http://localhost:3000",
-    cookieHeader: headerStore.get("cookie")
+    ok: true,
+    value: {
+      top_tenants: topTenants,
+      top_tests: topTests
+    }
   };
 };
 
@@ -91,27 +122,26 @@ const fetchDistribution = async (
   resolvedSearchParams: SearchParams
 ): Promise<{ payload: AdminAnalyticsDistributionResponse | null; error: string | null }> => {
   const queryString = buildQueryString(resolvedSearchParams, QUERY_KEYS);
-  const { origin, cookieHeader } = await readOrigin();
-  const requestUrl = queryString
-    ? `${origin}/api/admin/analytics/distribution?${queryString}`
-    : `${origin}/api/admin/analytics/distribution`;
+  const searchParams = new URLSearchParams(queryString);
+  const parsedFilters = parseAdminAnalyticsFilters(searchParams);
+  if (!parsedFilters.ok) {
+    return {
+      payload: null,
+      error: "Invalid analytics filters."
+    };
+  }
+  const parsedOptions = parseDistributionOptions(searchParams);
+  if (!parsedOptions.ok) {
+    return {
+      payload: null,
+      error: parsedOptions.error
+    };
+  }
 
   try {
-    const response = await fetch(requestUrl, {
-      method: "GET",
-      cache: "no-store",
-      headers: cookieHeader ? { cookie: cookieHeader } : undefined
-    });
-
-    if (!response.ok) {
-      return {
-        payload: null,
-        error: `Distribution request failed with status ${response.status}.`
-      };
-    }
-
+    const provider = getAdminAnalyticsProvider();
     return {
-      payload: (await response.json()) as AdminAnalyticsDistributionResponse,
+      payload: await provider.getDistribution(parsedFilters.value, parsedOptions.value),
       error: null
     };
   } catch (error) {
