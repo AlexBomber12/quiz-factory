@@ -17,6 +17,8 @@ import type {
   AdminAnalyticsRevenueDailyRow,
   AdminAnalyticsRevenueResponse,
   AdminAnalyticsTenantDetailResponse,
+  AdminAnalyticsTenantLocaleRow,
+  AdminAnalyticsTenantTopTestRow,
   AdminAnalyticsTenantsResponse,
   AdminAnalyticsTestsResponse,
   AdminAnalyticsTestDetailResponse,
@@ -48,6 +50,7 @@ const DEFAULT_CHANNELS = ["direct", "google", "meta", "newsletter"] as const;
 const DEFAULT_DEVICES = ["desktop", "mobile", "tablet"] as const;
 const DEFAULT_LOCALES = ["en", "es", "pt-BR"] as const;
 const OFFER_TYPES = ["single", "pack_5", "pack_10"] as const;
+const TENANT_TABLE_LIMIT = 20;
 
 type DailyMetrics = {
   date: string;
@@ -150,11 +153,6 @@ const formatTitleFromId = (value: string): string => {
     .filter((segment) => segment.length > 0)
     .map((segment) => `${segment[0]?.toUpperCase() ?? ""}${segment.slice(1)}`)
     .join(" ");
-};
-
-const formatDomainFromTenantId = (tenantId: string): string => {
-  const normalized = tenantId.startsWith("tenant-") ? tenantId.slice(7) : tenantId;
-  return `${normalized}.example.com`;
 };
 
 const buildDailySeries = (filters: AdminAnalyticsFilters, scope: string): DailyMetrics[] => {
@@ -392,7 +390,9 @@ const resolveTestIds = (filters: AdminAnalyticsFilters): string[] => {
 
 const resolveTenantIds = (filters: AdminAnalyticsFilters): string[] => {
   if (filters.tenant_id) {
-    return [filters.tenant_id];
+    return TENANT_CATALOG.some((entry) => entry.tenant_id === filters.tenant_id)
+      ? [filters.tenant_id]
+      : [];
   }
 
   return TENANT_CATALOG.map((entry) => entry.tenant_id);
@@ -419,6 +419,88 @@ const buildTestsRows = (filters: AdminAnalyticsFilters, scope: string): AdminAna
     .sort((left, right) => right.revenue_eur - left.revenue_eur || left.test_id.localeCompare(right.test_id));
 };
 
+const buildTenantTopTestsRows = (
+  filters: AdminAnalyticsFilters,
+  tenantId: string,
+  scope: string
+): AdminAnalyticsTenantTopTestRow[] => {
+  return resolveTestIds(filters)
+    .map((testId) => {
+      const daily = buildDailySeries(
+        { ...filters, tenant_id: tenantId, test_id: testId },
+        `${scope}:${tenantId}:${testId}`
+      );
+      const summary = summarizeSeries(daily);
+
+      return {
+        test_id: testId,
+        sessions: summary.visits,
+        test_starts: summary.test_starts,
+        test_completions: summary.test_completions,
+        purchases: summary.purchase_success_count,
+        paid_conversion: divide(summary.purchase_success_count, summary.visits),
+        net_revenue_eur: summary.net_revenue_eur,
+        refunds_eur: summary.refunds_eur
+      };
+    })
+    .sort(
+      (left, right) =>
+        right.net_revenue_eur - left.net_revenue_eur ||
+        right.purchases - left.purchases ||
+        left.test_id.localeCompare(right.test_id)
+    );
+};
+
+const buildTenantLocaleBreakdownRows = (
+  filters: AdminAnalyticsFilters,
+  tenantId: string,
+  scope: string
+): AdminAnalyticsTenantLocaleRow[] => {
+  const segments = filters.locale === "all" ? [...DEFAULT_LOCALES] : [filters.locale];
+  const daily = buildDailySeries(
+    { ...filters, tenant_id: tenantId, locale: "all" },
+    `${scope}:${tenantId}`
+  );
+  const summary = summarizeSeries(daily);
+  const seed = seedFromFilters({ ...filters, tenant_id: tenantId, locale: "all" }, `${scope}:seed`);
+  const weights = segments.map((_, index) => ((seed + index * 17) % 11) + 3);
+
+  const sessions = allocateByWeights(summary.visits, weights);
+  const testStarts = allocateByWeights(summary.test_starts, weights);
+  const testCompletes = allocateByWeights(summary.test_completions, weights);
+  const purchases = allocateByWeights(summary.purchase_success_count, weights);
+  const netRevenue = allocateByWeights(Math.round(summary.net_revenue_eur * 100), weights).map(
+    (cents) => roundCurrency(cents / 100)
+  );
+  const refunds = allocateByWeights(Math.round(summary.refunds_eur * 100), weights).map(
+    (cents) => roundCurrency(cents / 100)
+  );
+
+  return segments
+    .map((locale, index) => {
+      const safeStarts = Math.min(sessions[index], testStarts[index]);
+      const safeCompletes = Math.min(safeStarts, testCompletes[index]);
+      const safePurchases = Math.min(safeCompletes, purchases[index]);
+
+      return {
+        locale,
+        sessions: sessions[index],
+        test_starts: safeStarts,
+        test_completions: safeCompletes,
+        purchases: safePurchases,
+        paid_conversion: divide(safePurchases, sessions[index]),
+        net_revenue_eur: netRevenue[index],
+        refunds_eur: refunds[index]
+      };
+    })
+    .sort(
+      (left, right) =>
+        right.net_revenue_eur - left.net_revenue_eur ||
+        right.purchases - left.purchases ||
+        left.locale.localeCompare(right.locale)
+    );
+};
+
 const buildTenantsRows = (
   filters: AdminAnalyticsFilters,
   scope: string
@@ -430,18 +512,27 @@ const buildTenantsRows = (
         `${scope}:${tenantId}`
       );
       const summary = summarizeSeries(daily);
-      const catalogEntry = TENANT_CATALOG.find((entry) => entry.tenant_id === tenantId);
+      const topTests = buildTenantTopTestsRows(filters, tenantId, `${scope}:top-tests`);
 
       return {
         tenant_id: tenantId,
-        domain: catalogEntry?.domain ?? formatDomainFromTenantId(tenantId),
-        visits: summary.visits,
+        sessions: summary.visits,
+        test_starts: summary.test_starts,
         test_completions: summary.test_completions,
-        purchase_success_count: summary.purchase_success_count,
-        revenue_eur: summary.net_revenue_eur
+        purchases: summary.purchase_success_count,
+        paid_conversion: divide(summary.purchase_success_count, summary.visits),
+        net_revenue_eur: summary.net_revenue_eur,
+        refunds_eur: summary.refunds_eur,
+        top_test_id: topTests[0]?.test_id ?? null,
+        last_activity_date: daily[daily.length - 1]?.date ?? null
       };
     })
-    .sort((left, right) => right.revenue_eur - left.revenue_eur || left.tenant_id.localeCompare(right.tenant_id));
+    .sort(
+      (left, right) =>
+        right.net_revenue_eur - left.net_revenue_eur ||
+        right.purchases - left.purchases ||
+        left.tenant_id.localeCompare(right.tenant_id)
+    );
 };
 
 const buildOverviewTopTests = (filters: AdminAnalyticsFilters): AdminAnalyticsOverviewTopTestRow[] => {
@@ -460,8 +551,8 @@ const buildOverviewTopTenants = (filters: AdminAnalyticsFilters): AdminAnalytics
     .slice(0, 5)
     .map((row) => ({
       tenant_id: row.tenant_id,
-      net_revenue_eur: row.revenue_eur,
-      purchases: row.purchase_success_count
+      net_revenue_eur: row.net_revenue_eur,
+      purchases: row.purchases
     }));
 };
 
@@ -576,10 +667,13 @@ export class MockAdminAnalyticsProvider implements AdminAnalyticsProvider {
   }
 
   async getTenants(filters: AdminAnalyticsFilters): Promise<AdminAnalyticsTenantsResponse> {
+    const rows = buildTenantsRows(filters, "tenants");
+
     return {
       filters,
       generated_at_utc: generatedAtUtc(filters),
-      rows: buildTenantsRows(filters, "tenants")
+      rows: rows.slice(0, TENANT_TABLE_LIMIT),
+      total_rows: rows.length
     };
   }
 
@@ -591,19 +685,43 @@ export class MockAdminAnalyticsProvider implements AdminAnalyticsProvider {
       ...filters,
       tenant_id: tenantId
     };
+
+    const isKnownTenant = TENANT_CATALOG.some((entry) => entry.tenant_id === tenantId);
+    if (!isKnownTenant) {
+      return {
+        filters: scopedFilters,
+        generated_at_utc: generatedAtUtc(scopedFilters),
+        tenant_id: tenantId,
+        kpis: [],
+        funnel: [],
+        sessions_timeseries: [],
+        revenue_timeseries: [],
+        top_tests: [],
+        top_tests_total: 0,
+        locale_breakdown: [],
+        locale_breakdown_total: 0,
+        has_data: false
+      };
+    }
+
     const daily = buildDailySeries(scopedFilters, `tenants-detail:${tenantId}`);
     const summary = summarizeSeries(daily);
-
-    const topTests = buildTestsRows(scopedFilters, `tenant-top-tests:${tenantId}`).slice(0, 3);
+    const topTests = buildTenantTopTestsRows(scopedFilters, tenantId, "tenant-top-tests");
+    const localeBreakdown = buildTenantLocaleBreakdownRows(scopedFilters, tenantId, "tenant-locale-breakdown");
 
     return {
       filters: scopedFilters,
       generated_at_utc: generatedAtUtc(scopedFilters),
       tenant_id: tenantId,
       kpis: buildOverviewKpis(daily, summary),
-      visits_timeseries: toVisitsSeries(daily),
+      funnel: buildFunnel(summary),
+      sessions_timeseries: toVisitsSeries(daily),
       revenue_timeseries: toRevenueSeries(daily),
-      top_tests: topTests
+      top_tests: topTests.slice(0, TENANT_TABLE_LIMIT),
+      top_tests_total: topTests.length,
+      locale_breakdown: localeBreakdown.slice(0, TENANT_TABLE_LIMIT),
+      locale_breakdown_total: localeBreakdown.length,
+      has_data: true
     };
   }
 
