@@ -9,6 +9,7 @@ import type {
   AdminAnalyticsTenantsResponse,
   AdminAnalyticsTestDetailResponse,
   AdminAnalyticsTestsResponse,
+  AdminAnalyticsTrafficOptions,
   AdminAnalyticsTrafficResponse
 } from "./types";
 import { createBigQueryAdminAnalyticsProvider } from "./providers/bigquery";
@@ -30,7 +31,10 @@ export interface AdminAnalyticsProvider {
     filters: AdminAnalyticsFilters,
     options: AdminAnalyticsDistributionOptions
   ): Promise<AdminAnalyticsDistributionResponse>;
-  getTraffic(filters: AdminAnalyticsFilters): Promise<AdminAnalyticsTrafficResponse>;
+  getTraffic(
+    filters: AdminAnalyticsFilters,
+    options?: AdminAnalyticsTrafficOptions
+  ): Promise<AdminAnalyticsTrafficResponse>;
   getRevenue(filters: AdminAnalyticsFilters): Promise<AdminAnalyticsRevenueResponse>;
   getDataHealth(filters: AdminAnalyticsFilters): Promise<AdminAnalyticsDataResponse>;
 }

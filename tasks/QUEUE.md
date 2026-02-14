@@ -556,7 +556,7 @@ Queue (in order)
 - Depends on: PR-ADMIN-ANALYTICS-05
 
 100) PR-ADMIN-ANALYTICS-07: Traffic Analytics (UTM, Referrers, Devices, Geo)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-ADMIN-ANALYTICS-07.md
 - Depends on: PR-ADMIN-ANALYTICS-06
 

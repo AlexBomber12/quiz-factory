@@ -23,7 +23,10 @@ const FILTERS: AdminAnalyticsFilters = {
 };
 
 const makeProvider = (
-  resolveRows: (query: string) => Array<Record<string, unknown>> | Promise<Array<Record<string, unknown>>>
+  resolveRows: (
+    query: string,
+    params: Record<string, unknown>
+  ) => Array<Record<string, unknown>> | Promise<Array<Record<string, unknown>>>
 ): { provider: BigQueryAdminAnalyticsProvider; calls: QueryCall[] } => {
   const calls: QueryCall[] = [];
   const bigquery = {
@@ -33,7 +36,8 @@ const makeProvider = (
         params: options.params ?? {}
       });
       const job = {
-        getQueryResults: async () => [await resolveRows(options.query)] as [Array<Record<string, unknown>>]
+        getQueryResults: async () =>
+          [await resolveRows(options.query, options.params ?? {})] as [Array<Record<string, unknown>>]
       };
       return [job] as [typeof job, ...unknown[]];
     })
@@ -861,5 +865,156 @@ describe("BigQueryAdminAnalyticsProvider.getDistribution", () => {
       tenant_ids: ["tenant-quizfactory-en", "tenant-quizfactory-es"],
       test_ids: ["test-focus-rhythm", "test-energy-balance"]
     });
+  });
+});
+
+describe("BigQueryAdminAnalyticsProvider.getTraffic", () => {
+  it("returns traffic breakdowns with top_n bounds and optional mart dimensions", async () => {
+    const { provider, calls } = makeProvider((query, params) => {
+      if (query.includes("funnel_agg")) {
+        return [
+          {
+            sessions: 150,
+            test_starts: 110,
+            test_completes: 85,
+            paywall_views: 60,
+            checkout_starts: 42,
+            purchases: 25,
+            paid_conversion: 0.1667,
+            gross_revenue_eur: 1250,
+            net_revenue_eur: 980,
+            refunds_eur: 60,
+            disputes_eur: 20,
+            payment_fees_eur: 70
+          }
+        ];
+      }
+
+      if (query.includes("traffic_channel_breakdown:utm_source")) {
+        return [
+          {
+            segment: "meta",
+            sessions: 90,
+            purchases: 18,
+            paid_conversion: 0.2,
+            net_revenue_eur: 620
+          },
+          {
+            segment: "google",
+            sessions: 60,
+            purchases: 7,
+            paid_conversion: 0.1167,
+            net_revenue_eur: 360
+          }
+        ];
+      }
+
+      if (query.includes("traffic_channel_breakdown:utm_campaign")) {
+        return [
+          {
+            segment: "launch",
+            sessions: 70,
+            purchases: 13,
+            paid_conversion: 0.1857,
+            net_revenue_eur: 510
+          },
+          {
+            segment: "retargeting",
+            sessions: 35,
+            purchases: 8,
+            paid_conversion: 0.2286,
+            net_revenue_eur: 300
+          }
+        ];
+      }
+
+      if (query.includes("traffic_column_check")) {
+        if (params.column_name === "country") {
+          return [{ column_count: 0 }];
+        }
+
+        return [{ column_count: 1 }];
+      }
+
+      if (query.includes("traffic_funnel_breakdown:referrer")) {
+        return [
+          {
+            segment: "google.com",
+            sessions: 58,
+            purchases: 11,
+            paid_conversion: 0.1897
+          },
+          {
+            segment: "instagram.com",
+            sessions: 24,
+            purchases: 5,
+            paid_conversion: 0.2083
+          }
+        ];
+      }
+
+      if (query.includes("traffic_funnel_breakdown:device_type")) {
+        return [
+          {
+            segment: "mobile",
+            sessions: 96,
+            purchases: 16,
+            paid_conversion: 0.1667
+          },
+          {
+            segment: "desktop",
+            sessions: 54,
+            purchases: 9,
+            paid_conversion: 0.1667
+          }
+        ];
+      }
+
+      return [];
+    });
+
+    const traffic = await provider.getTraffic(FILTERS, { top_n: 25 });
+
+    expect(traffic.top_n).toBe(25);
+    expect(traffic.kpis.length).toBeGreaterThan(0);
+    expect(traffic.by_utm_source).toEqual([
+      {
+        segment: "meta",
+        sessions: 90,
+        purchases: 18,
+        paid_conversion: 0.2,
+        net_revenue_eur: 620
+      },
+      {
+        segment: "google",
+        sessions: 60,
+        purchases: 7,
+        paid_conversion: 0.1167,
+        net_revenue_eur: 360
+      }
+    ]);
+    expect(traffic.by_utm_campaign).toHaveLength(2);
+    expect(traffic.by_referrer[0]).toMatchObject({
+      segment: "google.com",
+      sessions: 58,
+      purchases: 11,
+      net_revenue_eur: 0
+    });
+    expect(traffic.by_device_type).toHaveLength(2);
+    expect(traffic.by_country).toEqual([]);
+
+    const sourceCall = calls.find((call) => call.query.includes("traffic_channel_breakdown:utm_source"));
+    expect(sourceCall).toBeDefined();
+    expect(sourceCall?.query).toContain("LIMIT 25");
+    expect(sourceCall?.params).toMatchObject({
+      start_date: FILTERS.start,
+      end_date: FILTERS.end,
+      tenant_id: FILTERS.tenant_id,
+      test_id: FILTERS.test_id,
+      locale: FILTERS.locale,
+      utm_source: FILTERS.utm_source
+    });
+
+    expect(calls.some((call) => call.query.includes("traffic_funnel_breakdown:country"))).toBe(false);
   });
 });

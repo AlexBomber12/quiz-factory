@@ -54,10 +54,16 @@ export type AdminAnalyticsFilterParseResult =
 
 export const ADMIN_ANALYTICS_DISTRIBUTION_DEFAULT_LIMIT = 20;
 export const ADMIN_ANALYTICS_DISTRIBUTION_MAX_LIMIT = 50;
+export const ADMIN_ANALYTICS_TRAFFIC_DEFAULT_LIMIT = 50;
+export const ADMIN_ANALYTICS_TRAFFIC_MAX_LIMIT = 200;
 
 export type AdminAnalyticsDistributionOptions = {
   top_tenants: number;
   top_tests: number;
+};
+
+export type AdminAnalyticsTrafficOptions = {
+  top_n: number;
 };
 
 const normalizeDistributionLimit = (
@@ -75,12 +81,35 @@ const normalizeDistributionLimit = (
   return Math.min(rounded, ADMIN_ANALYTICS_DISTRIBUTION_MAX_LIMIT);
 };
 
+const normalizeTrafficLimit = (
+  value: number | null | undefined
+): number => {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return ADMIN_ANALYTICS_TRAFFIC_DEFAULT_LIMIT;
+  }
+
+  const rounded = Math.floor(value);
+  if (rounded < 1) {
+    return 1;
+  }
+
+  return Math.min(rounded, ADMIN_ANALYTICS_TRAFFIC_MAX_LIMIT);
+};
+
 export const resolveAdminAnalyticsDistributionOptions = (
   options?: Partial<AdminAnalyticsDistributionOptions>
 ): AdminAnalyticsDistributionOptions => {
   return {
     top_tenants: normalizeDistributionLimit(options?.top_tenants),
     top_tests: normalizeDistributionLimit(options?.top_tests)
+  };
+};
+
+export const resolveAdminAnalyticsTrafficOptions = (
+  options?: Partial<AdminAnalyticsTrafficOptions>
+): AdminAnalyticsTrafficOptions => {
+  return {
+    top_n: normalizeTrafficLimit(options?.top_n)
   };
 };
 
@@ -187,6 +216,14 @@ export type AdminAnalyticsBreakdownRow = TableRow & {
   test_completions: number;
   purchase_success_count: number;
   purchase_conversion: number;
+};
+
+export type AdminAnalyticsTrafficSegmentRow = TableRow & {
+  segment: string;
+  sessions: number;
+  purchases: number;
+  paid_conversion: number;
+  net_revenue_eur: number;
 };
 
 export type AdminAnalyticsRevenueDailyRow = TableRow & {
@@ -358,10 +395,13 @@ export type AdminAnalyticsDistributionResponse = {
 export type AdminAnalyticsTrafficResponse = {
   filters: AdminAnalyticsFilters;
   generated_at_utc: string;
+  top_n: number;
   kpis: KpiCard[];
-  by_utm_source: AdminAnalyticsBreakdownRow[];
-  by_device_type: AdminAnalyticsBreakdownRow[];
-  by_locale: AdminAnalyticsBreakdownRow[];
+  by_utm_source: AdminAnalyticsTrafficSegmentRow[];
+  by_utm_campaign: AdminAnalyticsTrafficSegmentRow[];
+  by_referrer: AdminAnalyticsTrafficSegmentRow[];
+  by_device_type: AdminAnalyticsTrafficSegmentRow[];
+  by_country: AdminAnalyticsTrafficSegmentRow[];
 };
 
 export type AdminAnalyticsRevenueResponse = {
