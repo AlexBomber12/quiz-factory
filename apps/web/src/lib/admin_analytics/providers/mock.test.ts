@@ -40,15 +40,24 @@ describe("MockAdminAnalyticsProvider", () => {
     expect(tests.rows.length).toBeGreaterThan(0);
     expect(tests.rows[0]).toMatchObject({
       test_id: expect.any(String),
-      title: expect.any(String),
-      visits: expect.any(Number)
+      sessions: expect.any(Number),
+      starts: expect.any(Number),
+      purchases: expect.any(Number),
+      top_tenant_id: expect.any(String)
     });
 
     const testId = tests.rows[0]?.test_id ?? "test-focus-rhythm";
     const testDetail = await provider.getTestDetail(testId, FILTERS);
     expect(testDetail.test_id).toBe(testId);
+    expect(testDetail.timeseries.length).toBeGreaterThan(0);
+    expect(testDetail.tenant_breakdown.length).toBeGreaterThan(0);
     expect(testDetail.locale_breakdown.length).toBeGreaterThan(0);
-    expect(testDetail.device_breakdown.length).toBeGreaterThan(0);
+    expect(testDetail.paywall_metrics_available).toBe(true);
+    expect(testDetail.paywall_metrics).toMatchObject({
+      views: expect.any(Number),
+      checkout_starts: expect.any(Number),
+      checkout_success: expect.any(Number)
+    });
 
     const tenants = await provider.getTenants(FILTERS);
     expect(tenants.rows.length).toBeGreaterThan(0);
@@ -163,5 +172,32 @@ describe("MockAdminAnalyticsProvider", () => {
     expect(detail.revenue_timeseries).toEqual([]);
     expect(detail.top_tests_total).toBe(0);
     expect(detail.locale_breakdown_total).toBe(0);
+  });
+
+  it("respects locale filter in test detail locale_breakdown totals", async () => {
+    const provider = createMockAdminAnalyticsProvider();
+    const allLocaleDetail = await provider.getTestDetail("test-focus-rhythm", FILTERS);
+    const localeScopedFilters: AdminAnalyticsFilters = {
+      ...FILTERS,
+      locale: "es"
+    };
+
+    const detail = await provider.getTestDetail("test-focus-rhythm", localeScopedFilters);
+
+    expect(detail.locale_breakdown).toHaveLength(1);
+    expect(detail.locale_breakdown[0]?.locale).toBe("es");
+    expect(allLocaleDetail.locale_breakdown.length).toBeGreaterThan(1);
+
+    const allLocaleSessionsTotal = allLocaleDetail.locale_breakdown.reduce(
+      (total, row) => total + row.sessions,
+      0
+    );
+    const allLocalePurchasesTotal = allLocaleDetail.locale_breakdown.reduce(
+      (total, row) => total + row.purchases,
+      0
+    );
+
+    expect(detail.locale_breakdown[0]?.sessions).toBeLessThan(allLocaleSessionsTotal);
+    expect(detail.locale_breakdown[0]?.purchases).toBeLessThanOrEqual(allLocalePurchasesTotal);
   });
 });

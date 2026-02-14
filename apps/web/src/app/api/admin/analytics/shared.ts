@@ -12,6 +12,7 @@ import {
 } from "../../../../lib/admin_analytics/types";
 
 const MAX_ROUTE_IDENTIFIER_LENGTH = 120;
+const TEST_ID_PATTERN = /^test-[a-z0-9-]+$/;
 
 const hasControlCharacters = (value: string): boolean => {
   for (let index = 0; index < value.length; index += 1) {
@@ -109,6 +110,18 @@ export const parseRouteIdentifier = (
         {
           field,
           message: "contains control characters"
+        }
+      ])
+    };
+  }
+
+  if (field === "test_id" && !TEST_ID_PATTERN.test(normalized)) {
+    return {
+      ok: false,
+      response: buildValidationResponse("invalid_path_param", [
+        {
+          field,
+          message: "must match test-[a-z0-9-]+"
         }
       ])
     };

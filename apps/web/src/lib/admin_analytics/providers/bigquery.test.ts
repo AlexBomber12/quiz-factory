@@ -250,6 +250,270 @@ describe("BigQueryAdminAnalyticsProvider.getOverview", () => {
   });
 });
 
+describe("BigQueryAdminAnalyticsProvider.getTests", () => {
+  it("returns tests analytics list rows with tenant and activity metadata", async () => {
+    const { provider, calls } = makeProvider((query) => {
+      if (query.includes("ranked_tenants")) {
+        return [
+          {
+            test_id: "test-focus-rhythm",
+            sessions: 260,
+            starts: 210,
+            completes: 170,
+            purchases: 41,
+            paid_conversion: 0.1577,
+            net_revenue_eur: 1840.5,
+            refunds_eur: 65.4,
+            top_tenant_id: "tenant-quizfactory-en",
+            last_activity_date: "2026-02-07"
+          },
+          {
+            test_id: "test-energy-balance",
+            sessions: 220,
+            starts: 160,
+            completes: 132,
+            purchases: 28,
+            paid_conversion: 0.1273,
+            net_revenue_eur: 1220.2,
+            refunds_eur: 29.6,
+            top_tenant_id: "tenant-quizfactory-es",
+            last_activity_date: "2026-02-07"
+          }
+        ];
+      }
+
+      return [];
+    });
+
+    const tests = await provider.getTests(FILTERS);
+
+    expect(tests.rows).toHaveLength(2);
+    expect(tests.rows[0]).toEqual({
+      test_id: "test-focus-rhythm",
+      sessions: 260,
+      starts: 210,
+      completes: 170,
+      purchases: 41,
+      paid_conversion: 0.1577,
+      net_revenue_eur: 1840.5,
+      refunds_eur: 65.4,
+      top_tenant_id: "tenant-quizfactory-en",
+      last_activity_date: "2026-02-07"
+    });
+
+    const call = calls.find((candidate) => candidate.query.includes("ranked_tenants"));
+    expect(call).toBeDefined();
+    expect(call?.params).toMatchObject({
+      start_date: FILTERS.start,
+      end_date: FILTERS.end,
+      tenant_id: FILTERS.tenant_id,
+      test_id: FILTERS.test_id,
+      locale: FILTERS.locale,
+      utm_source: FILTERS.utm_source
+    });
+  });
+});
+
+describe("BigQueryAdminAnalyticsProvider.getTestDetail", () => {
+  it("returns KPI/funnel, daily timeseries, tenant+locale breakdown, and paywall metrics", async () => {
+    const { provider, calls } = makeProvider((query) => {
+      if (query.includes("funnel_agg")) {
+        return [
+          {
+            sessions: 170,
+            test_starts: 140,
+            test_completes: 112,
+            paywall_views: 87,
+            checkout_starts: 66,
+            purchases: 31,
+            paid_conversion: 0.1823,
+            gross_revenue_eur: 1560,
+            net_revenue_eur: 1240,
+            refunds_eur: 44,
+            disputes_eur: 18,
+            payment_fees_eur: 58
+          }
+        ];
+      }
+
+      if (query.includes("WITH funnel_daily AS")) {
+        return [
+          {
+            date: "2026-02-01",
+            sessions: 80,
+            completes: 52,
+            purchases: 14,
+            net_revenue_eur: 420
+          },
+          {
+            date: "2026-02-02",
+            sessions: 90,
+            completes: 60,
+            purchases: 17,
+            net_revenue_eur: 520
+          }
+        ];
+      }
+
+      if (query.includes("funnel_by_tenant AS")) {
+        return [
+          {
+            tenant_id: "tenant-quizfactory-en",
+            sessions: 100,
+            starts: 82,
+            completes: 66,
+            purchases: 19,
+            paid_conversion: 0.19,
+            net_revenue_eur: 740,
+            refunds_eur: 20
+          },
+          {
+            tenant_id: "tenant-quizfactory-es",
+            sessions: 70,
+            starts: 58,
+            completes: 46,
+            purchases: 12,
+            paid_conversion: 0.1714,
+            net_revenue_eur: 500,
+            refunds_eur: 24
+          }
+        ];
+      }
+
+      if (query.includes("funnel_by_locale AS") && query.includes("LIMIT 50")) {
+        return [
+          {
+            locale: "en",
+            sessions: 120,
+            starts: 96,
+            completes: 77,
+            purchases: 23,
+            paid_conversion: 0.1917,
+            net_revenue_eur: 880,
+            refunds_eur: 30
+          },
+          {
+            locale: "es",
+            sessions: 50,
+            starts: 44,
+            completes: 35,
+            purchases: 8,
+            paid_conversion: 0.16,
+            net_revenue_eur: 360,
+            refunds_eur: 14
+          }
+        ];
+      }
+
+      if (query.includes("COALESCE(SUM(paywall_views), 0) AS views")) {
+        return [
+          {
+            views: 87,
+            checkout_starts: 66,
+            checkout_success: 31,
+            checkout_start_rate: 0.7586,
+            checkout_success_rate: 0.4697
+          }
+        ];
+      }
+
+      return [];
+    });
+
+    const detail = await provider.getTestDetail("test-focus-rhythm", FILTERS);
+
+    expect(detail.filters.test_id).toBe("test-focus-rhythm");
+    expect(detail.kpis.length).toBeGreaterThan(0);
+    expect(detail.funnel.length).toBeGreaterThan(0);
+    expect(detail.timeseries).toEqual([
+      {
+        date: "2026-02-01",
+        sessions: 80,
+        completes: 52,
+        purchases: 14,
+        net_revenue_eur: 420
+      },
+      {
+        date: "2026-02-02",
+        sessions: 90,
+        completes: 60,
+        purchases: 17,
+        net_revenue_eur: 520
+      }
+    ]);
+    expect(detail.tenant_breakdown).toHaveLength(2);
+    expect(detail.locale_breakdown).toHaveLength(2);
+    expect(detail.paywall_metrics_available).toBe(true);
+    expect(detail.paywall_metrics).toEqual({
+      views: 87,
+      checkout_starts: 66,
+      checkout_success: 31,
+      checkout_start_rate: 0.7586,
+      checkout_success_rate: 0.4697
+    });
+
+    const filterCall = calls.find((candidate) => candidate.query.includes("funnel_by_tenant AS"));
+    expect(filterCall).toBeDefined();
+    expect(filterCall?.params).toMatchObject({
+      test_id: "test-focus-rhythm",
+      start_date: FILTERS.start,
+      end_date: FILTERS.end
+    });
+  });
+
+  it("returns paywall_metrics_available=false when paywall columns are unavailable", async () => {
+    const { provider } = makeProvider((query) => {
+      if (query.includes("funnel_agg")) {
+        return [
+          {
+            sessions: 20,
+            test_starts: 15,
+            test_completes: 10,
+            paywall_views: 7,
+            checkout_starts: 5,
+            purchases: 2,
+            paid_conversion: 0.1,
+            gross_revenue_eur: 80,
+            net_revenue_eur: 60,
+            refunds_eur: 3,
+            disputes_eur: 1,
+            payment_fees_eur: 2
+          }
+        ];
+      }
+
+      if (query.includes("WITH funnel_daily AS")) {
+        return [
+          {
+            date: "2026-02-01",
+            sessions: 20,
+            completes: 10,
+            purchases: 2,
+            net_revenue_eur: 60
+          }
+        ];
+      }
+
+      if (query.includes("funnel_by_tenant AS") || query.includes("funnel_by_locale AS")) {
+        return [];
+      }
+
+      if (query.includes("COALESCE(SUM(paywall_views), 0) AS views")) {
+        const error = new Error("Not found: Table quiz-factory-analytics:marts.mart_funnel_daily");
+        (error as Error & { code: number }).code = 404;
+        throw error;
+      }
+
+      return [];
+    });
+
+    const detail = await provider.getTestDetail("test-focus-rhythm", FILTERS);
+
+    expect(detail.paywall_metrics_available).toBe(false);
+    expect(detail.paywall_metrics).toBeNull();
+  });
+});
+
 describe("BigQueryAdminAnalyticsProvider.getTenants", () => {
   it("returns bounded tenant rows and total count", async () => {
     const { provider, calls } = makeProvider((query) => {

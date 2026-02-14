@@ -546,7 +546,7 @@ Queue (in order)
 - Depends on: PR-ADMIN-ANALYTICS-03
 
 98) PR-ADMIN-ANALYTICS-05: Tests Analytics (List + Detail)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-ADMIN-ANALYTICS-05.md
 - Depends on: PR-ADMIN-ANALYTICS-04
 
