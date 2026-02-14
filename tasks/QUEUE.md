@@ -566,7 +566,7 @@ Queue (in order)
 - Depends on: PR-ADMIN-ANALYTICS-07
 
 102) PR-ADMIN-CONSOLE-08: Admin UX Finishing (Deep Links)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-ADMIN-CONSOLE-08.md
 - Depends on: PR-ADMIN-ANALYTICS-08
 

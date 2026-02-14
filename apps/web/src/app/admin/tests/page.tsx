@@ -54,6 +54,8 @@ const renderLatestVersion = (record: AdminTestListRecord) => {
   return "";
 };
 
+const inlineLinkClassName = "text-primary underline underline-offset-4 hover:no-underline";
+
 export default async function AdminTestsPage({ searchParams }: PageProps) {
   const cookieStore = await cookies();
   const session = await verifyAdminSession(cookieStore.get(ADMIN_SESSION_COOKIE)?.value);
@@ -152,12 +154,32 @@ export default async function AdminTestsPage({ searchParams }: PageProps) {
                       </td>
                       <td className="px-2 py-2">{record.published_tenants_count}</td>
                       <td className="px-2 py-2">
-                        <Link
-                          className="text-primary underline underline-offset-4 hover:no-underline"
-                          href={`/admin/tests/${encodeURIComponent(record.test_id)}`}
-                        >
-                          Open
-                        </Link>
+                        <div className="flex flex-wrap gap-x-1 gap-y-1">
+                          <Link
+                            className={inlineLinkClassName}
+                            href={`/admin/tests/${encodeURIComponent(record.test_id)}`}
+                          >
+                            Open
+                          </Link>
+                          <span aria-hidden="true" className="text-muted-foreground">
+                            |
+                          </span>
+                          <Link
+                            className={inlineLinkClassName}
+                            href={`/admin/analytics/tests/${encodeURIComponent(record.test_id)}`}
+                          >
+                            Analytics
+                          </Link>
+                          <span aria-hidden="true" className="text-muted-foreground">
+                            |
+                          </span>
+                          <Link
+                            className={inlineLinkClassName}
+                            href={`/t/${encodeURIComponent(record.slug)}`}
+                          >
+                            Public
+                          </Link>
+                        </div>
                       </td>
                     </tr>
                   ))

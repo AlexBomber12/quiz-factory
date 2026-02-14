@@ -28,6 +28,8 @@ const resolveParams = async (
   return Promise.resolve(params);
 };
 
+const inlineLinkClassName = "text-primary underline underline-offset-4 hover:no-underline";
+
 const buildPublicationRows = (
   publications: AdminTestDetailPublication[]
 ): {
@@ -129,6 +131,7 @@ export default async function AdminTestDetailPage({ params }: PageProps) {
     );
   }
 
+  const test = detail.test;
   const publicationData = buildPublicationRows(detail.publications);
   const csrfToken = await getAdminCsrfTokenForRender();
   const diagnostics = await readAdminDiagnostics();
@@ -140,16 +143,24 @@ export default async function AdminTestDetailPage({ params }: PageProps) {
           <CardTitle>Test detail</CardTitle>
           <CardDescription className="space-y-1">
             <span className="block">
-              test_id: <code>{detail.test.test_id}</code>
+              test_id: <code>{test.test_id}</code>
             </span>
             <span className="block">
-              slug: <code>{detail.test.slug}</code>
+              slug: <code>{test.slug}</code>
             </span>
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2">
           <Button asChild type="button" variant="outline">
-            <Link href={`/t/${encodeURIComponent(detail.test.slug)}`}>Open /t/{detail.test.slug}</Link>
+            <Link href={`/admin/analytics/tests/${encodeURIComponent(test.test_id)}`}>
+              Analytics test
+            </Link>
+          </Button>
+          <Button asChild type="button" variant="outline">
+            <Link href="/admin/analytics/distribution">Analytics distribution</Link>
+          </Button>
+          <Button asChild type="button" variant="outline">
+            <Link href={`/t/${encodeURIComponent(test.slug)}`}>Open /t/{test.slug}</Link>
           </Button>
           <Button asChild type="button" variant="outline">
             <Link href="/tests">Open /tests</Link>
@@ -213,7 +224,7 @@ export default async function AdminTestDetailPage({ params }: PageProps) {
         publishActionsDisabledMessage={diagnostics.publishActionsDisabledReason}
         publishActionsEnabled={diagnostics.publishActionsEnabled}
         tenants={publicationData.knownTenants}
-        testId={detail.test.test_id}
+        testId={test.test_id}
         versions={detail.versions.map((version) => ({
           version_id: version.version_id,
           version: version.version
@@ -236,6 +247,7 @@ export default async function AdminTestDetailPage({ params }: PageProps) {
                   <th className="px-2 py-2 font-semibold">enabled</th>
                   <th className="px-2 py-2 font-semibold">published_version_id</th>
                   <th className="px-2 py-2 font-semibold">domains</th>
+                  <th className="px-2 py-2 font-semibold">links</th>
                 </tr>
               </thead>
               <tbody>
@@ -254,11 +266,43 @@ export default async function AdminTestDetailPage({ params }: PageProps) {
                         )}
                       </td>
                       <td className="px-2 py-2">{row.domains.length > 0 ? row.domains.join(", ") : "-"}</td>
+                      <td className="px-2 py-2">
+                        <div className="flex flex-wrap gap-x-1 gap-y-1">
+                          <Link
+                            className={inlineLinkClassName}
+                            href={`/admin/tenants/${encodeURIComponent(row.tenant_id)}`}
+                          >
+                            Admin tenant
+                          </Link>
+                          <span aria-hidden="true" className="text-muted-foreground">
+                            |
+                          </span>
+                          <Link
+                            className={inlineLinkClassName}
+                            href={`/admin/analytics/tenants/${encodeURIComponent(row.tenant_id)}`}
+                          >
+                            Tenant analytics
+                          </Link>
+                          {row.domains.length > 0 ? (
+                            <>
+                              <span aria-hidden="true" className="text-muted-foreground">
+                                |
+                              </span>
+                              <Link
+                                className={inlineLinkClassName}
+                                href={`https://${row.domains[0]}/t/${encodeURIComponent(test.slug)}`}
+                              >
+                                Public test
+                              </Link>
+                            </>
+                          ) : null}
+                        </div>
+                      </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td className="px-2 py-4 text-muted-foreground" colSpan={4}>
+                    <td className="px-2 py-4 text-muted-foreground" colSpan={5}>
                       No tenant publication rows found.
                     </td>
                   </tr>
