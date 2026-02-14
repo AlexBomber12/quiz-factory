@@ -1201,6 +1201,59 @@ describe("BigQueryAdminAnalyticsProvider.getRevenue", () => {
       utm_source: FILTERS.utm_source
     });
   });
+
+  it("reports drift when Stripe totals are zero but internal totals are non-zero", async () => {
+    const { provider } = makeProvider((query) => {
+      if (query.includes("funnel_agg")) {
+        return [
+          {
+            sessions: 40,
+            test_starts: 30,
+            test_completes: 25,
+            paywall_views: 20,
+            checkout_starts: 15,
+            purchases: 5,
+            paid_conversion: 0.125,
+            gross_revenue_eur: 250,
+            net_revenue_eur: 180,
+            refunds_eur: 20,
+            disputes_eur: 10,
+            payment_fees_eur: 40
+          }
+        ];
+      }
+
+      if (query.includes("COALESCE(SUM(gross_revenue_eur), 0) AS gross_revenue_eur") && query.includes("GROUP BY date")) {
+        return [];
+      }
+
+      if (query.includes("FROM `quiz-factory-analytics.raw_stripe.purchases`") && query.includes("stripe_purchase_count")) {
+        return [
+          {
+            stripe_purchase_count: 0,
+            stripe_gross_revenue_eur: 0
+          }
+        ];
+      }
+
+      return [];
+    });
+
+    const revenue = await provider.getRevenue(FILTERS);
+
+    expect(revenue.reconciliation).toMatchObject({
+      available: true,
+      stripe_purchase_count: 0,
+      internal_purchase_count: 5,
+      purchase_count_diff: -5,
+      purchase_count_diff_pct: -1,
+      stripe_gross_revenue_eur: 0,
+      internal_gross_revenue_eur: 250,
+      gross_revenue_diff_eur: -250,
+      gross_revenue_diff_pct: -1
+    });
+    expect(revenue.reconciliation.detail).toContain("drift exceeds tolerance");
+  });
 });
 
 describe("BigQueryAdminAnalyticsProvider.getDataHealth", () => {
@@ -1275,5 +1328,65 @@ describe("BigQueryAdminAnalyticsProvider.getDataHealth", () => {
       model_count: null
     });
     expect(dataHealth.checks.length).toBeGreaterThanOrEqual(4);
+  });
+
+  it("surfaces missing required marts tables as error freshness rows", async () => {
+    const { provider } = makeProvider((query) => {
+      if (query.includes("FROM `quiz-factory-analytics.marts.mart_funnel_daily`") && query.includes("MAX(TIMESTAMP(date))")) {
+        const error = new Error("Not found: Table quiz-factory-analytics:marts.mart_funnel_daily");
+        (error as Error & { code: number }).code = 404;
+        throw error;
+      }
+
+      if (query.includes("FROM `quiz-factory-analytics.marts.mart_pnl_daily`") && query.includes("MAX(TIMESTAMP(date))")) {
+        return [
+          {
+            last_loaded_utc: "2026-02-07T00:10:00.000Z",
+            lag_minutes: 1650
+          }
+        ];
+      }
+
+      if (query.includes("FROM `quiz-factory-analytics.raw_stripe.purchases`") && query.includes("MAX(created_utc)")) {
+        return [
+          {
+            last_loaded_utc: "2026-02-07T11:00:00.000Z",
+            lag_minutes: 70
+          }
+        ];
+      }
+
+      if (query.includes("FROM `quiz-factory-analytics.marts.alert_events`")) {
+        return [];
+      }
+
+      if (query.includes("INFORMATION_SCHEMA.TABLES") && query.includes("last_modified_time")) {
+        return [
+          {
+            finished_at_utc: "2026-02-07T12:15:00.000Z"
+          }
+        ];
+      }
+
+      return [];
+    });
+
+    const dataHealth = await provider.getDataHealth(FILTERS);
+    const missingMartRow = dataHealth.freshness.find(
+      (row) => row.dataset === "marts" && row.table === "mart_funnel_daily"
+    );
+    const missingMartCheck = dataHealth.checks.find(
+      (check) => check.key === "freshness_marts_mart_funnel_daily"
+    );
+
+    expect(missingMartRow).toMatchObject({
+      dataset: "marts",
+      table: "mart_funnel_daily",
+      last_loaded_utc: null,
+      lag_minutes: null,
+      status: "error"
+    });
+    expect(missingMartCheck?.status).toBe("error");
+    expect(dataHealth.status).toBe("error");
   });
 });

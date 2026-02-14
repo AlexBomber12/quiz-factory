@@ -224,6 +224,22 @@ const safeRatio = (numerator: number, denominator: number): number => {
   return Math.round((numerator / denominator) * 10_000) / 10_000;
 };
 
+const reconciliationDiffPct = (
+  diff: number,
+  stripeTotal: number,
+  internalTotal: number
+): number => {
+  if (Math.abs(stripeTotal) > 0) {
+    return safeRatio(diff, stripeTotal);
+  }
+
+  if (Math.abs(internalTotal) > 0) {
+    return safeRatio(diff, internalTotal);
+  }
+
+  return 0;
+};
+
 const toHealthStatusFromAlertSeverity = (severity: string): "ok" | "warn" | "error" => {
   const normalized = severity.trim().toLowerCase();
   if (normalized.includes("error") || normalized.includes("critical")) {
@@ -2427,8 +2443,16 @@ export class BigQueryAdminAnalyticsProvider implements AdminAnalyticsProvider {
       const internalGrossRevenue = aggregate.gross_revenue_eur;
       const purchaseDiff = stripePurchaseCount - internalPurchaseCount;
       const grossDiff = stripeGrossRevenue - internalGrossRevenue;
-      const purchaseDiffPct = safeRatio(purchaseDiff, stripePurchaseCount);
-      const grossDiffPct = safeRatio(grossDiff, stripeGrossRevenue);
+      const purchaseDiffPct = reconciliationDiffPct(
+        purchaseDiff,
+        stripePurchaseCount,
+        internalPurchaseCount
+      );
+      const grossDiffPct = reconciliationDiffPct(
+        grossDiff,
+        stripeGrossRevenue,
+        internalGrossRevenue
+      );
       const withinTolerance =
         Math.abs(purchaseDiffPct) <= 0.03 &&
         Math.abs(grossDiffPct) <= 0.03;
@@ -2469,7 +2493,8 @@ export class BigQueryAdminAnalyticsProvider implements AdminAnalyticsProvider {
 
   private async fetchMartFreshnessRow(
     tableName: "mart_funnel_daily" | "mart_pnl_daily"
-  ): Promise<AdminAnalyticsDataFreshnessRow | null> {
+  ): Promise<AdminAnalyticsDataFreshnessRow> {
+    const thresholds = resolveFreshnessThresholds("marts", tableName);
     const query = `
       SELECT
         MAX(TIMESTAMP(date)) AS last_loaded_utc,
@@ -2479,7 +2504,6 @@ export class BigQueryAdminAnalyticsProvider implements AdminAnalyticsProvider {
 
     try {
       const [row] = await this.runQuery<BigQueryRow>(query, {});
-      const thresholds = resolveFreshnessThresholds("marts", tableName);
       const hasTimestamp = row?.last_loaded_utc !== null && row?.last_loaded_utc !== undefined;
       const lagMinutes = hasTimestamp ? asNumber(row?.lag_minutes) : null;
 
@@ -2494,7 +2518,15 @@ export class BigQueryAdminAnalyticsProvider implements AdminAnalyticsProvider {
       };
     } catch (error) {
       if (isNotFoundError(error)) {
-        return null;
+        return {
+          dataset: "marts",
+          table: tableName,
+          last_loaded_utc: null,
+          lag_minutes: null,
+          warn_after_minutes: thresholds.warn_after_minutes,
+          error_after_minutes: thresholds.error_after_minutes,
+          status: "error"
+        };
       }
 
       throw error;
@@ -2541,7 +2573,7 @@ export class BigQueryAdminAnalyticsProvider implements AdminAnalyticsProvider {
       this.fetchStripeFreshnessRow()
     ]);
 
-    return [funnel, pnl, stripe].filter((row): row is AdminAnalyticsDataFreshnessRow => row !== null);
+    return stripe ? [funnel, pnl, stripe] : [funnel, pnl];
   }
 
   private async fetchDbtRunMarker(): Promise<AdminAnalyticsDataDbtRunMarker | null> {
