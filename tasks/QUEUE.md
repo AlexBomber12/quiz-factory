@@ -515,7 +515,7 @@ Queue (in order)
 - Depends on: PR-ADMIN-CONSOLE-04
 
 92) PR-ADMIN-CONSOLE-06: Audit Log Page + Event Instrumentation
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-ADMIN-CONSOLE-06.md
 - Depends on: PR-ADMIN-CONSOLE-05
 

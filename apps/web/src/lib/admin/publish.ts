@@ -304,38 +304,6 @@ const assertStagingPublishPrerequisite = async (
   );
 };
 
-const insertAuditEvent = async (
-  client: PoolClient,
-  params: {
-    actorRole: AdminRole;
-    actorHint: string | null;
-    action: "publish" | "rollback";
-    testId: string;
-    meta: Record<string, unknown>;
-  }
-): Promise<void> => {
-  await client.query(
-    `
-      INSERT INTO admin_audit_events (
-        actor_role,
-        actor_hint,
-        action,
-        target_type,
-        target_id,
-        meta_json
-      )
-      VALUES ($1, $2, $3, 'test', $4, $5::jsonb)
-    `,
-    [
-      params.actorRole,
-      params.actorHint,
-      params.action,
-      params.testId,
-      JSON.stringify(params.meta)
-    ]
-  );
-};
-
 const invalidateCaches = (testId: string, tenantIds: string[]): void => {
   for (const tenantId of tenantIds) {
     invalidateTenant(tenantId);
@@ -545,19 +513,6 @@ export const publishVersionToTenants = async (input: {
       ]
     );
 
-    await insertAuditEvent(client, {
-      actorRole: input.actor_role,
-      actorHint: normalizeString(input.actor_hint ?? null),
-      action: "publish",
-      testId,
-      meta: {
-        version_id: resolvedVersion.version_id,
-        version: resolvedVersion.version,
-        tenant_ids: tenantIds,
-        is_enabled: input.is_enabled
-      }
-    });
-
     await client.query("COMMIT");
   } catch (error) {
     await client.query("ROLLBACK");
@@ -637,18 +592,6 @@ export const rollbackVersionForTenant = async (input: {
       [tenantId, resolvedVersion.test_row_id, resolvedVersion.version_id, input.actor_role]
     );
     effectiveIsEnabled = rows[0]?.is_enabled ?? true;
-
-    await insertAuditEvent(client, {
-      actorRole: input.actor_role,
-      actorHint: normalizeString(input.actor_hint ?? null),
-      action: "rollback",
-      testId,
-      meta: {
-        version_id: resolvedVersion.version_id,
-        version: resolvedVersion.version,
-        tenant_ids: [tenantId]
-      }
-    });
 
     await client.query("COMMIT");
   } catch (error) {

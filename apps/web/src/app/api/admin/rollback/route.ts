@@ -17,6 +17,7 @@ import {
   isPublishWorkflowError,
   rollbackVersionForTenant
 } from "../../../../lib/admin/publish";
+import { logAdminEvent } from "../../../../lib/admin/audit";
 import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "../../../../lib/admin/session";
 
 type RollbackPayload = {
@@ -191,6 +192,18 @@ export const POST = async (request: Request): Promise<Response> => {
       test_id: parsedRequest.payload.test_id,
       tenant_id: parsedRequest.payload.tenant_id,
       version_id: parsedRequest.payload.version_id
+    });
+
+    await logAdminEvent({
+      actor: session.role,
+      action: "test_rollback",
+      entity_type: "test",
+      entity_id: updated.test_id,
+      metadata: {
+        tenant_id: parsedRequest.payload.tenant_id,
+        version_id: updated.version_id,
+        version: updated.version
+      }
     });
 
     return buildSuccessResponse(request, {

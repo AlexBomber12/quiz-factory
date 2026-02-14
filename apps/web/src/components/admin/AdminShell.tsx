@@ -14,10 +14,9 @@ const NAV_ITEMS: Array<{ href: string; label: string }> = [
   { href: "/admin", label: "Dashboard" },
   { href: "/admin/imports", label: "Imports" },
   { href: "/admin/tests", label: "Tests" },
-  { href: "/admin/tenants", label: "Tenants" }
+  { href: "/admin/tenants", label: "Tenants" },
+  { href: "/admin/audit", label: "Audit" }
 ];
-
-const COMING_SOON_ITEMS = ["Audit"];
 
 const isNavItemActive = (pathname: string, href: string): boolean => {
   if (href === "/admin") {
@@ -34,6 +33,10 @@ const isNavItemActive = (pathname: string, href: string): boolean => {
 
   if (href === "/admin/tenants") {
     return pathname.startsWith("/admin/tenants");
+  }
+
+  if (href === "/admin/audit") {
+    return pathname.startsWith("/admin/audit");
   }
 
   return pathname === href;
@@ -82,23 +85,6 @@ export default function AdminShell({ children }: AdminShellProps) {
                 );
               })}
             </nav>
-
-            <div className="mt-4 border-t pt-4">
-              <p className="px-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                Coming soon
-              </p>
-              <ul className="mt-2 space-y-1">
-                {COMING_SOON_ITEMS.map((item) => (
-                  <li
-                    key={item}
-                    className="rounded-md px-3 py-2 text-sm text-muted-foreground/80"
-                    aria-disabled="true"
-                  >
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
           </aside>
         ) : null}
 

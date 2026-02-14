@@ -17,6 +17,7 @@ import {
   isPublishWorkflowError,
   publishVersionToTenants
 } from "../../../../lib/admin/publish";
+import { logAdminEvent } from "../../../../lib/admin/audit";
 import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "../../../../lib/admin/session";
 
 type PublishPayload = {
@@ -229,6 +230,19 @@ export const POST = async (request: Request): Promise<Response> => {
       version_id: parsedRequest.payload.version_id,
       tenant_ids: parsedRequest.payload.tenant_ids,
       is_enabled: parsedRequest.payload.is_enabled
+    });
+
+    await logAdminEvent({
+      actor: session.role,
+      action: "test_published",
+      entity_type: "test",
+      entity_id: updated.test_id,
+      metadata: {
+        version_id: updated.version_id,
+        version: updated.version,
+        tenant_ids: updated.tenant_ids,
+        is_enabled: updated.is_enabled
+      }
     });
 
     return buildSuccessResponse(request, {

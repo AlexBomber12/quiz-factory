@@ -14,6 +14,8 @@ import {
   issueAdminSession,
   resolveAdminRoleFromToken
 } from "../../../../lib/admin/session";
+import { logAdminEvent } from "../../../../lib/admin/audit";
+import { resolveTenant } from "../../../../lib/tenants/resolve";
 
 const normalizeString = (value: unknown): string | null => {
   if (typeof value !== "string") {
@@ -101,6 +103,9 @@ export const POST = async (request: Request): Promise<Response> => {
     return NextResponse.redirect(buildLoginRedirect(request, "server_misconfigured"), 303);
   }
 
+  const requestUrl = new URL(request.url);
+  const tenantResolution = resolveTenant(request.headers, requestUrl.hostname);
+
   const response = NextResponse.redirect(new URL("/admin", request.url), 303);
   response.cookies.set({
     name: ADMIN_SESSION_COOKIE,
@@ -110,6 +115,16 @@ export const POST = async (request: Request): Promise<Response> => {
     sameSite: "lax",
     path: "/",
     expires: session.expiresAt
+  });
+
+  await logAdminEvent({
+    actor: role,
+    action: "admin_login",
+    entity_type: "tenant",
+    entity_id: tenantResolution.tenantId,
+    metadata: {
+      host: requestUrl.hostname
+    }
   });
 
   return response;

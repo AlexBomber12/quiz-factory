@@ -21,6 +21,7 @@ import {
   ADMIN_UPLOAD_RATE_LIMIT,
   consumeAdminRateLimit
 } from "../../../../lib/admin/rate_limit";
+import { logAdminEvent } from "../../../../lib/admin/audit";
 import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "../../../../lib/admin/session";
 
 type UploadErrorCode =
@@ -192,6 +193,17 @@ export const POST = async (request: Request): Promise<Response> => {
     const created = await createUploadedImport({
       files_json: filesJson,
       created_by: session.role
+    });
+
+    await logAdminEvent({
+      actor: session.role,
+      action: "import_uploaded",
+      entity_type: "import",
+      entity_id: created.id,
+      metadata: {
+        locales: Object.keys(filesJson).sort((left, right) => left.localeCompare(right)),
+        status: created.status
+      }
     });
 
     if (prefersJson(request)) {
