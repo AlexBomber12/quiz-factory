@@ -17,6 +17,7 @@ import {
   getImportById,
   isValidImportId
 } from "../../../../../lib/admin/imports";
+import { logAdminEvent } from "../../../../../lib/admin/audit";
 import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "../../../../../lib/admin/session";
 
 type RouteContext = {
@@ -131,6 +132,19 @@ export const POST = async (request: Request, context: RouteContext): Promise<Res
     const converted = await convertImportToDraft({
       import_id: id,
       created_by: session.role
+    });
+
+    await logAdminEvent({
+      actor: session.role,
+      action: "import_converted",
+      entity_type: "import",
+      entity_id: id,
+      metadata: {
+        test_id: converted.draft.test_id,
+        version_id: converted.draft.id,
+        version: converted.draft.version,
+        created: converted.created
+      }
     });
 
     if (prefersJson(request)) {

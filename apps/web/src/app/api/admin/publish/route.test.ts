@@ -4,6 +4,7 @@ let sessionRole: "admin" | "editor" | null = "admin";
 const csrfToken = "csrf-token-01234567890123456789";
 
 const publishVersionToTenants = vi.fn();
+const logAdminEvent = vi.fn();
 
 vi.mock("next/headers", () => ({
   cookies: async () => ({
@@ -37,6 +38,10 @@ vi.mock("../../../../lib/admin/publish", () => ({
   }
 }));
 
+vi.mock("../../../../lib/admin/audit", () => ({
+  logAdminEvent: (...args: unknown[]) => logAdminEvent(...args)
+}));
+
 import { POST } from "./route";
 
 const buildJsonRequest = (body: Record<string, unknown>) => {
@@ -55,6 +60,7 @@ describe("POST /api/admin/publish", () => {
   beforeEach(() => {
     sessionRole = "admin";
     publishVersionToTenants.mockReset();
+    logAdminEvent.mockReset();
     publishVersionToTenants.mockResolvedValue({
       test_id: "test-focus-rhythm",
       version_id: "version-1",
@@ -137,6 +143,18 @@ describe("POST /api/admin/publish", () => {
       version_id: "version-1",
       tenant_ids: ["tenant-tenant-example-com"],
       is_enabled: true
+    });
+    expect(logAdminEvent).toHaveBeenCalledWith({
+      actor: "admin",
+      action: "test_published",
+      entity_type: "test",
+      entity_id: "test-focus-rhythm",
+      metadata: {
+        version_id: "version-1",
+        version: 1,
+        tenant_ids: ["tenant-tenant-example-com"],
+        is_enabled: true
+      }
     });
 
     const payload = await response.json();

@@ -9,7 +9,9 @@ import {
   readAdminCsrfTokenFromHeader,
   readAdminCsrfTokenFromJson
 } from "../../../../lib/admin/csrf";
-import { ADMIN_SESSION_COOKIE } from "../../../../lib/admin/session";
+import { logAdminEvent } from "../../../../lib/admin/audit";
+import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "../../../../lib/admin/session";
+import { resolveTenant } from "../../../../lib/tenants/resolve";
 
 const parseCsrfToken = async (request: Request): Promise<string | null> => {
   const headerToken = readAdminCsrfTokenFromHeader(request);
@@ -37,6 +39,7 @@ const parseCsrfToken = async (request: Request): Promise<string | null> => {
 
 export const POST = async (request: Request): Promise<Response> => {
   const cookieStore = await cookies();
+  const session = await verifyAdminSession(cookieStore.get(ADMIN_SESSION_COOKIE)?.value);
   const csrfCookieToken = normalizeAdminCsrfToken(
     cookieStore.get(ADMIN_CSRF_COOKIE)?.value
   );
@@ -57,5 +60,21 @@ export const POST = async (request: Request): Promise<Response> => {
     path: "/",
     maxAge: 0
   });
+
+  if (session) {
+    const requestUrl = new URL(request.url);
+    const tenantResolution = resolveTenant(request.headers, requestUrl.hostname);
+
+    await logAdminEvent({
+      actor: session.role,
+      action: "admin_logout",
+      entity_type: "tenant",
+      entity_id: tenantResolution.tenantId,
+      metadata: {
+        host: requestUrl.hostname
+      }
+    });
+  }
+
   return response;
 };

@@ -4,6 +4,7 @@ let sessionRole: "admin" | "editor" | null = "admin";
 const csrfToken = "csrf-token-01234567890123456789";
 
 const rollbackVersionForTenant = vi.fn();
+const logAdminEvent = vi.fn();
 
 vi.mock("next/headers", () => ({
   cookies: async () => ({
@@ -37,6 +38,10 @@ vi.mock("../../../../lib/admin/publish", () => ({
   }
 }));
 
+vi.mock("../../../../lib/admin/audit", () => ({
+  logAdminEvent: (...args: unknown[]) => logAdminEvent(...args)
+}));
+
 import { POST } from "./route";
 
 const buildJsonRequest = (body: Record<string, unknown>) => {
@@ -55,6 +60,7 @@ describe("POST /api/admin/rollback", () => {
   beforeEach(() => {
     sessionRole = "admin";
     rollbackVersionForTenant.mockReset();
+    logAdminEvent.mockReset();
     rollbackVersionForTenant.mockResolvedValue({
       test_id: "test-focus-rhythm",
       version_id: "version-1",
@@ -132,6 +138,17 @@ describe("POST /api/admin/rollback", () => {
       test_id: "test-focus-rhythm",
       tenant_id: "tenant-tenant-example-com",
       version_id: "version-1"
+    });
+    expect(logAdminEvent).toHaveBeenCalledWith({
+      actor: "admin",
+      action: "test_rollback",
+      entity_type: "test",
+      entity_id: "test-focus-rhythm",
+      metadata: {
+        tenant_id: "tenant-tenant-example-com",
+        version_id: "version-1",
+        version: 1
+      }
     });
 
     const payload = await response.json();
