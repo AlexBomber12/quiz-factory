@@ -87,4 +87,52 @@ describe("MockAdminAnalyticsProvider", () => {
       lag_minutes: expect.any(Number)
     });
   });
+
+  it("scopes cost_ingestion status to raw_costs.ad_spend_daily freshness", async () => {
+    const provider = createMockAdminAnalyticsProvider();
+
+    let sampledDataHealth: Awaited<ReturnType<typeof provider.getDataHealth>> | null = null;
+    for (let dayOffset = 0; dayOffset < 120; dayOffset += 1) {
+      const date = new Date(Date.UTC(2026, 1, 1 + dayOffset));
+      const day = date.toISOString().slice(0, 10);
+      const filters: AdminAnalyticsFilters = {
+        ...FILTERS,
+        start: day,
+        end: day,
+        utm_source: `source-${dayOffset}`
+      };
+
+      const candidate = await provider.getDataHealth(filters);
+      const costRow = candidate.freshness.find(
+        (row) => row.dataset === "raw_costs" && row.table === "ad_spend_daily"
+      );
+      const pnlRow = candidate.freshness.find(
+        (row) => row.dataset === "marts" && row.table === "mart_pnl_daily"
+      );
+      const costCheck = candidate.checks.find((check) => check.key === "cost_ingestion");
+
+      if (!costRow || !pnlRow || !costCheck) {
+        continue;
+      }
+
+      if (pnlRow.status !== "ok" && costRow.status === "ok") {
+        sampledDataHealth = candidate;
+        break;
+      }
+    }
+
+    expect(sampledDataHealth).not.toBeNull();
+    if (!sampledDataHealth) {
+      return;
+    }
+
+    const costRow = sampledDataHealth.freshness.find(
+      (row) => row.dataset === "raw_costs" && row.table === "ad_spend_daily"
+    );
+    const costCheck = sampledDataHealth.checks.find((check) => check.key === "cost_ingestion");
+
+    expect(costRow?.status).toBe("ok");
+    expect(costCheck?.status).toBe("ok");
+    expect(costCheck?.detail).toContain("raw_costs.ad_spend_daily");
+  });
 });

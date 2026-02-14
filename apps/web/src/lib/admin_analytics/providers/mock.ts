@@ -755,7 +755,10 @@ export class MockAdminAnalyticsProvider implements AdminAnalyticsProvider {
       }
     ];
 
-    const staleRows = freshnessRows.filter((row) => row.status !== "ok");
+    const costFreshnessRow =
+      freshnessRows.find(
+        (row) => row.dataset === "raw_costs" && row.table === "ad_spend_daily"
+      ) ?? freshnessRows[3];
 
     const checks: AdminAnalyticsDataHealthCheck[] = [
       {
@@ -786,11 +789,11 @@ export class MockAdminAnalyticsProvider implements AdminAnalyticsProvider {
       {
         key: "cost_ingestion",
         label: "Ad spend ingestion",
-        status: staleRows.length > 0 ? "warn" : "ok",
-        detail: staleRows.length > 0
-          ? "One or more ingestion tables are stale; investigate scheduler delays."
-          : "All monitored tables are within freshness targets.",
-        last_updated_utc: freshnessRows[3].last_loaded_utc
+        status: costFreshnessRow.status,
+        detail: costFreshnessRow.status === "ok"
+          ? "raw_costs.ad_spend_daily is fresh."
+          : "raw_costs.ad_spend_daily lag exceeded warning threshold.",
+        last_updated_utc: costFreshnessRow.last_loaded_utc
       }
     ];
 
