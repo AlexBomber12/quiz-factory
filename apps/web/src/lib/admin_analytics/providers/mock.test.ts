@@ -173,4 +173,31 @@ describe("MockAdminAnalyticsProvider", () => {
     expect(detail.top_tests_total).toBe(0);
     expect(detail.locale_breakdown_total).toBe(0);
   });
+
+  it("respects locale filter in test detail locale_breakdown totals", async () => {
+    const provider = createMockAdminAnalyticsProvider();
+    const allLocaleDetail = await provider.getTestDetail("test-focus-rhythm", FILTERS);
+    const localeScopedFilters: AdminAnalyticsFilters = {
+      ...FILTERS,
+      locale: "es"
+    };
+
+    const detail = await provider.getTestDetail("test-focus-rhythm", localeScopedFilters);
+
+    expect(detail.locale_breakdown).toHaveLength(1);
+    expect(detail.locale_breakdown[0]?.locale).toBe("es");
+    expect(allLocaleDetail.locale_breakdown.length).toBeGreaterThan(1);
+
+    const allLocaleSessionsTotal = allLocaleDetail.locale_breakdown.reduce(
+      (total, row) => total + row.sessions,
+      0
+    );
+    const allLocalePurchasesTotal = allLocaleDetail.locale_breakdown.reduce(
+      (total, row) => total + row.purchases,
+      0
+    );
+
+    expect(detail.locale_breakdown[0]?.sessions).toBeLessThan(allLocaleSessionsTotal);
+    expect(detail.locale_breakdown[0]?.purchases).toBeLessThanOrEqual(allLocalePurchasesTotal);
+  });
 });

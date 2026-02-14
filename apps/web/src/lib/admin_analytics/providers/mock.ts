@@ -499,12 +499,16 @@ const buildTestLocaleBreakdownRows = (
   scope: string
 ): AdminAnalyticsTestLocaleRow[] => {
   const localeSegments = filters.locale === "all" ? [...DEFAULT_LOCALES] : [filters.locale];
+  const localeForSeries = filters.locale === "all" ? "all" : filters.locale;
   const daily = buildDailySeries(
-    { ...filters, test_id: testId, locale: "all" },
+    { ...filters, test_id: testId, locale: localeForSeries },
     `${scope}:${testId}`
   );
   const summary = summarizeSeries(daily);
-  const seed = seedFromFilters({ ...filters, test_id: testId, locale: "all" }, `${scope}:seed`);
+  const seed = seedFromFilters(
+    { ...filters, test_id: testId, locale: localeForSeries },
+    `${scope}:seed`
+  );
   const weights = localeSegments.map((_, index) => ((seed + index * 19) % 11) + 3);
 
   const sessions = allocateByWeights(summary.visits, weights);
