@@ -531,7 +531,7 @@ Queue (in order)
 - Depends on: PR-ADMIN-CONSOLE-07
 
 95) PR-ADMIN-ANALYTICS-02: Admin Analytics API Contract + Provider Abstraction
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-ADMIN-ANALYTICS-02.md
 - Depends on: PR-ADMIN-ANALYTICS-01
 
