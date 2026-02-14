@@ -231,7 +231,8 @@ export const POST = async (request: Request): Promise<Response> => {
     await validatePublishGuardrails({
       test_id: parsedRequest.payload.test_id,
       version_id: parsedRequest.payload.version_id,
-      tenant_ids: parsedRequest.payload.tenant_ids
+      tenant_ids: parsedRequest.payload.tenant_ids,
+      is_enabled: parsedRequest.payload.is_enabled
     });
   } catch (error) {
     if (isPublishGuardrailValidationError(error)) {

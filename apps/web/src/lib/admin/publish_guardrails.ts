@@ -11,6 +11,7 @@ type PublishGuardrailInput = {
   test_id: string;
   version_id: string;
   tenant_ids: string[];
+  is_enabled: boolean;
 };
 
 type RollbackGuardrailInput = {
@@ -89,6 +90,11 @@ export const validatePublishGuardrails = async (input: PublishGuardrailInput): P
     throw new PublishGuardrailValidationError(
       `version_id '${input.version_id}' does not belong to test_id '${input.test_id}'.`
     );
+  }
+
+  // Disable-only operations must stay available for incident mitigation.
+  if (!input.is_enabled) {
+    return;
   }
 
   validateVersionSpecForPublish(input.test_id, versionSpec.spec_json);

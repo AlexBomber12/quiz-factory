@@ -155,7 +155,8 @@ describe("POST /api/admin/publish", () => {
     expect(validatePublishGuardrails).toHaveBeenCalledWith({
       test_id: "test-focus-rhythm",
       version_id: "version-1",
-      tenant_ids: ["tenant-tenant-example-com"]
+      tenant_ids: ["tenant-tenant-example-com"],
+      is_enabled: true
     });
     expect(publishVersionToTenants).toHaveBeenCalledWith({
       actor_role: "admin",
@@ -180,6 +181,32 @@ describe("POST /api/admin/publish", () => {
     const payload = await response.json();
     expect(payload.ok).toBe(true);
     expect(payload.result.version_id).toBe("version-1");
+  });
+
+  it("passes disable requests through guardrails and publish mutation", async () => {
+    const response = await POST(
+      buildJsonRequest({
+        test_id: "test-focus-rhythm",
+        version_id: "version-1",
+        tenant_ids: ["tenant-tenant-example-com"],
+        is_enabled: false
+      })
+    );
+
+    expect(response.status).toBe(200);
+    expect(validatePublishGuardrails).toHaveBeenCalledWith({
+      test_id: "test-focus-rhythm",
+      version_id: "version-1",
+      tenant_ids: ["tenant-tenant-example-com"],
+      is_enabled: false
+    });
+    expect(publishVersionToTenants).toHaveBeenCalledWith({
+      actor_role: "admin",
+      test_id: "test-focus-rhythm",
+      version_id: "version-1",
+      tenant_ids: ["tenant-tenant-example-com"],
+      is_enabled: false
+    });
   });
 
   it("returns structured workflow errors", async () => {
