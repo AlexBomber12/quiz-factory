@@ -232,18 +232,20 @@ export const POST = async (request: Request): Promise<Response> => {
       is_enabled: parsedRequest.payload.is_enabled
     });
 
-    await logAdminEvent({
-      actor: session.role,
-      action: "test_published",
-      entity_type: "test",
-      entity_id: updated.test_id,
-      metadata: {
-        version_id: updated.version_id,
-        version: updated.version,
-        tenant_ids: updated.tenant_ids,
-        is_enabled: updated.is_enabled
-      }
-    });
+    void Promise.resolve(
+      logAdminEvent({
+        actor: session.role,
+        action: "test_published",
+        entity_type: "test",
+        entity_id: updated.test_id,
+        metadata: {
+          version_id: updated.version_id,
+          version: updated.version,
+          tenant_ids: updated.tenant_ids,
+          is_enabled: updated.is_enabled
+        }
+      })
+    ).catch(() => undefined);
 
     return buildSuccessResponse(request, {
       ok: true,
