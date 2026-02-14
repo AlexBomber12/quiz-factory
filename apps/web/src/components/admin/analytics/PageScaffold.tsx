@@ -1,8 +1,8 @@
-import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../ui/card";
 import AdminAnalyticsFilterBar from "./FilterBar";
+import AdminAnalyticsRelatedLinks from "./RelatedLinks";
 
 type AdminAnalyticsPageLink = {
   href: string;
@@ -51,15 +51,7 @@ export default function AdminAnalyticsPageScaffold({
             <CardDescription>Use these links to move between analytics views.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-wrap gap-2">
-            {links.map((link) => (
-              <Link
-                className="text-primary underline underline-offset-4 hover:no-underline"
-                href={link.href}
-                key={link.href}
-              >
-                {link.label}
-              </Link>
-            ))}
+            <AdminAnalyticsRelatedLinks links={links} />
           </CardContent>
         </Card>
       ) : null}
