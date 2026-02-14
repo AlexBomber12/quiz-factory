@@ -2,9 +2,10 @@ import { parseDateYYYYMMDD } from "../../admin/analytics_dates";
 import type { AdminAnalyticsProvider } from "../provider";
 import {
   resolveAdminAnalyticsDistributionOptions,
+  resolveAdminAnalyticsTrafficOptions,
   type AdminAnalyticsDistributionCell,
   type AdminAnalyticsDistributionOptions,
-  AdminAnalyticsBreakdownRow,
+  type AdminAnalyticsTrafficOptions,
   AdminAnalyticsDataFreshnessRow,
   AdminAnalyticsDataHealthCheck,
   AdminAnalyticsDataResponse,
@@ -29,6 +30,7 @@ import {
   AdminAnalyticsTestDetailResponse,
   AdminAnalyticsTestTenantRow,
   AdminAnalyticsTestTimeseriesRow,
+  AdminAnalyticsTrafficSegmentRow,
   AdminAnalyticsTrafficResponse,
   AdminAnalyticsTestsRow,
   AdminAnalyticsTenantsRow,
@@ -54,8 +56,11 @@ const TENANT_CATALOG = [
 ] as const;
 
 const DEFAULT_CHANNELS = ["direct", "google", "meta", "newsletter"] as const;
+const DEFAULT_CAMPAIGNS = ["launch", "retargeting", "always-on", "creator"] as const;
+const DEFAULT_REFERRERS = ["google.com", "instagram.com", "youtube.com", "t.co"] as const;
 const DEFAULT_DEVICES = ["desktop", "mobile", "tablet"] as const;
 const DEFAULT_LOCALES = ["en", "es", "pt-BR"] as const;
+const DEFAULT_COUNTRIES = ["US", "ES", "BR", "MX"] as const;
 const OFFER_TYPES = ["single", "pack_5", "pack_10"] as const;
 const TENANT_TABLE_LIMIT = 20;
 
@@ -382,28 +387,31 @@ const allocateByWeights = (total: number, weights: number[]): number[] => {
   return allocated;
 };
 
-const buildBreakdownRows = (
+const buildTrafficRows = (
   segments: string[],
   summary: MetricsSummary,
   seed: number
-): AdminAnalyticsBreakdownRow[] => {
+): AdminAnalyticsTrafficSegmentRow[] => {
   const weights = segments.map((_, index) => ((seed + index * 19) % 11) + 3);
 
-  const visits = allocateByWeights(summary.visits, weights);
-  const uniqueVisitors = allocateByWeights(summary.unique_visitors, weights);
-  const testStarts = allocateByWeights(summary.test_starts, weights);
-  const testCompletions = allocateByWeights(summary.test_completions, weights);
-  const purchases = allocateByWeights(summary.purchase_success_count, weights);
+  const sessions = allocateByWeights(summary.visits, weights);
+  const purchases = allocateByWeights(summary.purchase_success_count, weights).map((value, index) =>
+    Math.min(value, sessions[index] ?? 0)
+  );
+  const netRevenueCents = allocateByWeights(Math.round(summary.net_revenue_eur * 100), weights);
 
-  return segments.map((segment, index) => ({
-    segment,
-    visits: visits[index],
-    unique_visitors: Math.min(visits[index], uniqueVisitors[index]),
-    test_starts: Math.min(visits[index], testStarts[index]),
-    test_completions: Math.min(testStarts[index], testCompletions[index]),
-    purchase_success_count: Math.min(testCompletions[index], purchases[index]),
-    purchase_conversion: divide(purchases[index], visits[index])
-  }));
+  return segments.map((segment, index) => {
+    const sessionsValue = sessions[index] ?? 0;
+    const purchasesValue = purchases[index] ?? 0;
+
+    return {
+      segment,
+      sessions: sessionsValue,
+      purchases: purchasesValue,
+      paid_conversion: divide(purchasesValue, sessionsValue),
+      net_revenue_eur: roundCurrency((netRevenueCents[index] ?? 0) / 100)
+    };
+  });
 };
 
 const resolveTestIds = (filters: AdminAnalyticsFilters): string[] => {
@@ -979,20 +987,29 @@ export class MockAdminAnalyticsProvider implements AdminAnalyticsProvider {
     };
   }
 
-  async getTraffic(filters: AdminAnalyticsFilters): Promise<AdminAnalyticsTrafficResponse> {
+  async getTraffic(
+    filters: AdminAnalyticsFilters,
+    options?: AdminAnalyticsTrafficOptions
+  ): Promise<AdminAnalyticsTrafficResponse> {
+    const resolvedOptions = resolveAdminAnalyticsTrafficOptions(options);
     const daily = buildDailySeries(filters, "traffic");
     const summary = summarizeSeries(daily);
     const channelSegments = filters.utm_source ? [filters.utm_source] : [...DEFAULT_CHANNELS];
+    const campaignSegments = filters.utm_source
+      ? DEFAULT_CAMPAIGNS.map((campaign) => `${filters.utm_source}:${campaign}`)
+      : DEFAULT_CAMPAIGNS.map((campaign) => `unknown:${campaign}`);
+    const referrerSegments = [...DEFAULT_REFERRERS];
     const deviceSegments = filters.device_type === "all"
       ? [...DEFAULT_DEVICES]
       : [filters.device_type];
-    const localeSegments = filters.locale === "all"
-      ? [...DEFAULT_LOCALES]
-      : [filters.locale];
+    const countrySegments = filters.locale === "all"
+      ? [...DEFAULT_COUNTRIES]
+      : [filters.locale === "pt-BR" ? "BR" : filters.locale.toUpperCase()];
 
     return {
       filters,
       generated_at_utc: generatedAtUtc(filters),
+      top_n: resolvedOptions.top_n,
       kpis: [
         {
           key: "visits",
@@ -1030,21 +1047,31 @@ export class MockAdminAnalyticsProvider implements AdminAnalyticsProvider {
           delta: trendDelta(daily, (row) => divide(row.purchase_success_count, row.visits))
         }
       ],
-      by_utm_source: buildBreakdownRows(
+      by_utm_source: buildTrafficRows(
         channelSegments,
         summary,
         seedFromFilters(filters, "traffic-by-channel")
-      ),
-      by_device_type: buildBreakdownRows(
+      ).slice(0, resolvedOptions.top_n),
+      by_utm_campaign: buildTrafficRows(
+        campaignSegments,
+        summary,
+        seedFromFilters(filters, "traffic-by-campaign")
+      ).slice(0, resolvedOptions.top_n),
+      by_referrer: buildTrafficRows(
+        referrerSegments,
+        summary,
+        seedFromFilters(filters, "traffic-by-referrer")
+      ).slice(0, resolvedOptions.top_n),
+      by_device_type: buildTrafficRows(
         deviceSegments,
         summary,
         seedFromFilters(filters, "traffic-by-device")
-      ),
-      by_locale: buildBreakdownRows(
-        localeSegments,
+      ).slice(0, resolvedOptions.top_n),
+      by_country: buildTrafficRows(
+        countrySegments,
         summary,
-        seedFromFilters(filters, "traffic-by-locale")
-      )
+        seedFromFilters(filters, "traffic-by-country")
+      ).slice(0, resolvedOptions.top_n)
     };
   }
 

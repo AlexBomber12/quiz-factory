@@ -105,10 +105,13 @@ describe("MockAdminAnalyticsProvider", () => {
     });
 
     const traffic = await provider.getTraffic(FILTERS);
+    expect(traffic.top_n).toBe(50);
     expect(traffic.kpis.length).toBeGreaterThan(0);
     expect(traffic.by_utm_source.length).toBeGreaterThan(0);
+    expect(traffic.by_utm_campaign.length).toBeGreaterThan(0);
+    expect(traffic.by_referrer.length).toBeGreaterThan(0);
     expect(traffic.by_device_type.length).toBeGreaterThan(0);
-    expect(traffic.by_locale.length).toBeGreaterThan(0);
+    expect(traffic.by_country.length).toBeGreaterThan(0);
 
     const revenue = await provider.getRevenue(FILTERS);
     expect(revenue.kpis.length).toBeGreaterThan(0);
