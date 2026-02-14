@@ -536,7 +536,7 @@ Queue (in order)
 - Depends on: PR-ADMIN-ANALYTICS-01
 
 96) PR-ADMIN-ANALYTICS-03: Global Analytics Overview (BigQuery) + UI Wiring
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-ADMIN-ANALYTICS-03.md
 - Depends on: PR-ADMIN-ANALYTICS-02
 

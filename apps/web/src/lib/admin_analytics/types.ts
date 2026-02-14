@@ -150,6 +150,34 @@ export type AdminAnalyticsDataFreshnessRow = TableRow & {
   status: AdminAnalyticsDataHealthStatus;
 };
 
+export type AdminAnalyticsOverviewTopTestRow = TableRow & {
+  test_id: string;
+  net_revenue_eur: number;
+  purchase_conversion: number;
+  purchases: number;
+};
+
+export type AdminAnalyticsOverviewTopTenantRow = TableRow & {
+  tenant_id: string;
+  net_revenue_eur: number;
+  purchases: number;
+};
+
+export type AdminAnalyticsOverviewFreshnessRow = TableRow & {
+  table: string;
+  max_date: string | null;
+  available: boolean;
+};
+
+export type AdminAnalyticsOverviewAlertRow = TableRow & {
+  detected_at_utc: string;
+  alert_name: string;
+  severity: string;
+  tenant_id: string | null;
+  metric_value: number | null;
+  threshold_value: number | null;
+};
+
 export type AdminAnalyticsOverviewResponse = {
   filters: AdminAnalyticsFilters;
   generated_at_utc: string;
@@ -157,6 +185,11 @@ export type AdminAnalyticsOverviewResponse = {
   funnel: FunnelStep[];
   visits_timeseries: TimeseriesPoint[];
   revenue_timeseries: TimeseriesPoint[];
+  top_tests: AdminAnalyticsOverviewTopTestRow[];
+  top_tenants: AdminAnalyticsOverviewTopTenantRow[];
+  data_freshness: AdminAnalyticsOverviewFreshnessRow[];
+  alerts_available: boolean;
+  alerts: AdminAnalyticsOverviewAlertRow[];
 };
 
 export type AdminAnalyticsTestsResponse = {
