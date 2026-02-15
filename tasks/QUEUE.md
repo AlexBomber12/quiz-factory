@@ -591,7 +591,7 @@ Queue (in order)
 - Depends on: PR-ADMIN-ANALYTICS-08 and PR-CONTENT-DB-04
 
 107) PR-OPS-RUNBOOK-01: Ops Runbook Finishing (standalone, analytics mode, verify)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-OPS-RUNBOOK-01.md
 - Depends on: PR-ADMIN-ANALYTICS-09
 
