@@ -81,7 +81,7 @@ class MultiStripeAnalyticsStore implements StripeAnalyticsStore {
     row: Row
   ): Promise<boolean> {
     if (this.stores.length === 0) {
-      return true;
+      return false;
     }
 
     let inserted = false;
@@ -106,7 +106,7 @@ class MultiStripeAnalyticsStore implements StripeAnalyticsStore {
     }
 
     if (successfulWrites === 0) {
-      return true;
+      return false;
     }
 
     return inserted;

@@ -78,6 +78,26 @@ describe("stripe webhook store selection", () => {
     expect(mocks.createStripeContentDbStore).toHaveBeenCalledTimes(1);
   });
 
+  it("returns false when no stores are configured", async () => {
+    mocks.createStripeContentDbStore.mockReturnValue(null);
+
+    const { createStripeAnalyticsStore } = await import("./route");
+    const store = createStripeAnalyticsStore();
+    const inserted = await store.recordWebhookEvent({
+      stripe_event_id: "evt_no_stores",
+      type: "checkout.session.completed",
+      created_utc: "2026-01-01T00:00:00.000Z",
+      livemode: false,
+      object_type: "checkout.session",
+      object_id: "cs_no_stores",
+      request_id: "req_no_stores",
+      api_version: "2024-06-20",
+      received_utc: "2026-01-01T00:00:01.000Z"
+    });
+
+    expect(inserted).toBe(false);
+  });
+
   it("includes BigQuery store when BigQuery env is present", async () => {
     process.env.BIGQUERY_PROJECT_ID = "quiz-factory-test";
     const bigqueryStore = createStoreStub();
@@ -129,5 +149,46 @@ describe("stripe webhook store selection", () => {
     expect(recordWebhookEventFailure).toHaveBeenCalledTimes(1);
     expect(contentDbStore.recordWebhookEvent).toHaveBeenCalledTimes(1);
     expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns false when every configured store write fails", async () => {
+    process.env.BIGQUERY_PROJECT_ID = "quiz-factory-test";
+
+    const bigqueryStore = createStoreStub();
+    const contentDbStore = createStoreStub();
+    const bigqueryFailure = vi.fn(async () => {
+      throw new Error("bigquery unavailable");
+    });
+    const contentDbFailure = vi.fn(async () => {
+      throw new Error("content db unavailable");
+    });
+    bigqueryStore.recordWebhookEvent = bigqueryFailure;
+    contentDbStore.recordWebhookEvent = contentDbFailure;
+
+    mocks.createStripeBigQueryStore.mockReturnValue(bigqueryStore);
+    mocks.createStripeContentDbStore.mockReturnValue(contentDbStore);
+
+    const consoleErrorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+
+    const { createStripeAnalyticsStore } = await import("./route");
+    const store = createStripeAnalyticsStore();
+    const inserted = await store.recordWebhookEvent({
+      stripe_event_id: "evt_all_fail",
+      type: "checkout.session.completed",
+      created_utc: "2026-01-01T00:00:00.000Z",
+      livemode: false,
+      object_type: "checkout.session",
+      object_id: "cs_all_fail",
+      request_id: "req_all_fail",
+      api_version: "2024-06-20",
+      received_utc: "2026-01-01T00:00:01.000Z"
+    });
+
+    expect(inserted).toBe(false);
+    expect(bigqueryFailure).toHaveBeenCalledTimes(1);
+    expect(contentDbFailure).toHaveBeenCalledTimes(1);
+    expect(consoleErrorSpy).toHaveBeenCalledTimes(2);
   });
 });
