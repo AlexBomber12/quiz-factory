@@ -571,7 +571,7 @@ Queue (in order)
 - Depends on: PR-ADMIN-ANALYTICS-08
 
 103) PR-ADMIN-CONSOLE-09: Publications Registry (Tenant x Test Matrix)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-ADMIN-CONSOLE-09.md
 - Depends on: PR-ADMIN-CONSOLE-08
 

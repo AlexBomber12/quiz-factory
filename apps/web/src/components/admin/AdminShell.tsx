@@ -15,6 +15,7 @@ const NAV_ITEMS: Array<{ href: string; label: string }> = [
   { href: "/admin/analytics", label: "Analytics" },
   { href: "/admin/imports", label: "Imports" },
   { href: "/admin/tests", label: "Tests" },
+  { href: "/admin/publications", label: "Publications" },
   { href: "/admin/tenants", label: "Tenants" },
   { href: "/admin/audit", label: "Audit" }
 ];
@@ -34,6 +35,10 @@ const isNavItemActive = (pathname: string, href: string): boolean => {
 
   if (href === "/admin/tests") {
     return pathname.startsWith("/admin/tests");
+  }
+
+  if (href === "/admin/publications") {
+    return pathname.startsWith("/admin/publications");
   }
 
   if (href === "/admin/tenants") {
