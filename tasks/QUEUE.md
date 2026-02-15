@@ -581,7 +581,7 @@ Queue (in order)
 - Depends on: PR-CONTENT-DB-02
 
 105) PR-CONTENT-DB-04: Stripe Facts Store (Content DB)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-CONTENT-DB-04.md
 - Depends on: PR-CONTENT-DB-03
 
