@@ -576,7 +576,7 @@ Queue (in order)
 - Depends on: PR-ADMIN-CONSOLE-08
 
 104) PR-CONTENT-DB-03: Analytics Events Store (Content DB)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-CONTENT-DB-03.md
 - Depends on: PR-CONTENT-DB-02
 
