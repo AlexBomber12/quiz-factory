@@ -117,6 +117,8 @@ const tenantRegistry = ((tenantsConfig as TenantRegistryRaw).tenants ?? [])
   .filter((entry): entry is { tenant_id: string; domains: string[] } => entry !== null)
   .sort((left, right) => left.tenant_id.localeCompare(right.tenant_id));
 
+const knownTenantIds = new Set<string>(tenantRegistry.map((tenant) => tenant.tenant_id));
+
 const buildPublicationKey = (tenantId: string, testId: string): string => {
   return `${tenantId}::${testId}`;
 };
@@ -194,7 +196,7 @@ export const listAdminPublications = async (
 
   const testsById = new Map<string, PublicationTest>();
   const stateByPublication = new Map<string, PublicationState>();
-  const tenantIds = new Set<string>(tenantRegistry.map((tenant) => tenant.tenant_id));
+  const tenantIds = new Set<string>(knownTenantIds);
 
   for (const row of rows) {
     const testId = normalizeNonEmptyString(row.test_id);
@@ -211,7 +213,10 @@ export const listAdminPublications = async (
       continue;
     }
 
-    tenantIds.add(tenantId);
+    if (!knownTenantIds.has(tenantId)) {
+      continue;
+    }
+
     stateByPublication.set(buildPublicationKey(tenantId, testId), {
       published_version_id: normalizeNonEmptyString(row.published_version_id),
       is_enabled: row.is_enabled ?? false,

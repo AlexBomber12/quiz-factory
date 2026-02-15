@@ -28,6 +28,14 @@ describe("listAdminPublications", () => {
           updated_at: new Date("2026-01-01T10:00:00.000Z")
         },
         {
+          tenant_id: "tenant-legacy-example-com",
+          test_id: "test-focus-rhythm",
+          slug: "focus-rhythm",
+          published_version_id: "legacy-version",
+          is_enabled: true,
+          updated_at: new Date("2026-01-01T11:00:00.000Z")
+        },
+        {
           tenant_id: null,
           test_id: "test-energy-audit",
           slug: "energy-audit",
@@ -56,6 +64,17 @@ describe("listAdminPublications", () => {
       slug: "focus-rhythm",
       published_version_id: "version-1",
       is_enabled: true
+    });
+  });
+
+  it("excludes unknown tenant rows from the matrix", async () => {
+    const rows = await listAdminPublications({ only_published: true });
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      tenant_id: "tenant-tenant-example-com",
+      test_id: "test-focus-rhythm",
+      published_version_id: "version-1"
     });
   });
 
