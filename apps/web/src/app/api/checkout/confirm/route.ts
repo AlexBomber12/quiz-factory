@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { buildBaseEventProperties } from "../../../../lib/analytics/events";
+import { recordAnalyticsEventToContentDb } from "../../../../lib/analytics/event_store";
 import { capturePosthogEvent } from "../../../../lib/analytics/posthog";
 import {
   normalizeString,
@@ -261,6 +262,9 @@ export const POST = async (request: Request): Promise<Response> => {
     );
     if (validation.ok) {
       void capturePosthogEvent("purchase_success", analyticsProperties).catch(() => null);
+      void recordAnalyticsEventToContentDb("purchase_success", analyticsProperties).catch(
+        () => null
+      );
     }
   }
 

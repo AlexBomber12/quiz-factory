@@ -13,6 +13,7 @@ import {
   shouldEmitPageView
 } from "./page_view";
 import { capturePosthogEvent } from "./posthog";
+import { recordAnalyticsEventToContentDb } from "./event_store";
 import {
   coerceAnalyticsPayload,
   validateAnalyticsEventPayload,
@@ -281,19 +282,17 @@ export const handleAnalyticsEvent = async (
     return respondBadRequest(validation.error);
   }
 
-  if (options.event === "page_view") {
-    const resolvedPageViewType = pageViewType ?? DEFAULT_PAGE_VIEW_TYPE;
-    if (
-      shouldEmitPageView({
-        sessionId,
-        pageType: resolvedPageViewType
-      }) &&
-      shouldEmitEvent(eventId)
-    ) {
-      void capturePosthogEvent(options.event, properties).catch(() => null);
-    }
-  } else if (shouldEmitEvent(eventId)) {
+  const shouldEmit =
+    options.event === "page_view"
+      ? shouldEmitPageView({
+          sessionId,
+          pageType: pageViewType ?? DEFAULT_PAGE_VIEW_TYPE
+        }) && shouldEmitEvent(eventId)
+      : shouldEmitEvent(eventId);
+
+  if (shouldEmit) {
     void capturePosthogEvent(options.event, properties).catch(() => null);
+    void recordAnalyticsEventToContentDb(options.event, properties).catch(() => null);
   }
 
   let attemptToken: string | null = null;
