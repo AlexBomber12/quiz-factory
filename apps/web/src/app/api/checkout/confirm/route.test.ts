@@ -10,10 +10,20 @@ import {
 } from "../../../../lib/credits";
 import { REPORT_TOKEN } from "../../../../lib/product/report_token";
 import { createStripeClient } from "../../../../lib/stripe/client";
+import { recordAnalyticsEventToContentDb } from "../../../../lib/analytics/event_store";
+import { capturePosthogEvent } from "../../../../lib/analytics/posthog";
 import { enqueueReportJob } from "../../../../lib/report/report_job_repo";
 
 vi.mock("../../../../lib/stripe/client", () => ({
   createStripeClient: vi.fn()
+}));
+
+vi.mock("../../../../lib/analytics/posthog", () => ({
+  capturePosthogEvent: vi.fn(async () => ({ ok: true, skipped: false }))
+}));
+
+vi.mock("../../../../lib/analytics/event_store", () => ({
+  recordAnalyticsEventToContentDb: vi.fn(async () => undefined)
 }));
 
 vi.mock("../../../../lib/report/report_job_repo", () => ({
@@ -21,6 +31,8 @@ vi.mock("../../../../lib/report/report_job_repo", () => ({
 }));
 
 const createStripeClientMock = vi.mocked(createStripeClient);
+const capturePosthogEventMock = vi.mocked(capturePosthogEvent);
+const recordAnalyticsEventToContentDbMock = vi.mocked(recordAnalyticsEventToContentDb);
 const enqueueReportJobMock = vi.mocked(enqueueReportJob);
 
 const buildRequest = (
@@ -41,6 +53,10 @@ describe("POST /api/checkout/confirm", () => {
   beforeEach(() => {
     resetRateLimitState();
     process.env.REPORT_TOKEN_SECRET = "test-report-token-secret";
+    capturePosthogEventMock.mockReset();
+    capturePosthogEventMock.mockResolvedValue({ ok: true, skipped: false });
+    recordAnalyticsEventToContentDbMock.mockReset();
+    recordAnalyticsEventToContentDbMock.mockResolvedValue(undefined);
     enqueueReportJobMock.mockReset();
     enqueueReportJobMock.mockResolvedValue(null);
   });
@@ -91,6 +107,16 @@ describe("POST /api/checkout/confirm", () => {
     });
 
     expect(retrieveSession).toHaveBeenCalledWith("cs_123");
+    expect(capturePosthogEventMock).toHaveBeenCalledTimes(1);
+    expect(capturePosthogEventMock).toHaveBeenCalledWith(
+      "purchase_success",
+      expect.objectContaining({ event_id: "purchase_success:purchase-123" })
+    );
+    expect(recordAnalyticsEventToContentDbMock).toHaveBeenCalledTimes(1);
+    expect(recordAnalyticsEventToContentDbMock).toHaveBeenCalledWith(
+      "purchase_success",
+      expect.objectContaining({ event_id: "purchase_success:purchase-123" })
+    );
     const setCookie = response.headers.get("set-cookie") ?? "";
     expect(setCookie).toContain(`${REPORT_TOKEN}=`);
     expect(setCookie).toContain(`${CREDITS_COOKIE}=`);
