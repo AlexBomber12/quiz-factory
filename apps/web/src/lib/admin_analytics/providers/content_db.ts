@@ -1330,7 +1330,7 @@ export class ContentDbAdminAnalyticsProvider implements AdminAnalyticsProvider {
         segment_metrics AS (
           SELECT
             event_sessions.${dimension} AS segment,
-            COUNT(*) AS sessions,
+            COUNT(DISTINCT event_sessions.session_id) AS sessions,
             COUNT(DISTINCT fp.purchase_id) AS purchases,
             COALESCE(SUM(fp.net_revenue_eur), 0) AS net_revenue_eur
           FROM event_sessions
@@ -1406,19 +1406,19 @@ export class ContentDbAdminAnalyticsProvider implements AdminAnalyticsProvider {
     }
 
     if (tables.stripe_purchases) {
-      const cte = this.buildStripeCte(filters, tables);
-      const [row] = cte
-        ? await this.queryRows<Record<string, unknown>>(
-            `
-              WITH ${cte.cteSql}
-              SELECT MAX(fp.purchase_date)::text AS last_loaded_utc
-              FROM filtered_purchases fp
-            `,
-            cte.params
-          )
-        : [undefined];
-      const dateOnly = toDateOnlyString(row?.last_loaded_utc);
-      pushRow("content_db", "stripe_purchases", dateOnly ? `${dateOnly}T00:00:00.000Z` : null);
+      const stripeFilter = buildContentDbStripeFilterClause(filters, {
+        alias: "sp",
+        canFilterByDeviceType: tables.analytics_events
+      });
+      const [row] = await this.queryRows<Record<string, unknown>>(
+        `
+          SELECT MAX(sp.created_utc) AS last_loaded_utc
+          FROM stripe_purchases sp
+          ${stripeFilter.whereSql}
+        `,
+        stripeFilter.params
+      );
+      pushRow("content_db", "stripe_purchases", toNullableString(row?.last_loaded_utc));
     } else {
       pushRow("content_db", "stripe_purchases", null);
     }
@@ -2326,14 +2326,12 @@ export class ContentDbAdminAnalyticsProvider implements AdminAnalyticsProvider {
 
     for (const tenantId of row_order) {
       const cells: Record<string, AdminAnalyticsDistributionCell> = {};
-      let rowNetRevenue = 0;
 
       for (const testId of column_order) {
         const pairKey = `${tenantId}::${testId}`;
         const metrics = pairMetrics.get(pairKey);
         const publication = publicationState.get(pairKey);
         const netRevenue = roundCurrency(metrics?.net_revenue_eur ?? 0);
-        rowNetRevenue += netRevenue;
 
         cells[testId] = {
           tenant_id: tenantId,
@@ -2348,7 +2346,7 @@ export class ContentDbAdminAnalyticsProvider implements AdminAnalyticsProvider {
 
       rows[tenantId] = {
         tenant_id: tenantId,
-        net_revenue_eur_7d: roundCurrency(rowNetRevenue),
+        net_revenue_eur_7d: roundCurrency(rowRevenue.get(tenantId) ?? 0),
         cells
       };
     }
