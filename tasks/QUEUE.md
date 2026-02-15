@@ -595,6 +595,11 @@ Queue (in order)
 - Tasks file: tasks/PR-OPS-RUNBOOK-01.md
 - Depends on: PR-ADMIN-ANALYTICS-09
 
+108) PR-FIX-ADMIN-REDIRECT-01: Fix Admin Redirect Base (avoid 0.0.0.0 after login)
+- Status: TODO
+- Tasks file: tasks/PR-FIX-ADMIN-REDIRECT-01.md
+- Depends on: none
+
 Execution rules (apply to every PR)
 - Work on exactly 1 PR at a time.
 - Create a new branch from main named as specified in the selected tasks file (single source of truth).
