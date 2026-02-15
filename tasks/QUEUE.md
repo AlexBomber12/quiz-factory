@@ -586,7 +586,7 @@ Queue (in order)
 - Depends on: PR-CONTENT-DB-03
 
 106) PR-ADMIN-ANALYTICS-09: Content DB Analytics Provider + Mode Override
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-ADMIN-ANALYTICS-09.md
 - Depends on: PR-ADMIN-ANALYTICS-08 and PR-CONTENT-DB-04
 
