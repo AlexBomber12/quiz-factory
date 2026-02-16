@@ -9,9 +9,11 @@ const buildRequest = (url: string, headers: Record<string, string> = {}): Reques
 };
 
 describe("redirect base helpers", () => {
-  it("uses Origin when present, even when request.url host is internal", () => {
+  it("ignores Origin and uses trusted forwarded headers", () => {
     const request = buildRequest("http://0.0.0.0:3000/api/admin/login", {
-      origin: "https://qf.nexavi.co"
+      origin: "https://attacker.example",
+      "x-forwarded-proto": "https",
+      "x-forwarded-host": "qf.nexavi.co"
     });
 
     const base = resolvePublicBase(request);
@@ -40,6 +42,19 @@ describe("redirect base helpers", () => {
 
   it("falls back to host header when forwarded headers are missing", () => {
     const request = buildRequest("http://0.0.0.0:3000/api/admin/login", {
+      host: "localhost:3000"
+    });
+
+    expect(resolvePublicBase(request)).toEqual({
+      origin: "http://localhost:3000",
+      protocol: "http",
+      host: "localhost:3000"
+    });
+  });
+
+  it("does not use Origin when host header is available", () => {
+    const request = buildRequest("http://0.0.0.0:3000/api/admin/login", {
+      origin: "https://attacker.example",
       host: "localhost:3000"
     });
 

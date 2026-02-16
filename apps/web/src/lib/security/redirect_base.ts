@@ -42,29 +42,6 @@ const isUnspecifiedHost = (host: string): boolean => {
   );
 };
 
-const parseOriginHeader = (value: string | null): PublicBaseParts | null => {
-  const firstOrigin = takeFirst(value);
-  if (!firstOrigin) {
-    return null;
-  }
-
-  try {
-    const parsed = new URL(firstOrigin);
-    const protocol = normalizeProtocol(parsed.protocol);
-    if (!protocol) {
-      return null;
-    }
-
-    return {
-      origin: parsed.origin,
-      protocol,
-      host: parsed.host
-    };
-  } catch {
-    return null;
-  }
-};
-
 const parseRequestUrl = (request: Request): URL | null => {
   try {
     return new URL(request.url);
@@ -74,11 +51,6 @@ const parseRequestUrl = (request: Request): URL | null => {
 };
 
 export const resolvePublicBase = (request: Request): PublicBaseParts => {
-  const originHeader = parseOriginHeader(request.headers.get("origin"));
-  if (originHeader) {
-    return originHeader;
-  }
-
   const forwardedProto = normalizeProtocol(takeFirst(request.headers.get("x-forwarded-proto")));
   const forwardedHost = takeFirst(request.headers.get("x-forwarded-host"));
   const hostHeader = takeFirst(request.headers.get("host"));
