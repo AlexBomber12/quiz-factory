@@ -600,6 +600,41 @@ Queue (in order)
 - Tasks file: tasks/PR-FIX-ADMIN-REDIRECT-01.md
 - Depends on: none
 
+109) PR-DOMAINS-01: DB-backed Domain Registry (Tenants Source of Truth)
+- Status: TODO
+- Tasks file: tasks/PR-DOMAINS-01.md
+- Depends on: PR-ADMIN-CONSOLE-09 and PR-CONTENT-DB-04
+
+110) PR-DOMAINS-02: Universal Domain Publications (Content Registry + Matrix)
+- Status: TODO
+- Tasks file: tasks/PR-DOMAINS-02.md
+- Depends on: PR-DOMAINS-01
+
+111) PR-ADMIN-VIZ-01: Admin Analytics Visualization with Apache ECharts
+- Status: TODO
+- Tasks file: tasks/PR-ADMIN-VIZ-01.md
+- Depends on: PR-ADMIN-ANALYTICS-09 and PR-DOMAINS-01
+
+112) PR-REVENUE-ATTRIB-01: Revenue Attribution (Domain -> Content -> Offer) + Drilldown
+- Status: TODO
+- Tasks file: tasks/PR-REVENUE-ATTRIB-01.md
+- Depends on: PR-ADMIN-VIZ-01
+
+113) PR-TRIGGERS-01: Alerts Rules Engine (Rules, Instances, Runner, UI)
+- Status: TODO
+- Tasks file: tasks/PR-TRIGGERS-01.md
+- Depends on: PR-REVENUE-ATTRIB-01 and PR-DOMAINS-02
+
+114) PR-AI-INSIGHTS-01: AI Insights for Alerts (Action Center)
+- Status: TODO
+- Tasks file: tasks/PR-AI-INSIGHTS-01.md
+- Depends on: PR-TRIGGERS-01
+
+115) PR-PRODUCTS-01: Products Content Type Skeleton + Publish to Domains
+- Status: TODO
+- Tasks file: tasks/PR-PRODUCTS-01.md
+- Depends on: PR-DOMAINS-02
+
 Execution rules (apply to every PR)
 - Work on exactly 1 PR at a time.
 - Create a new branch from main named as specified in the selected tasks file (single source of truth).
