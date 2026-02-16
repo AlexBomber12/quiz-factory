@@ -23,6 +23,7 @@ import {
 } from "../../../../lib/admin/publish_guardrails";
 import { logAdminEvent } from "../../../../lib/admin/audit";
 import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "../../../../lib/admin/session";
+import { buildRedirectUrl } from "../../../../lib/security/redirect_base";
 
 type PublishPayload = {
   test_id: string;
@@ -95,7 +96,7 @@ const errorRedirect = (
   code: string,
   detail?: string | null
 ): NextResponse => {
-  const redirectUrl = new URL("/admin", request.url);
+  const redirectUrl = buildRedirectUrl(request, "/admin");
   redirectUrl.searchParams.set("publish_error", code);
   if (detail) {
     redirectUrl.searchParams.set("detail", detail);
@@ -104,7 +105,7 @@ const errorRedirect = (
 };
 
 const successRedirect = (request: Request): NextResponse => {
-  const redirectUrl = new URL("/admin", request.url);
+  const redirectUrl = buildRedirectUrl(request, "/admin");
   redirectUrl.searchParams.set("publish", "ok");
   return NextResponse.redirect(redirectUrl, 303);
 };
