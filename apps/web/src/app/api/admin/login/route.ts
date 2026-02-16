@@ -15,6 +15,7 @@ import {
   resolveAdminRoleFromToken
 } from "../../../../lib/admin/session";
 import { logAdminEvent } from "../../../../lib/admin/audit";
+import { buildRedirectUrl } from "../../../../lib/security/redirect_base";
 import { resolveTenant } from "../../../../lib/tenants/resolve";
 
 const normalizeString = (value: unknown): string | null => {
@@ -27,7 +28,7 @@ const normalizeString = (value: unknown): string | null => {
 };
 
 const buildLoginRedirect = (request: Request, error?: string): URL => {
-  const loginUrl = new URL("/admin/login", request.url);
+  const loginUrl = buildRedirectUrl(request, "/admin/login");
   if (error) {
     loginUrl.searchParams.set("error", error);
   }
@@ -106,7 +107,7 @@ export const POST = async (request: Request): Promise<Response> => {
   const requestUrl = new URL(request.url);
   const tenantResolution = resolveTenant(request.headers, requestUrl.hostname);
 
-  const response = NextResponse.redirect(new URL("/admin", request.url), 303);
+  const response = NextResponse.redirect(buildRedirectUrl(request, "/admin"), 303);
   response.cookies.set({
     name: ADMIN_SESSION_COOKIE,
     value: session.cookieValue,

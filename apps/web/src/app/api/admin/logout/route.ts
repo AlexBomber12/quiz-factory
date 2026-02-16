@@ -11,6 +11,7 @@ import {
 } from "../../../../lib/admin/csrf";
 import { logAdminEvent } from "../../../../lib/admin/audit";
 import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "../../../../lib/admin/session";
+import { buildRedirectUrl } from "../../../../lib/security/redirect_base";
 import { resolveTenant } from "../../../../lib/tenants/resolve";
 
 const parseCsrfToken = async (request: Request): Promise<string | null> => {
@@ -45,12 +46,12 @@ export const POST = async (request: Request): Promise<Response> => {
   );
   const csrfToken = await parseCsrfToken(request);
   if (!isAdminCsrfTokenValid(csrfCookieToken, csrfToken)) {
-    const invalidCsrfRedirect = new URL("/admin/login", request.url);
+    const invalidCsrfRedirect = buildRedirectUrl(request, "/admin/login");
     invalidCsrfRedirect.searchParams.set("error", "invalid_csrf");
     return NextResponse.redirect(invalidCsrfRedirect, 303);
   }
 
-  const response = NextResponse.redirect(new URL("/admin/login", request.url), 303);
+  const response = NextResponse.redirect(buildRedirectUrl(request, "/admin/login"), 303);
   response.cookies.set({
     name: ADMIN_SESSION_COOKIE,
     value: "",

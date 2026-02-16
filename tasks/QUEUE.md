@@ -596,7 +596,7 @@ Queue (in order)
 - Depends on: PR-ADMIN-ANALYTICS-09
 
 108) PR-FIX-ADMIN-REDIRECT-01: Fix Admin Redirect Base (avoid 0.0.0.0 after login)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-FIX-ADMIN-REDIRECT-01.md
 - Depends on: none
 

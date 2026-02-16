@@ -19,6 +19,7 @@ import {
 } from "../../../../../lib/admin/imports";
 import { logAdminEvent } from "../../../../../lib/admin/audit";
 import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "../../../../../lib/admin/session";
+import { buildRedirectUrl } from "../../../../../lib/security/redirect_base";
 
 type RouteContext = {
   params: Promise<{ id: string }> | { id: string };
@@ -38,7 +39,7 @@ const buildRedirectResponse = (
   importId: string,
   params: Record<string, string>
 ): NextResponse => {
-  const redirectUrl = new URL(`/admin/imports/${importId}`, request.url);
+  const redirectUrl = buildRedirectUrl(request, `/admin/imports/${importId}`);
   for (const [key, value] of Object.entries(params)) {
     redirectUrl.searchParams.set(key, value);
   }

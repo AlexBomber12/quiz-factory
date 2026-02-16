@@ -23,6 +23,7 @@ import {
 } from "../../../../lib/admin/rate_limit";
 import { logAdminEvent } from "../../../../lib/admin/audit";
 import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "../../../../lib/admin/session";
+import { buildRedirectUrl } from "../../../../lib/security/redirect_base";
 
 type UploadErrorCode =
   | "unauthorized"
@@ -66,7 +67,7 @@ const buildErrorResponse = (
     return NextResponse.json({ error: code, detail: detail ?? null }, { status });
   }
 
-  const redirectUrl = new URL("/admin/imports/new", request.url);
+  const redirectUrl = buildRedirectUrl(request, "/admin/imports/new");
   redirectUrl.searchParams.set("error", code);
   if (detail) {
     redirectUrl.searchParams.set("detail", detail);
@@ -216,7 +217,7 @@ export const POST = async (request: Request): Promise<Response> => {
       );
     }
 
-    return NextResponse.redirect(new URL(`/admin/imports/${created.id}`, request.url), 303);
+    return NextResponse.redirect(buildRedirectUrl(request, `/admin/imports/${created.id}`), 303);
   } catch {
     return buildErrorResponse(request, "db_error", 500);
   }
