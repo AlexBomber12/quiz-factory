@@ -18,6 +18,11 @@ type RouteContext = {
   params: Promise<{ rule_id: string }> | { rule_id: string };
 };
 
+type ParsedRunPayload = {
+  csrfToken: string | null;
+  dryRunFromBody: boolean;
+};
+
 const TRUE_VALUES = new Set(["1", "true", "yes", "on"]);
 
 const normalizeNonEmptyString = (value: unknown): string | null => {
@@ -45,38 +50,35 @@ const resolveParams = async (params: RouteContext["params"]): Promise<{ rule_id:
   return Promise.resolve(params);
 };
 
-const parseCsrfToken = async (request: Request): Promise<string | null> => {
-  const contentType = request.headers.get("content-type") ?? "";
-  if (contentType.includes("application/json")) {
-    const body = (await request.json()) as Record<string, unknown>;
-    return readAdminCsrfTokenFromHeader(request) ?? readAdminCsrfTokenFromJson(body);
-  }
-
-  const formData = await request.formData();
-  return readAdminCsrfTokenFromHeader(request) ?? readAdminCsrfTokenFromFormData(formData);
-};
-
-const parseDryRun = async (request: Request): Promise<boolean> => {
-  const queryDryRun = normalizeNonEmptyString(new URL(request.url).searchParams.get("dry_run"));
-  if (queryDryRun) {
-    return parseBoolean(queryDryRun);
-  }
-
+const parseRunPayload = async (request: Request): Promise<ParsedRunPayload> => {
+  const csrfFromHeader = readAdminCsrfTokenFromHeader(request);
   const contentType = request.headers.get("content-type") ?? "";
   if (contentType.includes("application/json")) {
     try {
-      const body = (await request.clone().json()) as Record<string, unknown>;
-      return parseBoolean(body.dry_run);
+      const body = (await request.json()) as Record<string, unknown>;
+      return {
+        csrfToken: csrfFromHeader ?? readAdminCsrfTokenFromJson(body),
+        dryRunFromBody: parseBoolean(body.dry_run)
+      };
     } catch {
-      return false;
+      return {
+        csrfToken: csrfFromHeader,
+        dryRunFromBody: false
+      };
     }
   }
 
   try {
-    const formData = await request.clone().formData();
-    return parseBoolean(formData.get("dry_run"));
+    const formData = await request.formData();
+    return {
+      csrfToken: csrfFromHeader ?? readAdminCsrfTokenFromFormData(formData),
+      dryRunFromBody: parseBoolean(formData.get("dry_run"))
+    };
   } catch {
-    return false;
+    return {
+      csrfToken: csrfFromHeader,
+      dryRunFromBody: false
+    };
   }
 };
 
@@ -135,13 +137,13 @@ export const POST = async (request: Request, context: RouteContext): Promise<Res
     return buildErrorResponse(request, ruleId, "forbidden", 403, "Only admin can run alert rules.");
   }
 
-  const csrfToken = await parseCsrfToken(request);
+  const parsedPayload = await parseRunPayload(request);
+  const queryDryRun = normalizeNonEmptyString(new URL(request.url).searchParams.get("dry_run"));
+  const dryRun = queryDryRun ? parseBoolean(queryDryRun) : parsedPayload.dryRunFromBody;
   const csrfCookieToken = normalizeAdminCsrfToken(cookieStore.get(ADMIN_CSRF_COOKIE)?.value);
-  if (!isAdminCsrfTokenValid(csrfCookieToken, csrfToken)) {
+  if (!isAdminCsrfTokenValid(csrfCookieToken, parsedPayload.csrfToken)) {
     return buildErrorResponse(request, ruleId, "invalid_csrf", 403);
   }
-
-  const dryRun = await parseDryRun(request);
 
   try {
     const result = await runAlertRules({

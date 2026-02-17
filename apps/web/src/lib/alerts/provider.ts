@@ -221,24 +221,26 @@ class ContentDbAlertsProvider implements AlertsProvider {
       "ae.occurred_date >= $1::date",
       "ae.occurred_date <= $2::date"
     ];
-    const purchaseFilters: string[] = [
-      "sp.created_utc::date >= $1::date",
-      "sp.created_utc::date <= $2::date"
-    ];
+    const purchaseScopeFilters: string[] = [];
 
     if (scope.tenant_id) {
       params.push(scope.tenant_id);
       const index = params.length;
       eventFilters.push(`ae.tenant_id = $${index}`);
-      purchaseFilters.push(`sp.tenant_id = $${index}`);
+      purchaseScopeFilters.push(`sp.tenant_id = $${index}`);
     }
 
     if (testId) {
       params.push(testId);
       const index = params.length;
       eventFilters.push(`ae.test_id = $${index}`);
-      purchaseFilters.push(`sp.test_id = $${index}`);
+      purchaseScopeFilters.push(`sp.test_id = $${index}`);
     }
+
+    const purchaseScopeWhere =
+      purchaseScopeFilters.length > 0
+        ? `WHERE ${purchaseScopeFilters.join(" AND ")}`
+        : "";
 
     const pool = getContentDbPool();
     const { rows } = await pool.query<DailyMetricsRow>(
@@ -260,7 +262,7 @@ class ContentDbAlertsProvider implements AlertsProvider {
             sp.created_utc::date AS date,
             COALESCE(sp.amount_eur, 0)::double precision AS amount_eur
           FROM stripe_purchases sp
-          WHERE ${purchaseFilters.join(" AND ")}
+          ${purchaseScopeWhere}
         ),
         purchases AS (
           SELECT
@@ -268,6 +270,8 @@ class ContentDbAlertsProvider implements AlertsProvider {
             COUNT(DISTINCT pd.purchase_id)::double precision AS purchases,
             COALESCE(SUM(pd.amount_eur), 0)::double precision AS gross_revenue_eur
           FROM purchase_dim pd
+          WHERE pd.date >= $1::date
+            AND pd.date <= $2::date
           GROUP BY pd.date
         ),
         refunds AS (
