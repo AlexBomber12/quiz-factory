@@ -237,7 +237,7 @@ export default async function AdminTenantsPage({ searchParams }: PageProps) {
                   <th className="px-2 py-2 font-semibold">domains</th>
                   <th className="px-2 py-2 font-semibold">default_locale</th>
                   <th className="px-2 py-2 font-semibold">enabled</th>
-                  <th className="px-2 py-2 font-semibold">published tests</th>
+                  <th className="px-2 py-2 font-semibold">published items</th>
                   <th className="px-2 py-2 font-semibold">actions</th>
                 </tr>
               </thead>

@@ -1,25 +1,13 @@
-import tenantsConfig from "../../../../../config/tenants.json";
-
+import {
+  listContentItems,
+  listDomainPublications,
+  type ContentItemRecord
+} from "../content_db/domain_publications";
 import { getContentDbPool } from "../content_db/pool";
 
-type TimestampValue = Date | string;
-
-type TenantRegistryEntryRaw = {
-  tenant_id: string;
-  domains?: string[];
-};
-
-type TenantRegistryRaw = {
-  tenants?: TenantRegistryEntryRaw[];
-};
-
-type PublicationStateRow = {
+type TenantDomainRow = {
   tenant_id: string | null;
-  test_id: string | null;
-  slug: string | null;
-  published_version_id: string | null;
-  is_enabled: boolean | null;
-  updated_at: TimestampValue | null;
+  domain: string | null;
 };
 
 type PublicationState = {
@@ -28,15 +16,11 @@ type PublicationState = {
   updated_at: string | null;
 };
 
-type PublicationTest = {
-  test_id: string;
-  slug: string;
-};
-
 export type AdminPublicationRow = {
   tenant_id: string;
   domains: string[];
-  test_id: string;
+  content_type: string;
+  content_key: string;
   slug: string;
   published_version_id: string | null;
   is_enabled: boolean;
@@ -46,6 +30,8 @@ export type AdminPublicationRow = {
 export type ListAdminPublicationsFilters = {
   q?: string | null;
   tenant_id?: string | null;
+  content_type?: string | null;
+  content_key?: string | null;
   test_id?: string | null;
   only_published?: boolean | null;
   only_enabled?: boolean | null;
@@ -84,51 +70,56 @@ const normalizeBooleanFilter = (value: unknown): boolean => {
   return TRUE_BOOLEAN_VALUES.has(value.trim().toLowerCase());
 };
 
-const toIsoString = (value: TimestampValue | null): string | null => {
-  if (!value) {
-    return null;
-  }
-
-  if (value instanceof Date) {
-    return value.toISOString();
-  }
-
-  return value;
+const buildPublicationKey = (
+  tenantId: string,
+  contentType: string,
+  contentKey: string
+): string => {
+  return `${tenantId}::${contentType}::${contentKey}`;
 };
 
-const tenantRegistry = ((tenantsConfig as TenantRegistryRaw).tenants ?? [])
-  .map((entry) => {
-    const tenantId = normalizeNonEmptyString(entry.tenant_id);
+const loadTenantDomainsByTenant = async (): Promise<Map<string, string[]>> => {
+  const pool = getContentDbPool();
+  const result = await pool.query<TenantDomainRow>(
+    `
+      SELECT
+        t.tenant_id,
+        td.domain
+      FROM tenants t
+      LEFT JOIN tenant_domains td
+        ON td.tenant_id = t.tenant_id
+      ORDER BY t.tenant_id ASC, td.domain ASC
+    `
+  );
+
+  const output = new Map<string, string[]>();
+  for (const row of result.rows) {
+    const tenantId = normalizeNonEmptyString(row.tenant_id);
     if (!tenantId) {
-      return null;
+      continue;
     }
 
-    const domains = Array.isArray(entry.domains)
-      ? entry.domains
-          .map((domain) => normalizeNonEmptyString(domain))
-          .filter((domain): domain is string => domain !== null)
-      : [];
+    if (!output.has(tenantId)) {
+      output.set(tenantId, []);
+    }
 
-    return {
-      tenant_id: tenantId,
-      domains
-    };
-  })
-  .filter((entry): entry is { tenant_id: string; domains: string[] } => entry !== null)
-  .sort((left, right) => left.tenant_id.localeCompare(right.tenant_id));
+    const domain = normalizeNonEmptyString(row.domain);
+    if (!domain) {
+      continue;
+    }
 
-const knownTenantIds = new Set<string>(tenantRegistry.map((tenant) => tenant.tenant_id));
+    const domains = output.get(tenantId);
+    if (!domains) {
+      continue;
+    }
 
-const buildPublicationKey = (tenantId: string, testId: string): string => {
-  return `${tenantId}::${testId}`;
-};
-
-const buildTenantDomainsById = (): Map<string, string[]> => {
-  const domainsById = new Map<string, string[]>();
-  for (const tenant of tenantRegistry) {
-    domainsById.set(tenant.tenant_id, [...tenant.domains]);
+    if (!domains.includes(domain)) {
+      domains.push(domain);
+      domains.sort((left, right) => left.localeCompare(right));
+    }
   }
-  return domainsById;
+
+  return output;
 };
 
 const matchesQuery = (row: AdminPublicationRow, queryText: string): boolean => {
@@ -137,7 +128,10 @@ const matchesQuery = (row: AdminPublicationRow, queryText: string): boolean => {
   if (row.tenant_id.toLowerCase().includes(normalizedQuery)) {
     return true;
   }
-  if (row.test_id.toLowerCase().includes(normalizedQuery)) {
+  if (row.content_type.toLowerCase().includes(normalizedQuery)) {
+    return true;
+  }
+  if (row.content_key.toLowerCase().includes(normalizedQuery)) {
     return true;
   }
   if (row.slug.toLowerCase().includes(normalizedQuery)) {
@@ -153,12 +147,28 @@ const comparePublicationRows = (left: AdminPublicationRow, right: AdminPublicati
     return tenantCompare;
   }
 
+  const contentTypeCompare = left.content_type.localeCompare(right.content_type);
+  if (contentTypeCompare !== 0) {
+    return contentTypeCompare;
+  }
+
   const slugCompare = left.slug.localeCompare(right.slug);
   if (slugCompare !== 0) {
     return slugCompare;
   }
 
-  return left.test_id.localeCompare(right.test_id);
+  return left.content_key.localeCompare(right.content_key);
+};
+
+const applyContentKeyFilter = (
+  items: ContentItemRecord[],
+  contentKeyFilter: string | null
+): ContentItemRecord[] => {
+  if (!contentKeyFilter) {
+    return items;
+  }
+
+  return items.filter((item) => item.content_key === contentKeyFilter);
 };
 
 export const listAdminPublications = async (
@@ -166,98 +176,66 @@ export const listAdminPublications = async (
 ): Promise<AdminPublicationRow[]> => {
   const queryText = normalizeFilterText(filters?.q);
   const tenantFilter = normalizeFilterText(filters?.tenant_id);
-  const testFilter = normalizeFilterText(filters?.test_id);
+  const contentTypeFilter = normalizeFilterText(filters?.content_type)?.toLowerCase() ?? null;
+  const contentKeyFilter = normalizeFilterText(filters?.content_key ?? filters?.test_id);
   const onlyPublished = normalizeBooleanFilter(filters?.only_published);
   const onlyEnabled = normalizeBooleanFilter(filters?.only_enabled);
 
-  const pool = getContentDbPool();
-  let rows: PublicationStateRow[];
+  const [tenantDomainsByTenant, contentItems, publicationRows] = await Promise.all([
+    loadTenantDomainsByTenant(),
+    listContentItems({
+      content_type: contentTypeFilter
+    }),
+    listDomainPublications(tenantFilter, {
+      content_type: contentTypeFilter,
+      content_key: contentKeyFilter
+    })
+  ]);
 
-  try {
-    const result = await pool.query<PublicationStateRow>(
-      `
-        SELECT
-          tt.tenant_id,
-          t.test_id,
-          t.slug,
-          tt.published_version_id,
-          tt.is_enabled,
-          tt.published_at AS updated_at
-        FROM tests t
-        LEFT JOIN tenant_tests tt
-          ON tt.test_id = t.id
-        ORDER BY t.slug ASC, t.test_id ASC, tt.tenant_id ASC
-      `
-    );
-    rows = result.rows;
-  } catch {
-    throw new Error("Unable to load publications.");
-  }
-
-  const testsById = new Map<string, PublicationTest>();
-  const stateByPublication = new Map<string, PublicationState>();
-  const tenantIds = new Set<string>(knownTenantIds);
-
-  for (const row of rows) {
-    const testId = normalizeNonEmptyString(row.test_id);
-    const slug = normalizeNonEmptyString(row.slug);
-    if (testId && slug && !testsById.has(testId)) {
-      testsById.set(testId, {
-        test_id: testId,
-        slug
-      });
-    }
-
-    const tenantId = normalizeNonEmptyString(row.tenant_id);
-    if (!tenantId || !testId) {
-      continue;
-    }
-
-    if (!knownTenantIds.has(tenantId)) {
-      continue;
-    }
-
-    stateByPublication.set(buildPublicationKey(tenantId, testId), {
-      published_version_id: normalizeNonEmptyString(row.published_version_id),
-      is_enabled: row.is_enabled ?? false,
-      updated_at: toIsoString(row.updated_at)
-    });
-  }
-
-  const tests = Array.from(testsById.values()).sort((left, right) => {
-    const slugCompare = left.slug.localeCompare(right.slug);
-    if (slugCompare !== 0) {
-      return slugCompare;
-    }
-    return left.test_id.localeCompare(right.test_id);
-  });
-  if (tests.length === 0) {
+  if (tenantFilter && !tenantDomainsByTenant.has(tenantFilter)) {
     return [];
   }
 
-  const domainsByTenant = buildTenantDomainsById();
-  const sortedTenantIds = Array.from(tenantIds).sort((left, right) => left.localeCompare(right));
-  const publications: AdminPublicationRow[] = [];
+  const filteredContentItems = applyContentKeyFilter(contentItems, contentKeyFilter);
+  if (filteredContentItems.length === 0) {
+    return [];
+  }
 
-  for (const tenantId of sortedTenantIds) {
-    for (const test of tests) {
-      const publicationState = stateByPublication.get(buildPublicationKey(tenantId, test.test_id));
+  const stateByPublication = new Map<string, PublicationState>();
+  for (const row of publicationRows) {
+    stateByPublication.set(
+      buildPublicationKey(row.tenant_id, row.content_type, row.content_key),
+      {
+        published_version_id: row.published_version_id,
+        is_enabled: row.enabled,
+        updated_at: row.updated_at
+      }
+    );
+  }
+
+  const tenantIds = tenantFilter
+    ? [tenantFilter]
+    : Array.from(tenantDomainsByTenant.keys()).sort((left, right) => left.localeCompare(right));
+
+  const publications: AdminPublicationRow[] = [];
+  for (const tenantId of tenantIds) {
+    const domains = [...(tenantDomainsByTenant.get(tenantId) ?? [])];
+    for (const item of filteredContentItems) {
+      const state = stateByPublication.get(
+        buildPublicationKey(tenantId, item.content_type, item.content_key)
+      );
+
       const row: AdminPublicationRow = {
         tenant_id: tenantId,
-        domains: [...(domainsByTenant.get(tenantId) ?? [])],
-        test_id: test.test_id,
-        slug: test.slug,
-        published_version_id: publicationState?.published_version_id ?? null,
-        is_enabled: publicationState?.is_enabled ?? false,
-        updated_at: publicationState?.updated_at ?? null
+        domains,
+        content_type: item.content_type,
+        content_key: item.content_key,
+        slug: item.slug,
+        published_version_id: state?.published_version_id ?? null,
+        is_enabled: state?.is_enabled ?? false,
+        updated_at: state?.updated_at ?? null
       };
 
-      if (tenantFilter && row.tenant_id !== tenantFilter) {
-        continue;
-      }
-      if (testFilter && row.test_id !== testFilter) {
-        continue;
-      }
       if (onlyPublished && row.published_version_id === null) {
         continue;
       }

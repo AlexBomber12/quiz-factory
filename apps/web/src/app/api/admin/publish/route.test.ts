@@ -171,6 +171,8 @@ describe("POST /api/admin/publish", () => {
       entity_type: "test",
       entity_id: "test-focus-rhythm",
       metadata: {
+        content_type: "test",
+        content_key: "test-focus-rhythm",
         version_id: "version-1",
         version: 1,
         tenant_ids: ["tenant-tenant-example-com"],

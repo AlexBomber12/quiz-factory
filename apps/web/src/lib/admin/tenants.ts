@@ -23,10 +23,11 @@ type TenantPublishedCountRow = {
 };
 
 type TenantPublishedTestRow = {
-  test_id: string | null;
+  content_type: string | null;
+  content_key: string | null;
   slug: string | null;
   published_version_id: string | null;
-  is_enabled: boolean | null;
+  enabled: boolean | null;
 };
 
 type TenantRow = {
@@ -49,7 +50,8 @@ export type AdminTenantWithCount = {
 };
 
 export type AdminTenantPublishedTest = {
-  test_id: string;
+  content_type: string;
+  content_key: string;
   slug: string;
   published_version_id: string;
   enabled: boolean;
@@ -211,11 +213,11 @@ const loadPublishedCountsByTenant = async (
     const result = await pool.query<TenantPublishedCountRow>(
       `
         SELECT
-          tt.tenant_id,
+          dp.tenant_id,
           COUNT(*)::int AS published_count
-        FROM tenant_tests tt
-        WHERE tt.is_enabled = TRUE
-        GROUP BY tt.tenant_id
+        FROM domain_publications dp
+        WHERE dp.enabled = TRUE
+        GROUP BY dp.tenant_id
       `
     );
 
@@ -247,34 +249,37 @@ const loadPublishedTestsForTenant = async (
     const result = await pool.query<TenantPublishedTestRow>(
       `
         SELECT
-          t.test_id,
-          t.slug,
-          tt.published_version_id,
-          tt.is_enabled
-        FROM tenant_tests tt
-        JOIN tests t
-          ON t.id = tt.test_id
-        WHERE tt.tenant_id = $1
-          AND tt.published_version_id IS NOT NULL
-        ORDER BY t.slug ASC, t.test_id ASC
+          ci.content_type,
+          ci.content_key,
+          ci.slug,
+          dp.published_version_id,
+          dp.enabled
+        FROM domain_publications dp
+        JOIN content_items ci
+          ON ci.id = dp.content_item_id
+        WHERE dp.tenant_id = $1
+          AND dp.published_version_id IS NOT NULL
+        ORDER BY ci.content_type ASC, ci.slug ASC, ci.content_key ASC
       `,
       [tenantId]
     );
 
     return result.rows
       .map((row) => {
-        const testId = normalizeString(row.test_id);
+        const contentType = normalizeString(row.content_type);
+        const contentKey = normalizeString(row.content_key);
         const slug = normalizeString(row.slug);
         const publishedVersionId = normalizeString(row.published_version_id);
-        if (!testId || !slug || !publishedVersionId) {
+        if (!contentType || !contentKey || !slug || !publishedVersionId) {
           return null;
         }
 
         return {
-          test_id: testId,
+          content_type: contentType,
+          content_key: contentKey,
           slug,
           published_version_id: publishedVersionId,
-          enabled: row.is_enabled ?? false
+          enabled: row.enabled ?? false
         };
       })
       .filter((row): row is AdminTenantPublishedTest => row !== null);
@@ -681,14 +686,6 @@ export const deleteAdminTenant = async (tenantIdInput: string): Promise<void> =>
 
   try {
     await client.query("BEGIN");
-    await client.query(
-      `
-        DELETE FROM tenant_tests
-        WHERE tenant_id = $1
-      `,
-      [tenantId]
-    );
-
     const result = await client.query(
       `
         DELETE FROM tenants
