@@ -1,6 +1,8 @@
 import { headers } from "next/headers";
 import Link from "next/link";
 
+import AdminChart from "../../../../components/admin/charts/AdminChart";
+import { buildLineChartOption, buildStackedBarOption } from "../../../../components/admin/charts/options";
 import AdminAnalyticsPageScaffold from "../../../../components/admin/analytics/PageScaffold";
 import { Button } from "../../../../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../../components/ui/card";
@@ -278,6 +280,51 @@ const formatUtcDate = (value: string | null): string => {
   return parsed.toISOString();
 };
 
+const buildTestsVolumeChartOption = (rows: AdminAnalyticsTestsRow[]) => {
+  const chartRows = rows.slice(0, 20);
+
+  return buildStackedBarOption({
+    categories: chartRows.map((row) => row.test_id),
+    series: [
+      {
+        name: "Sessions",
+        values: chartRows.map((row) => row.sessions),
+        color: "#0284c7"
+      },
+      {
+        name: "Purchases",
+        values: chartRows.map((row) => row.purchases),
+        color: "#0f766e"
+      }
+    ],
+    emptyMessage: "No test rows for the selected filters."
+  });
+};
+
+const buildTestsRevenueChartOption = (rows: AdminAnalyticsTestsRow[]) => {
+  const chartRows = rows.slice(0, 20);
+
+  return buildLineChartOption({
+    categories: chartRows.map((row) => row.test_id),
+    yAxes: 2,
+    series: [
+      {
+        name: "Net revenue",
+        values: chartRows.map((row) => row.net_revenue_eur),
+        area: true,
+        color: "#0f766e"
+      },
+      {
+        name: "Paid conversion (%)",
+        values: chartRows.map((row) => row.paid_conversion * 100),
+        yAxisIndex: 1,
+        color: "#f59e0b"
+      }
+    ],
+    emptyMessage: "No test revenue rows for the selected filters."
+  });
+};
+
 export default async function AdminAnalyticsTestsPage({ searchParams }: PageProps) {
   const resolvedSearchParams = await resolveSearchParams(searchParams);
   const { field, direction } = readSort(resolvedSearchParams);
@@ -363,6 +410,10 @@ export default async function AdminAnalyticsTestsPage({ searchParams }: PageProp
           </CardDescription>
         </CardHeader>
         <CardContent>
+          <div className="mb-4 space-y-4">
+            <AdminChart option={buildTestsVolumeChartOption(rows)} />
+            <AdminChart option={buildTestsRevenueChartOption(rows)} />
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[1180px] border-collapse text-left text-sm">
               <thead>

@@ -1,5 +1,7 @@
 import { headers } from "next/headers";
 
+import AdminChart from "../../../../components/admin/charts/AdminChart";
+import { buildLineChartOption, buildStackedBarOption } from "../../../../components/admin/charts/options";
 import AdminAnalyticsPageScaffold from "../../../../components/admin/analytics/PageScaffold";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../../components/ui/card";
 import type {
@@ -302,6 +304,57 @@ const renderRemediationHints = (payload: AdminAnalyticsDataResponse | null) => {
   );
 };
 
+const buildFreshnessChartOption = (rows: AdminAnalyticsDataFreshnessRow[]) => {
+  const chartRows = rows.slice(0, 20);
+  const categories = chartRows.map((row) => `${row.dataset}.${row.table}`);
+
+  return buildLineChartOption({
+    categories,
+    series: [
+      {
+        name: "Current lag (min)",
+        values: chartRows.map((row) => row.lag_minutes ?? 0),
+        area: true,
+        color: "#0284c7"
+      },
+      {
+        name: "Warn threshold (min)",
+        values: chartRows.map((row) => row.warn_after_minutes),
+        color: "#f59e0b"
+      },
+      {
+        name: "Error threshold (min)",
+        values: chartRows.map((row) => row.error_after_minutes),
+        color: "#dc2626"
+      }
+    ],
+    emptyMessage: "No freshness rows available for charting."
+  });
+};
+
+const buildAlertSeverityChartOption = (alerts: AdminAnalyticsDataAlertRow[]) => {
+  const bySeverity = new Map<string, number>();
+
+  for (const alert of alerts) {
+    const severity = alert.severity.trim().toLowerCase() || "unknown";
+    bySeverity.set(severity, (bySeverity.get(severity) ?? 0) + 1);
+  }
+
+  const categories = [...bySeverity.keys()];
+
+  return buildStackedBarOption({
+    categories,
+    series: [
+      {
+        name: "Alerts",
+        values: categories.map((severity) => bySeverity.get(severity) ?? 0),
+        color: "#b91c1c"
+      }
+    ],
+    emptyMessage: "No alerts available for the selected filters."
+  });
+};
+
 export default async function AdminAnalyticsDataHealthPage({ searchParams }: PageProps) {
   const resolvedSearchParams = await resolveSearchParams(searchParams);
   const { payload, error } = await fetchDataHealth(resolvedSearchParams);
@@ -355,7 +408,10 @@ export default async function AdminAnalyticsDataHealthPage({ searchParams }: Pag
           <CardTitle className="text-base">Freshness cards</CardTitle>
           <CardDescription>Configured thresholds are embedded in code and evaluated server-side.</CardDescription>
         </CardHeader>
-        <CardContent>{renderFreshnessCards(payload?.freshness ?? [])}</CardContent>
+        <CardContent className="space-y-4">
+          <AdminChart option={buildFreshnessChartOption(payload?.freshness ?? [])} />
+          {renderFreshnessCards(payload?.freshness ?? [])}
+        </CardContent>
       </Card>
 
       <Card>
@@ -375,7 +431,10 @@ export default async function AdminAnalyticsDataHealthPage({ searchParams }: Pag
               : "alert_events table is unavailable in this environment."}
           </CardDescription>
         </CardHeader>
-        <CardContent>{renderAlerts(payload?.alerts ?? [])}</CardContent>
+        <CardContent className="space-y-4">
+          <AdminChart option={buildAlertSeverityChartOption(payload?.alerts ?? [])} />
+          {renderAlerts(payload?.alerts ?? [])}
+        </CardContent>
       </Card>
 
       <Card>

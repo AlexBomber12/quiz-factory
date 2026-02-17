@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import AdminChart from "../../../../components/admin/charts/AdminChart";
+import { buildHeatmapOption } from "../../../../components/admin/charts/options";
 import AdminAnalyticsPageScaffold from "../../../../components/admin/analytics/PageScaffold";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../../components/ui/card";
 import { getAdminAnalyticsProvider } from "../../../../lib/admin_analytics/provider";
@@ -206,6 +208,41 @@ const buildCellHref = (
     : `/admin/analytics/tenants/${encodedTenantId}`;
 };
 
+const buildDistributionHeatmapOption = (
+  payload: AdminAnalyticsDistributionResponse | null
+) => {
+  const rowOrder = payload?.row_order ?? [];
+  const columnOrder = payload?.column_order ?? [];
+  const points = rowOrder.flatMap((tenantId) => {
+    const row = payload?.rows[tenantId];
+    if (!row) {
+      return [];
+    }
+
+    return columnOrder
+      .map((testId) => {
+        const cell = row.cells[testId];
+        if (!cell) {
+          return null;
+        }
+
+        return {
+          x: testId,
+          y: tenantId,
+          value: cell.net_revenue_eur_7d
+        };
+      })
+      .filter((point): point is { x: string; y: string; value: number } => point !== null);
+  });
+
+  return buildHeatmapOption({
+    xLabels: columnOrder,
+    yLabels: rowOrder,
+    points,
+    emptyMessage: "No matrix cells available for the selected filters."
+  });
+};
+
 export default async function AdminAnalyticsDistributionPage({ searchParams }: PageProps) {
   const resolvedSearchParams = await resolveSearchParams(searchParams);
   const { payload, error } = await fetchDistribution(resolvedSearchParams);
@@ -235,6 +272,18 @@ export default async function AdminAnalyticsDistributionPage({ searchParams }: P
           </CardContent>
         </Card>
       ) : null}
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Distribution heatmap</CardTitle>
+          <CardDescription>
+            Tenant x test matrix visualized by 7-day net revenue.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <AdminChart option={buildDistributionHeatmapOption(payload)} />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
