@@ -5,6 +5,8 @@ import type { LocalizedTest, TestSpec } from "./types";
 const mocks = vi.hoisted(() => ({
   getTenantCatalog: vi.fn(),
   getPublishedTestBySlug: vi.fn(),
+  listTenantProducts: vi.fn(),
+  getPublishedProductBySlug: vi.fn(),
   getTenantTestIds: vi.fn(),
   resolveTestIdBySlug: vi.fn(),
   loadTestSpecById: vi.fn(),
@@ -15,6 +17,11 @@ const mocks = vi.hoisted(() => ({
 vi.mock("../content_db/repo", () => ({
   getTenantCatalog: mocks.getTenantCatalog,
   getPublishedTestBySlug: mocks.getPublishedTestBySlug
+}));
+
+vi.mock("../content_db/products_repo", () => ({
+  listTenantProducts: mocks.listTenantProducts,
+  getPublishedProductBySlug: mocks.getPublishedProductBySlug
 }));
 
 vi.mock("./catalog", () => ({
@@ -30,6 +37,8 @@ vi.mock("./load", () => ({
 
 import {
   listCatalogForTenant,
+  listTenantProducts,
+  loadPublishedProductBySlug,
   loadPublishedTestBySlug
 } from "./provider";
 
@@ -198,5 +207,90 @@ describe("content provider", () => {
     );
     expect(published?.test.report_title).toBe("Your focus report");
   });
-});
 
+  it("returns empty tenant products outside db content mode", async () => {
+    const products = await listTenantProducts("tenant-a", "en");
+
+    expect(mocks.listTenantProducts).not.toHaveBeenCalled();
+    expect(products).toEqual([]);
+  });
+
+  it("lists tenant products from database when CONTENT_SOURCE=db", async () => {
+    process.env.CONTENT_SOURCE = "db";
+    mocks.listTenantProducts.mockResolvedValue([
+      {
+        tenant_id: "tenant-a",
+        product_id: "product-focus-kit",
+        slug: "focus-kit",
+        published_version_id: "f8d4e8f8-64d4-4de8-b0ed-8be7fbd6ae2c",
+        published_version: 2,
+        published_at: "2026-02-17T18:30:00.000Z",
+        spec: {
+          title: "Fallback title",
+          description: "Fallback description",
+          locales: {
+            en: {
+              title: "Focus Kit",
+              description: "A practical focus toolkit",
+              price: "$19"
+            }
+          }
+        }
+      }
+    ]);
+
+    const products = await listTenantProducts("tenant-a", "en");
+
+    expect(mocks.listTenantProducts).toHaveBeenCalledWith("tenant-a");
+    expect(products).toEqual([
+      {
+        tenant_id: "tenant-a",
+        product_id: "product-focus-kit",
+        slug: "focus-kit",
+        default_locale: "en",
+        locale: "en",
+        title: "Focus Kit",
+        description: "A practical focus toolkit",
+        price: "$19"
+      }
+    ]);
+  });
+
+  it("loads published product by slug from database when CONTENT_SOURCE=db", async () => {
+    process.env.CONTENT_SOURCE = "db";
+    mocks.getPublishedProductBySlug.mockResolvedValue({
+      tenant_id: "tenant-a",
+      product_id: "product-focus-kit",
+      slug: "focus-kit",
+      published_version_id: "f8d4e8f8-64d4-4de8-b0ed-8be7fbd6ae2c",
+      published_version: 2,
+      published_at: "2026-02-17T18:30:00.000Z",
+      spec: {
+        title: "Focus Kit",
+        description: "Fallback description",
+        images: ["https://cdn.example.com/focus-kit.jpg"],
+        locales: {
+          en: {
+            title: "Focus Kit",
+            description: "A practical focus toolkit",
+            attributes: {
+              format: "PDF"
+            },
+            price: {
+              amount: 19,
+              currency: "USD"
+            }
+          }
+        }
+      }
+    });
+
+    const product = await loadPublishedProductBySlug("tenant-a", "focus-kit", "en");
+
+    expect(mocks.getPublishedProductBySlug).toHaveBeenCalledWith("tenant-a", "focus-kit");
+    expect(product?.product.title).toBe("Focus Kit");
+    expect(product?.product.description).toBe("A practical focus toolkit");
+    expect(product?.product.price).toBe("19 USD");
+    expect(product?.product.attributes).toEqual([{ key: "format", value: "PDF" }]);
+  });
+});
