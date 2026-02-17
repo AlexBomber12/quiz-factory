@@ -8,6 +8,10 @@ import type { AdminAnalyticsProvider } from "../provider";
 import {
   resolveAdminAnalyticsDistributionOptions,
   resolveAdminAnalyticsTrafficOptions,
+  type AdminAnalyticsAttributionMixRow,
+  type AdminAnalyticsAttributionOptions,
+  type AdminAnalyticsAttributionResponse,
+  type AdminAnalyticsAttributionRow,
   AdminAnalyticsDataAlertRow,
   AdminAnalyticsDataDbtRunMarker,
   type AdminAnalyticsDistributionCell,
@@ -885,6 +889,120 @@ const buildRevenueReconciliation = (
   };
 };
 
+const normalizeAttributionOption = (value: string | null): string | null => {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const normalized = value.trim();
+  return normalized.length > 0 ? normalized : null;
+};
+
+const buildAttributionRows = (
+  filters: AdminAnalyticsFilters,
+  options: AdminAnalyticsAttributionOptions
+): {
+  contentType: string | null;
+  contentKey: string | null;
+  rows: AdminAnalyticsAttributionRow[];
+} => {
+  const contentType = normalizeAttributionOption(options.content_type)?.toLowerCase() ?? null;
+  const contentKey = normalizeAttributionOption(options.content_key);
+  if (contentType && contentType !== "test") {
+    return {
+      contentType,
+      contentKey,
+      rows: []
+    };
+  }
+
+  const tenantIds = filters.tenant_id ? [filters.tenant_id] : resolveTenantIds(filters);
+  const testIds = contentKey
+    ? [contentKey]
+    : filters.test_id
+      ? [filters.test_id]
+      : resolveTestIds(filters);
+  const rows: AdminAnalyticsAttributionRow[] = [];
+
+  for (const tenantId of tenantIds) {
+    for (const testId of testIds) {
+      const scopedFilters: AdminAnalyticsFilters = {
+        ...filters,
+        tenant_id: tenantId,
+        test_id: testId
+      };
+      const daily = buildDailySeries(scopedFilters, `attribution:${tenantId}:${testId}`);
+      const summary = summarizeSeries(daily);
+      const offers = buildRevenueByOfferRows(scopedFilters);
+
+      for (const offer of offers) {
+        rows.push({
+          tenant_id: tenantId,
+          content_type: contentType ?? "test",
+          content_key: testId,
+          offer_key: offer.offer_key,
+          pricing_variant: offer.pricing_variant,
+          purchases: offer.purchases,
+          visits: summary.visits,
+          conversion: divide(offer.purchases, summary.visits),
+          gross_revenue_eur: offer.gross_revenue_eur,
+          refunds_eur: offer.refunds_eur,
+          disputes_fees_eur: offer.disputes_fees_eur,
+          payment_fees_eur: offer.payment_fees_eur,
+          net_revenue_eur: offer.net_revenue_eur
+        });
+      }
+    }
+  }
+
+  return {
+    contentType: contentType ?? "test",
+    contentKey,
+    rows: rows.sort(
+      (left, right) =>
+        right.net_revenue_eur - left.net_revenue_eur ||
+        right.purchases - left.purchases ||
+        left.tenant_id.localeCompare(right.tenant_id) ||
+        left.content_key.localeCompare(right.content_key) ||
+        left.offer_key.localeCompare(right.offer_key)
+    )
+  };
+};
+
+const buildAttributionMixRows = (
+  rows: AdminAnalyticsAttributionRow[],
+  groupedBy: "tenant" | "content"
+): AdminAnalyticsAttributionMixRow[] => {
+  const bySegment = new Map<string, AdminAnalyticsAttributionMixRow>();
+
+  for (const row of rows) {
+    const segment = groupedBy === "tenant" ? row.tenant_id : row.content_key;
+    const current = bySegment.get(segment) ?? {
+      segment,
+      gross_revenue_eur: 0,
+      refunds_eur: 0,
+      disputes_fees_eur: 0,
+      payment_fees_eur: 0,
+      net_revenue_eur: 0
+    };
+
+    current.gross_revenue_eur = roundCurrency(current.gross_revenue_eur + row.gross_revenue_eur);
+    current.refunds_eur = roundCurrency(current.refunds_eur + row.refunds_eur);
+    current.disputes_fees_eur = roundCurrency(current.disputes_fees_eur + row.disputes_fees_eur);
+    current.payment_fees_eur = roundCurrency(current.payment_fees_eur + row.payment_fees_eur);
+    current.net_revenue_eur = roundCurrency(current.net_revenue_eur + row.net_revenue_eur);
+    bySegment.set(segment, current);
+  }
+
+  return [...bySegment.values()]
+    .sort(
+      (left, right) =>
+        right.net_revenue_eur - left.net_revenue_eur ||
+        left.segment.localeCompare(right.segment)
+    )
+    .slice(0, 20);
+};
+
 const buildDataFreshnessRows = (filters: AdminAnalyticsFilters): AdminAnalyticsDataFreshnessRow[] => {
   const seed = seedFromFilters(filters, "data-health");
   const endDate = parseDateYYYYMMDD(filters.end);
@@ -1370,6 +1488,24 @@ export class MockAdminAnalyticsProvider implements AdminAnalyticsProvider {
       by_tenant: buildRevenueByTenantRows(filters),
       by_test: buildRevenueByTestRows(filters),
       reconciliation: buildRevenueReconciliation(filters, summary)
+    };
+  }
+
+  async getAttribution(
+    filters: AdminAnalyticsFilters,
+    options: AdminAnalyticsAttributionOptions
+  ): Promise<AdminAnalyticsAttributionResponse> {
+    const { contentType, contentKey, rows } = buildAttributionRows(filters, options);
+    const groupedBy: "tenant" | "content" = filters.tenant_id ? "content" : "tenant";
+
+    return {
+      filters,
+      generated_at_utc: generatedAtUtc(filters),
+      content_type: contentType,
+      content_key: contentKey,
+      grouped_by: groupedBy,
+      mix: buildAttributionMixRows(rows, groupedBy),
+      rows
     };
   }
 

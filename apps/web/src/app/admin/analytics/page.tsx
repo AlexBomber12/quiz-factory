@@ -344,6 +344,7 @@ export default async function AdminAnalyticsOverviewPage({ searchParams }: PageP
         { href: "/admin/analytics/distribution", label: "Open distribution matrix" },
         { href: "/admin/analytics/traffic", label: "Open traffic analytics" },
         { href: "/admin/analytics/revenue", label: "Open revenue analytics" },
+        { href: "/admin/analytics/attribution", label: "Open attribution analytics" },
         { href: "/admin/analytics/data", label: "Open data health" }
       ]}
       title="Analytics overview"

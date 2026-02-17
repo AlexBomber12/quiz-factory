@@ -361,6 +361,7 @@ export default async function AdminAnalyticsRevenuePage({ searchParams }: PagePr
     <AdminAnalyticsPageScaffold
       description="Revenue KPIs, offer/pricing mix, and Stripe reconciliation signals."
       links={[
+        { href: "/admin/analytics/attribution", label: "Open attribution analytics" },
         { href: "/admin/analytics/data", label: "Open data health" },
         { href: "/admin/analytics", label: "Back to analytics overview" }
       ]}

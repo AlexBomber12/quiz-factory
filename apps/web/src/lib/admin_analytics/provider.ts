@@ -1,4 +1,6 @@
 import type {
+  AdminAnalyticsAttributionOptions,
+  AdminAnalyticsAttributionResponse,
   AdminAnalyticsDataResponse,
   AdminAnalyticsDistributionOptions,
   AdminAnalyticsDistributionResponse,
@@ -37,6 +39,10 @@ export interface AdminAnalyticsProvider {
     options?: AdminAnalyticsTrafficOptions
   ): Promise<AdminAnalyticsTrafficResponse>;
   getRevenue(filters: AdminAnalyticsFilters): Promise<AdminAnalyticsRevenueResponse>;
+  getAttribution(
+    filters: AdminAnalyticsFilters,
+    options: AdminAnalyticsAttributionOptions
+  ): Promise<AdminAnalyticsAttributionResponse>;
   getDataHealth(filters: AdminAnalyticsFilters): Promise<AdminAnalyticsDataResponse>;
 }
 

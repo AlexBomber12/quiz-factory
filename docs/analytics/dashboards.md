@@ -71,3 +71,19 @@ Conditional formatting suggestions:
   exceeds 50.
 - Highlight rows when purchase_count_diff_pct or gross_revenue_diff_pct exceeds
   0.02.
+
+## Revenue Attribution View (Domain -> Content -> Offer)
+Sources:
+- marts.mart_unit_econ_offers_daily (BigQuery mode)
+- stripe_purchases + stripe_refunds + stripe_disputes + stripe_fees + analytics_events (Content DB mode)
+
+Filters:
+- date range (required)
+- tenant_id (optional)
+- content_type (optional, currently `test`)
+- content_key (optional, maps to `test_id`)
+
+Outputs:
+- stacked mix by tenant (or by content when tenant is already selected)
+- table dimensions: tenant_id, content_key (`test_id`), offer_key, pricing_variant
+- metrics: purchases, visits, conversion, gross_revenue_eur, refunds_eur, disputes_fees_eur, payment_fees_eur, net_revenue_eur

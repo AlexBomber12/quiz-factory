@@ -280,6 +280,38 @@ export type AdminAnalyticsRevenueReconciliation = {
   gross_revenue_diff_pct: number | null;
 };
 
+export type AdminAnalyticsAttributionOptions = {
+  content_type: string | null;
+  content_key: string | null;
+};
+
+export type AdminAnalyticsAttributionGroupBy = "tenant" | "content";
+
+export type AdminAnalyticsAttributionMixRow = TableRow & {
+  segment: string;
+  gross_revenue_eur: number;
+  refunds_eur: number;
+  disputes_fees_eur: number;
+  payment_fees_eur: number;
+  net_revenue_eur: number;
+};
+
+export type AdminAnalyticsAttributionRow = TableRow & {
+  tenant_id: string;
+  content_type: string;
+  content_key: string;
+  offer_key: string;
+  pricing_variant: string;
+  purchases: number;
+  visits: number;
+  conversion: number;
+  gross_revenue_eur: number;
+  refunds_eur: number;
+  disputes_fees_eur: number;
+  payment_fees_eur: number;
+  net_revenue_eur: number;
+};
+
 export type AdminAnalyticsDataHealthStatus = "ok" | "warn" | "error";
 
 export type AdminAnalyticsDataHealthCheck = {
@@ -469,6 +501,16 @@ export type AdminAnalyticsRevenueResponse = {
   by_tenant: AdminAnalyticsRevenueByTenantRow[];
   by_test: AdminAnalyticsRevenueByTestRow[];
   reconciliation: AdminAnalyticsRevenueReconciliation;
+};
+
+export type AdminAnalyticsAttributionResponse = {
+  filters: AdminAnalyticsFilters;
+  generated_at_utc: string;
+  content_type: string | null;
+  content_key: string | null;
+  grouped_by: AdminAnalyticsAttributionGroupBy;
+  mix: AdminAnalyticsAttributionMixRow[];
+  rows: AdminAnalyticsAttributionRow[];
 };
 
 export type AdminAnalyticsDataResponse = {
