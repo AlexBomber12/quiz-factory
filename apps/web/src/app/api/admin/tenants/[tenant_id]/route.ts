@@ -113,11 +113,23 @@ const buildErrorResponse = (
 const parsePatchPayloadFromJson = async (
   request: Request
 ): Promise<ParsedPatchPayload> => {
-  const body = (await request.json()) as Record<string, unknown>;
+  const rawBody = await request.json();
+  if (!rawBody || typeof rawBody !== "object" || Array.isArray(rawBody)) {
+    throw new AdminTenantError("invalid_payload", 400);
+  }
+  const body = rawBody as Record<string, unknown>;
+  let enabled: boolean | undefined;
+  if (Object.prototype.hasOwnProperty.call(body, "enabled")) {
+    const parsedEnabled = normalizeBoolean(body.enabled);
+    if (parsedEnabled === null) {
+      throw new AdminTenantError("invalid_payload", 400, "enabled must be true or false.");
+    }
+    enabled = parsedEnabled;
+  }
 
   return {
     default_locale: normalizeString(body.default_locale) ?? undefined,
-    enabled: normalizeBoolean(body.enabled) ?? undefined,
+    enabled,
     csrfToken: readAdminCsrfTokenFromHeader(request) ?? readAdminCsrfTokenFromJson(body)
   };
 };
@@ -127,13 +139,18 @@ const parsePatchPayloadFromFormData = async (
 ): Promise<ParsedPatchPayload> => {
   const formData = await request.formData();
   const enabledInput = formData.get("enabled");
+  let enabled: boolean | undefined;
+  if (enabledInput !== null) {
+    const parsedEnabled = normalizeBoolean(enabledInput);
+    if (parsedEnabled === null) {
+      throw new AdminTenantError("invalid_payload", 400, "enabled must be true or false.");
+    }
+    enabled = parsedEnabled;
+  }
 
   return {
     default_locale: normalizeString(formData.get("default_locale")) ?? undefined,
-    enabled:
-      enabledInput === null
-        ? undefined
-        : normalizeBoolean(enabledInput) ?? undefined,
+    enabled,
     csrfToken: readAdminCsrfTokenFromHeader(request) ?? readAdminCsrfTokenFromFormData(formData)
   };
 };
@@ -214,7 +231,16 @@ const runPatch = async (
   let payload: ParsedPatchPayload;
   try {
     payload = await parsePatchPayload(request);
-  } catch {
+  } catch (error) {
+    if (error instanceof AdminTenantError) {
+      return buildErrorResponse(
+        request,
+        tenantId,
+        error.code,
+        error.status,
+        error.detail
+      );
+    }
     return buildErrorResponse(request, tenantId, "invalid_payload", 400);
   }
 

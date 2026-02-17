@@ -2,6 +2,7 @@ import { getContentDbPool } from "../content_db/pool";
 import { normalizeHostname } from "../security/request_host";
 
 export const TENANT_RUNTIME_CACHE_TTL_MS = 60_000;
+export const TENANT_DOMAIN_CACHE_MAX_ENTRIES = 1_024;
 
 export type RuntimeTenantRecord = {
   tenantId: string;
@@ -45,6 +46,23 @@ const normalizeDomain = (value: unknown): string | null => {
 
 const now = (): number => Date.now();
 
+const pruneTenantByDomainCache = (currentNow: number): void => {
+  for (const [domain, entry] of tenantByDomainCache) {
+    if (entry.expiresAtMs <= currentNow) {
+      tenantByDomainCache.delete(domain);
+    }
+  }
+
+  while (tenantByDomainCache.size > TENANT_DOMAIN_CACHE_MAX_ENTRIES) {
+    const oldestDomain = tenantByDomainCache.keys().next().value;
+    if (!oldestDomain) {
+      break;
+    }
+
+    tenantByDomainCache.delete(oldestDomain);
+  }
+};
+
 const readTenantFromCache = (domain: string): RuntimeTenantRecord | null | undefined => {
   const cached = tenantByDomainCache.get(domain);
   if (!cached) {
@@ -56,14 +74,25 @@ const readTenantFromCache = (domain: string): RuntimeTenantRecord | null | undef
     return undefined;
   }
 
+  // Refresh access order so hot domains are less likely to be evicted.
+  tenantByDomainCache.delete(domain);
+  tenantByDomainCache.set(domain, cached);
+
   return cached.value;
 };
 
 const writeTenantToCache = (domain: string, value: RuntimeTenantRecord | null): RuntimeTenantRecord | null => {
+  const currentNow = now();
+  pruneTenantByDomainCache(currentNow);
+  if (tenantByDomainCache.has(domain)) {
+    tenantByDomainCache.delete(domain);
+  }
+
   tenantByDomainCache.set(domain, {
     value,
-    expiresAtMs: now() + TENANT_RUNTIME_CACHE_TTL_MS
+    expiresAtMs: currentNow + TENANT_RUNTIME_CACHE_TTL_MS
   });
+  pruneTenantByDomainCache(currentNow);
 
   return value;
 };
