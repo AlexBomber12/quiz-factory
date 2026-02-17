@@ -46,6 +46,20 @@ export type AlertInstanceRecord = {
   created_at: string;
 };
 
+export type AlertInstanceWithRuleRecord = AlertInstanceRecord & {
+  scope_json: AlertRuleScope;
+  params_json: AlertRuleParams;
+};
+
+export type AlertAiInsightRecord = {
+  alert_instance_id: string;
+  model: string;
+  prompt_hash: string;
+  insight_md: string;
+  actions_json: unknown;
+  created_at: string;
+};
+
 export type CreateAlertRuleInput = {
   name: string;
   enabled: boolean;

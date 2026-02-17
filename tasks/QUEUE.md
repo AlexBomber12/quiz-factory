@@ -626,7 +626,7 @@ Queue (in order)
 - Depends on: PR-REVENUE-ATTRIB-01 and PR-DOMAINS-02
 
 114) PR-AI-INSIGHTS-01: AI Insights for Alerts (Action Center)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-AI-INSIGHTS-01.md
 - Depends on: PR-TRIGGERS-01
 

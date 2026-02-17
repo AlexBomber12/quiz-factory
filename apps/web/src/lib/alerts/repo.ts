@@ -1,10 +1,12 @@
 import { getContentDbPool } from "../content_db/pool";
 
 import {
+  type AlertAiInsightRecord,
   ALERT_INSTANCE_SEVERITIES,
   ALERT_INSTANCE_STATUSES,
   ALERT_RULE_TYPES,
   type AlertInstanceRecord,
+  type AlertInstanceWithRuleRecord,
   type AlertInstanceSeverity,
   type AlertInstanceStatus,
   type AlertRuleParams,
@@ -43,6 +45,20 @@ type AlertInstanceRow = {
   created_at: TimestampValue;
 };
 
+type AlertInstanceWithRuleRow = AlertInstanceRow & {
+  scope_json: unknown;
+  params_json: unknown;
+};
+
+type AlertAiInsightRow = {
+  alert_instance_id: string;
+  model: string;
+  prompt_hash: string;
+  insight_md: string;
+  actions_json: unknown;
+  created_at: TimestampValue;
+};
+
 type UpdatedAlertInstanceRow = {
   id: string;
   rule_id: string;
@@ -61,6 +77,14 @@ type InsertAlertInstanceInput = {
 type InsertAlertInstanceResult = {
   inserted: boolean;
   id: string | null;
+};
+
+type UpsertAlertAiInsightInput = {
+  alert_instance_id: string;
+  model: string;
+  prompt_hash: string;
+  insight_md: string;
+  actions_json: unknown;
 };
 
 const RULE_TYPE_SET = new Set<string>(ALERT_RULE_TYPES);
@@ -176,6 +200,33 @@ const normalizeInstanceId = (value: unknown): string => {
   return normalized;
 };
 
+const normalizePromptHash = (value: unknown): string => {
+  const normalized = normalizeNonEmptyString(value);
+  if (!normalized) {
+    throw new Error("prompt_hash is required.");
+  }
+
+  return normalized;
+};
+
+const normalizeModel = (value: unknown): string => {
+  const normalized = normalizeNonEmptyString(value);
+  if (!normalized) {
+    throw new Error("model is required.");
+  }
+
+  return normalized;
+};
+
+const normalizeInsightMarkdown = (value: unknown): string => {
+  const normalized = normalizeNonEmptyString(value);
+  if (!normalized) {
+    throw new Error("insight_md is required.");
+  }
+
+  return normalized;
+};
+
 const normalizeLimit = (value: unknown): number => {
   if (typeof value !== "number" || !Number.isFinite(value)) {
     return DEFAULT_INSTANCES_LIMIT;
@@ -213,6 +264,27 @@ const toAlertInstanceRecord = (row: AlertInstanceRow): AlertInstanceRecord => {
     fired_at: toIsoString(row.fired_at),
     context_json: normalizeObjectRecord(row.context_json, "context_json"),
     fingerprint: row.fingerprint,
+    created_at: toIsoString(row.created_at)
+  };
+};
+
+const toAlertInstanceWithRuleRecord = (
+  row: AlertInstanceWithRuleRow
+): AlertInstanceWithRuleRecord => {
+  return {
+    ...toAlertInstanceRecord(row),
+    scope_json: normalizeAlertScope(row.scope_json),
+    params_json: normalizeAlertParams(row.params_json)
+  };
+};
+
+const toAlertAiInsightRecord = (row: AlertAiInsightRow): AlertAiInsightRecord => {
+  return {
+    alert_instance_id: row.alert_instance_id,
+    model: normalizeModel(row.model),
+    prompt_hash: normalizePromptHash(row.prompt_hash),
+    insight_md: normalizeInsightMarkdown(row.insight_md),
+    actions_json: row.actions_json,
     created_at: toIsoString(row.created_at)
   };
 };
@@ -399,6 +471,39 @@ export const listAlertInstances = async (
   return rows.map((row) => toAlertInstanceRecord(row));
 };
 
+export const getAlertInstanceWithRuleById = async (
+  instanceIdInput: string
+): Promise<AlertInstanceWithRuleRecord | null> => {
+  const instanceId = normalizeInstanceId(instanceIdInput);
+  const pool = getContentDbPool();
+  const { rows } = await pool.query<AlertInstanceWithRuleRow>(
+    `
+      SELECT
+        ai.id,
+        ai.rule_id,
+        ar.name AS rule_name,
+        ar.rule_type,
+        ai.status,
+        ai.severity,
+        ai.fired_at,
+        ai.context_json,
+        ai.fingerprint,
+        ai.created_at,
+        ar.scope_json,
+        ar.params_json
+      FROM alert_instances ai
+      JOIN alert_rules ar
+        ON ar.id = ai.rule_id
+      WHERE ai.id = $1
+      LIMIT 1
+    `,
+    [instanceId]
+  );
+
+  const row = rows[0];
+  return row ? toAlertInstanceWithRuleRecord(row) : null;
+};
+
 export const updateAlertInstanceStatus = async (
   instanceIdInput: string,
   statusInput: AlertInstanceStatus
@@ -495,4 +600,91 @@ export const getAlertRuleById = async (
 
   const row = rows[0];
   return row ? toAlertRuleRecord(row) : null;
+};
+
+const sanitizeAlertAiInsightInput = (input: UpsertAlertAiInsightInput): UpsertAlertAiInsightInput => {
+  return {
+    alert_instance_id: normalizeInstanceId(input.alert_instance_id),
+    model: normalizeModel(input.model),
+    prompt_hash: normalizePromptHash(input.prompt_hash),
+    insight_md: normalizeInsightMarkdown(input.insight_md),
+    actions_json: input.actions_json
+  };
+};
+
+export const getAlertAiInsightByInstanceId = async (
+  instanceIdInput: string
+): Promise<AlertAiInsightRecord | null> => {
+  const instanceId = normalizeInstanceId(instanceIdInput);
+  const pool = getContentDbPool();
+  const { rows } = await pool.query<AlertAiInsightRow>(
+    `
+      SELECT
+        alert_instance_id,
+        model,
+        prompt_hash,
+        insight_md,
+        actions_json,
+        created_at
+      FROM alert_ai_insights
+      WHERE alert_instance_id = $1
+      LIMIT 1
+    `,
+    [instanceId]
+  );
+
+  const row = rows[0];
+  return row ? toAlertAiInsightRecord(row) : null;
+};
+
+export const upsertAlertAiInsight = async (
+  input: UpsertAlertAiInsightInput
+): Promise<AlertAiInsightRecord> => {
+  const normalized = sanitizeAlertAiInsightInput(input);
+  const actionsJson = JSON.stringify(normalized.actions_json);
+  if (typeof actionsJson !== "string") {
+    throw new Error("actions_json is invalid.");
+  }
+
+  const pool = getContentDbPool();
+  const { rows } = await pool.query<AlertAiInsightRow>(
+    `
+      INSERT INTO alert_ai_insights (
+        alert_instance_id,
+        model,
+        prompt_hash,
+        insight_md,
+        actions_json
+      )
+      VALUES ($1, $2, $3, $4, $5::jsonb)
+      ON CONFLICT (alert_instance_id)
+      DO UPDATE SET
+        model = EXCLUDED.model,
+        prompt_hash = EXCLUDED.prompt_hash,
+        insight_md = EXCLUDED.insight_md,
+        actions_json = EXCLUDED.actions_json,
+        created_at = now()
+      RETURNING
+        alert_instance_id,
+        model,
+        prompt_hash,
+        insight_md,
+        actions_json,
+        created_at
+    `,
+    [
+      normalized.alert_instance_id,
+      normalized.model,
+      normalized.prompt_hash,
+      normalized.insight_md,
+      actionsJson
+    ]
+  );
+
+  const row = rows[0];
+  if (!row) {
+    throw new Error("Failed to upsert alert insight.");
+  }
+
+  return toAlertAiInsightRecord(row);
 };

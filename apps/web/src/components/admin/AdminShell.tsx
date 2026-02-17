@@ -13,6 +13,7 @@ type AdminShellProps = {
 const NAV_ITEMS: Array<{ href: string; label: string }> = [
   { href: "/admin", label: "Dashboard" },
   { href: "/admin/alerts", label: "Alerts" },
+  { href: "/admin/action-center", label: "Action Center" },
   { href: "/admin/analytics", label: "Analytics" },
   { href: "/admin/imports", label: "Imports" },
   { href: "/admin/tests", label: "Tests" },
@@ -32,6 +33,10 @@ const isNavItemActive = (pathname: string, href: string): boolean => {
 
   if (href === "/admin/alerts") {
     return pathname.startsWith("/admin/alerts");
+  }
+
+  if (href === "/admin/action-center") {
+    return pathname.startsWith("/admin/action-center");
   }
 
   if (href === "/admin/analytics") {
