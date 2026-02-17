@@ -153,6 +153,18 @@ const tenantRegistry = ((tenantsConfig as TenantRegistryRaw).tenants ?? [])
   .sort((left, right) => left.tenant_id.localeCompare(right.tenant_id));
 
 const tenantIdSet = new Set(tenantRegistry.map((entry) => entry.tenant_id));
+const tenantRegistryById = new Map(tenantRegistry.map((entry) => [entry.tenant_id, entry]));
+
+const normalizeTenantDefaultLocale = (value: string): "en" | "es" | "pt-BR" => {
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "es") {
+    return "es";
+  }
+  if (normalized === "pt-br") {
+    return "pt-BR";
+  }
+  return "en";
+};
 
 const normalizeTenantIds = (tenantIds: string[]): string[] => {
   const unique = new Set<string>();
@@ -217,6 +229,33 @@ const requireAdminRole = (actorRole: AdminRole): void => {
   if (actorRole !== "admin") {
     throw new PublishWorkflowError("forbidden", 403, "Only admin can publish or rollback.");
   }
+};
+
+const ensureTenantRowsExist = async (client: PoolClient, tenantIds: string[]): Promise<void> => {
+  if (tenantIds.length === 0) {
+    return;
+  }
+
+  const locales = tenantIds.map((tenantId) =>
+    normalizeTenantDefaultLocale(tenantRegistryById.get(tenantId)?.default_locale ?? "en")
+  );
+
+  await client.query(
+    `
+      INSERT INTO tenants (
+        tenant_id,
+        default_locale,
+        enabled
+      )
+      SELECT
+        tenant_id,
+        default_locale,
+        TRUE
+      FROM unnest($1::text[], $2::text[]) AS seed(tenant_id, default_locale)
+      ON CONFLICT (tenant_id) DO NOTHING
+    `,
+    [tenantIds, locales]
+  );
 };
 
 const resolveTestVersion = async (
@@ -480,6 +519,7 @@ export const publishVersionToTenants = async (input: {
 
   try {
     await client.query("BEGIN");
+    await ensureTenantRowsExist(client, tenantIds);
     resolvedVersion = await resolveTestVersion(client, testId, versionId);
     await assertStagingPublishPrerequisite(client, {
       testId,
@@ -558,6 +598,7 @@ export const rollbackVersionForTenant = async (input: {
 
   try {
     await client.query("BEGIN");
+    await ensureTenantRowsExist(client, [tenantId]);
     resolvedVersion = await resolveTestVersion(client, testId, versionId);
     const publication = await rollbackDomainContent(
       tenantId,

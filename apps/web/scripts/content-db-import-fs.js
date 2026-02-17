@@ -10,6 +10,7 @@ const { Pool } = require("pg");
 const ROOT_DIR = path.resolve(__dirname, "../../..");
 const TESTS_ROOT = path.join(ROOT_DIR, "content/tests");
 const CATALOG_PATH = path.join(ROOT_DIR, "config/catalog.json");
+const TENANTS_CONFIG_PATH = path.join(ROOT_DIR, "config/tenants.json");
 const MIGRATION_ACTOR = "migration-fs-to-db";
 const LOCALE_CANONICAL = {
   en: "en",
@@ -246,6 +247,34 @@ const loadCatalogEntries = () => {
     entries,
     skipped
   };
+};
+
+const loadTenantDefaultLocales = () => {
+  if (!fs.existsSync(TENANTS_CONFIG_PATH)) {
+    return new Map();
+  }
+
+  const parsed = readJsonFile(TENANTS_CONFIG_PATH, "config/tenants.json");
+  if (!isObjectRecord(parsed) || !Array.isArray(parsed.tenants)) {
+    return new Map();
+  }
+
+  const output = new Map();
+  for (const rawEntry of parsed.tenants) {
+    if (!isObjectRecord(rawEntry)) {
+      continue;
+    }
+
+    const tenantId = normalizeNonEmptyString(rawEntry.tenant_id);
+    if (!tenantId) {
+      continue;
+    }
+
+    const locale = normalizeLocaleTag(rawEntry.default_locale) ?? "en";
+    output.set(tenantId, locale);
+  }
+
+  return output;
 };
 
 const findOrCreateTest = async (client, specRecord, summary) => {
@@ -521,6 +550,44 @@ const upsertTenantPublishedVersion = async (client, input, summary) => {
   summary.tenantMappingsUpdated += 1;
 };
 
+const ensureTenantRowsExist = async (client, tenantIds, tenantDefaultLocales) => {
+  if (!Array.isArray(tenantIds) || tenantIds.length === 0) {
+    return;
+  }
+
+  const normalizedTenantIds = Array.from(
+    new Set(
+      tenantIds
+        .map((tenantId) => normalizeNonEmptyString(tenantId))
+        .filter((tenantId) => tenantId !== null)
+    )
+  );
+  if (normalizedTenantIds.length === 0) {
+    return;
+  }
+
+  const defaultLocales = normalizedTenantIds.map(
+    (tenantId) => tenantDefaultLocales.get(tenantId) ?? "en"
+  );
+
+  await client.query(
+    `
+      INSERT INTO tenants (
+        tenant_id,
+        default_locale,
+        enabled
+      )
+      SELECT
+        tenant_id,
+        default_locale,
+        TRUE
+      FROM unnest($1::text[], $2::text[]) AS seed(tenant_id, default_locale)
+      ON CONFLICT (tenant_id) DO NOTHING
+    `,
+    [normalizedTenantIds, defaultLocales]
+  );
+};
+
 const printSummary = (summary) => {
   console.log("Filesystem content migration completed.");
   console.log(`Specs found: ${summary.specFilesFound}`);
@@ -546,6 +613,7 @@ const printSummary = (summary) => {
 const run = async () => {
   const specResult = loadSpecRecords();
   const catalogResult = loadCatalogEntries();
+  const tenantDefaultLocales = loadTenantDefaultLocales();
 
   const summary = {
     specFilesFound: specResult.specFilesFound,
@@ -589,6 +657,12 @@ const run = async () => {
       });
       summary.specsImported += 1;
     }
+
+    await ensureTenantRowsExist(
+      client,
+      catalogResult.entries.map((entry) => entry.tenantId),
+      tenantDefaultLocales
+    );
 
     for (const entry of catalogResult.entries) {
       const imported = importedVersionsByTestId.get(entry.testId) ?? null;
