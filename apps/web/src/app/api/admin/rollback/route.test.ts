@@ -165,6 +165,8 @@ describe("POST /api/admin/rollback", () => {
       entity_type: "test",
       entity_id: "test-focus-rhythm",
       metadata: {
+        content_type: "test",
+        content_key: "test-focus-rhythm",
         tenant_id: "tenant-tenant-example-com",
         version_id: "version-1",
         version: 1

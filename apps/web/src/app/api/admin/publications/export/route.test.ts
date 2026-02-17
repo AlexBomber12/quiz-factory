@@ -37,7 +37,8 @@ describe("GET /api/admin/publications/export", () => {
       {
         tenant_id: "tenant-tenant-example-com",
         domains: ["tenant.example.com"],
-        test_id: "test-focus-rhythm",
+        content_type: "test",
+        content_key: "test-focus-rhythm",
         slug: "focus-rhythm",
         published_version_id: "version-1",
         is_enabled: true,
@@ -61,7 +62,7 @@ describe("GET /api/admin/publications/export", () => {
   it("exports CSV and applies query filters", async () => {
     const response = await GET(
       new Request(
-        "https://tenant.example.com/api/admin/publications/export?q=tenant.example.com&tenant_id=tenant-tenant-example-com&test_id=test-focus-rhythm&only_published=1&only_enabled=true"
+        "https://tenant.example.com/api/admin/publications/export?q=tenant.example.com&tenant_id=tenant-tenant-example-com&content_type=test&content_key=test-focus-rhythm&only_published=1&only_enabled=true"
       )
     );
 
@@ -69,7 +70,9 @@ describe("GET /api/admin/publications/export", () => {
     expect(listAdminPublications).toHaveBeenCalledWith({
       q: "tenant.example.com",
       tenant_id: "tenant-tenant-example-com",
-      test_id: "test-focus-rhythm",
+      content_type: "test",
+      content_key: "test-focus-rhythm",
+      test_id: null,
       only_published: true,
       only_enabled: true
     });
@@ -79,7 +82,7 @@ describe("GET /api/admin/publications/export", () => {
     const text = await response.text();
     const lines = text.trimEnd().split("\n");
     expect(lines[0]).toBe(
-      "tenant_id,domains,test_id,slug,published_version_id,is_enabled,updated_at"
+      "tenant_id,domains,content_type,content_key,slug,published_version_id,is_enabled,updated_at"
     );
     expect(lines[1]).toContain("tenant-tenant-example-com");
     expect(lines[1]).toContain("tenant.example.com");

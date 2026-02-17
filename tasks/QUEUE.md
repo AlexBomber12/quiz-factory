@@ -606,7 +606,7 @@ Queue (in order)
 - Depends on: PR-ADMIN-CONSOLE-09 and PR-CONTENT-DB-04
 
 110) PR-DOMAINS-02: Universal Domain Publications (Content Registry + Matrix)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-DOMAINS-02.md
 - Depends on: PR-DOMAINS-01
 

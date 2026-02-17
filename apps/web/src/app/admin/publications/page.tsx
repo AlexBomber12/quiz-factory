@@ -22,7 +22,7 @@ import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "../../../lib/admin/ses
 type SearchParams = {
   q?: string | string[];
   tenant_id?: string | string[];
-  test_id?: string | string[];
+  content_type?: string | string[];
   only_published?: string | string[];
   only_enabled?: string | string[];
 };
@@ -57,7 +57,7 @@ const readFilters = async (
     return {
       q: null,
       tenant_id: null,
-      test_id: null,
+      content_type: null,
       only_published: false,
       only_enabled: false
     };
@@ -67,7 +67,7 @@ const readFilters = async (
   return {
     q: asSingleValue(resolved.q),
     tenant_id: asSingleValue(resolved.tenant_id),
-    test_id: asSingleValue(resolved.test_id),
+    content_type: asSingleValue(resolved.content_type),
     only_published: parseBooleanFilter(asSingleValue(resolved.only_published)),
     only_enabled: parseBooleanFilter(asSingleValue(resolved.only_enabled))
   };
@@ -81,8 +81,8 @@ const buildExportHref = (filters: ListAdminPublicationsFilters): string => {
   if (filters.tenant_id) {
     query.set("tenant_id", filters.tenant_id);
   }
-  if (filters.test_id) {
-    query.set("test_id", filters.test_id);
+  if (filters.content_type) {
+    query.set("content_type", filters.content_type);
   }
   if (filters.only_published) {
     query.set("only_published", "1");
@@ -122,7 +122,7 @@ export default async function AdminPublicationsPage({ searchParams }: PageProps)
         <CardHeader>
           <CardTitle>Publications registry</CardTitle>
           <CardDescription>
-            Tenant x test matrix with published version state and enabled flag.
+            Tenant x content matrix with published version state and enabled flag.
           </CardDescription>
         </CardHeader>
       </Card>
@@ -130,11 +130,11 @@ export default async function AdminPublicationsPage({ searchParams }: PageProps)
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Filters</CardTitle>
-          <CardDescription>Search by tenant_id, test_id, slug, or domain.</CardDescription>
+          <CardDescription>Filter by tenant, content type, and publication state.</CardDescription>
         </CardHeader>
         <CardContent>
           <form
-            className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto_auto] lg:grid-cols-[minmax(0,1fr)_auto_auto_auto_auto]"
+            className="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto_auto_auto_auto]"
             method="get"
           >
             <label className="space-y-1">
@@ -143,8 +143,34 @@ export default async function AdminPublicationsPage({ searchParams }: PageProps)
                 className="w-full rounded border bg-background px-2 py-2 text-sm"
                 defaultValue={filters.q ?? ""}
                 name="q"
-                placeholder="tenant_id, test_id, slug, domain"
+                placeholder="tenant_id, content_key, slug, domain"
                 type="search"
+              />
+            </label>
+
+            <label className="space-y-1">
+              <span className="block text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                tenant_id
+              </span>
+              <input
+                className="w-full rounded border bg-background px-2 py-2 text-sm"
+                defaultValue={filters.tenant_id ?? ""}
+                name="tenant_id"
+                placeholder="tenant-..."
+                type="text"
+              />
+            </label>
+
+            <label className="space-y-1">
+              <span className="block text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                content_type
+              </span>
+              <input
+                className="w-full rounded border bg-background px-2 py-2 text-sm"
+                defaultValue={filters.content_type ?? ""}
+                name="content_type"
+                placeholder="test"
+                type="text"
               />
             </label>
 
@@ -186,7 +212,7 @@ export default async function AdminPublicationsPage({ searchParams }: PageProps)
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Publications</CardTitle>
-          <CardDescription>Sorted by tenant_id, slug, and test_id.</CardDescription>
+          <CardDescription>Sorted by tenant_id, content_type, slug, and content_key.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           {loadError ? (
@@ -196,12 +222,13 @@ export default async function AdminPublicationsPage({ searchParams }: PageProps)
           ) : null}
 
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1280px] border-collapse text-left text-sm">
+            <table className="w-full min-w-[1320px] border-collapse text-left text-sm">
               <thead>
                 <tr className="border-b">
                   <th className="px-2 py-2 font-semibold">tenant_id</th>
                   <th className="px-2 py-2 font-semibold">domains</th>
-                  <th className="px-2 py-2 font-semibold">test_id</th>
+                  <th className="px-2 py-2 font-semibold">content_type</th>
+                  <th className="px-2 py-2 font-semibold">content_key</th>
                   <th className="px-2 py-2 font-semibold">slug</th>
                   <th className="px-2 py-2 font-semibold">published_version_id</th>
                   <th className="px-2 py-2 font-semibold">enabled</th>
@@ -211,19 +238,27 @@ export default async function AdminPublicationsPage({ searchParams }: PageProps)
               <tbody>
                 {rows.length > 0 ? (
                   rows.map((record) => {
+                    const isTestContent = record.content_type === "test";
+                    const testId = isTestContent ? record.content_key : null;
                     const publicDomain = record.domains[0] ?? null;
-                    const publicHref = publicDomain
+                    const publicHref = isTestContent && publicDomain
                       ? `https://${publicDomain}/t/${encodeURIComponent(record.slug)}`
                       : null;
 
                     return (
-                      <tr className="border-b align-top" key={`${record.tenant_id}:${record.test_id}`}>
+                      <tr
+                        className="border-b align-top"
+                        key={`${record.tenant_id}:${record.content_type}:${record.content_key}`}
+                      >
                         <td className="px-2 py-2">
                           <code>{record.tenant_id}</code>
                         </td>
                         <td className="px-2 py-2">{record.domains.length > 0 ? record.domains.join(", ") : "-"}</td>
                         <td className="px-2 py-2">
-                          <code>{record.test_id}</code>
+                          <code>{record.content_type}</code>
+                        </td>
+                        <td className="px-2 py-2">
+                          <code>{record.content_key}</code>
                         </td>
                         <td className="px-2 py-2">{record.slug}</td>
                         <td className="px-2 py-2">
@@ -236,12 +271,12 @@ export default async function AdminPublicationsPage({ searchParams }: PageProps)
                         <td className="px-2 py-2">
                           <div className="space-y-2">
                             <p>{record.is_enabled ? "true" : "false"}</p>
-                            {record.published_version_id ? (
+                            {record.published_version_id && testId ? (
                               <PublicationToggleButton
                                 csrfToken={csrfToken}
                                 isEnabled={record.is_enabled}
                                 tenantId={record.tenant_id}
-                                testId={record.test_id}
+                                testId={testId}
                                 versionId={record.published_version_id}
                               />
                             ) : null}
@@ -260,36 +295,40 @@ export default async function AdminPublicationsPage({ searchParams }: PageProps)
                             </span>
                             <Link
                               className={inlineLinkClassName}
-                              href={`/admin/tests/${encodeURIComponent(record.test_id)}`}
-                            >
-                              Admin test
-                            </Link>
-                            <span aria-hidden="true" className="text-muted-foreground">
-                              |
-                            </span>
-                            <Link
-                              className={inlineLinkClassName}
                               href={`/admin/analytics/tenants/${encodeURIComponent(record.tenant_id)}`}
                             >
                               Tenant analytics
                             </Link>
-                            <span aria-hidden="true" className="text-muted-foreground">
-                              |
-                            </span>
-                            <Link
-                              className={inlineLinkClassName}
-                              href={`/admin/analytics/tests/${encodeURIComponent(record.test_id)}`}
-                            >
-                              Test analytics
-                            </Link>
-                            {publicHref ? (
+                            {testId ? (
                               <>
                                 <span aria-hidden="true" className="text-muted-foreground">
                                   |
                                 </span>
-                                <Link className={inlineLinkClassName} href={publicHref}>
-                                  Public URL
+                                <Link
+                                  className={inlineLinkClassName}
+                                  href={`/admin/tests/${encodeURIComponent(testId)}`}
+                                >
+                                  Admin test
                                 </Link>
+                                <span aria-hidden="true" className="text-muted-foreground">
+                                  |
+                                </span>
+                                <Link
+                                  className={inlineLinkClassName}
+                                  href={`/admin/analytics/tests/${encodeURIComponent(testId)}`}
+                                >
+                                  Test analytics
+                                </Link>
+                                {publicHref ? (
+                                  <>
+                                    <span aria-hidden="true" className="text-muted-foreground">
+                                      |
+                                    </span>
+                                    <Link className={inlineLinkClassName} href={publicHref}>
+                                      Public URL
+                                    </Link>
+                                  </>
+                                ) : null}
                               </>
                             ) : null}
                           </div>
@@ -299,7 +338,7 @@ export default async function AdminPublicationsPage({ searchParams }: PageProps)
                   })
                 ) : (
                   <tr>
-                    <td className="px-2 py-4 text-muted-foreground" colSpan={7}>
+                    <td className="px-2 py-4 text-muted-foreground" colSpan={8}>
                       No publication rows found for the current filters.
                     </td>
                   </tr>

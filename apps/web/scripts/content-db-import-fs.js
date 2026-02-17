@@ -10,6 +10,7 @@ const { Pool } = require("pg");
 const ROOT_DIR = path.resolve(__dirname, "../../..");
 const TESTS_ROOT = path.join(ROOT_DIR, "content/tests");
 const CATALOG_PATH = path.join(ROOT_DIR, "config/catalog.json");
+const TENANTS_CONFIG_PATH = path.join(ROOT_DIR, "config/tenants.json");
 const MIGRATION_ACTOR = "migration-fs-to-db";
 const LOCALE_CANONICAL = {
   en: "en",
@@ -248,6 +249,34 @@ const loadCatalogEntries = () => {
   };
 };
 
+const loadTenantDefaultLocales = () => {
+  if (!fs.existsSync(TENANTS_CONFIG_PATH)) {
+    return new Map();
+  }
+
+  const parsed = readJsonFile(TENANTS_CONFIG_PATH, "config/tenants.json");
+  if (!isObjectRecord(parsed) || !Array.isArray(parsed.tenants)) {
+    return new Map();
+  }
+
+  const output = new Map();
+  for (const rawEntry of parsed.tenants) {
+    if (!isObjectRecord(rawEntry)) {
+      continue;
+    }
+
+    const tenantId = normalizeNonEmptyString(rawEntry.tenant_id);
+    if (!tenantId) {
+      continue;
+    }
+
+    const locale = normalizeLocaleTag(rawEntry.default_locale) ?? "en";
+    output.set(tenantId, locale);
+  }
+
+  return output;
+};
+
 const findOrCreateTest = async (client, specRecord, summary) => {
   const { rows } = await client.query(
     `
@@ -426,10 +455,17 @@ const upsertTenantPublishedVersion = async (client, input, summary) => {
   const { tenantId, testRowId, versionId } = input;
   const { rows: existingRows } = await client.query(
     `
-      SELECT published_version_id, is_enabled
-      FROM tenant_tests
-      WHERE tenant_id = $1
-        AND test_id = $2
+      SELECT
+        dp.published_version_id,
+        dp.enabled
+      FROM domain_publications dp
+      JOIN content_items ci
+        ON ci.id = dp.content_item_id
+      JOIN tests t
+        ON t.test_id = ci.content_key
+      WHERE dp.tenant_id = $1
+        AND ci.content_type = 'test'
+        AND t.id = $2::uuid
       LIMIT 1
     `,
     [tenantId, testRowId]
@@ -439,35 +475,66 @@ const upsertTenantPublishedVersion = async (client, input, summary) => {
 
   await client.query(
     `
-      INSERT INTO tenant_tests (
-        tenant_id,
-        test_id,
-        published_version_id,
-        is_enabled,
-        published_at,
-        published_by
+      WITH resolved_test AS (
+        SELECT
+          test_id,
+          slug
+        FROM tests
+        WHERE id = $2::uuid
+        LIMIT 1
+      ),
+      upsert_item AS (
+        INSERT INTO content_items (
+          content_type,
+          content_key,
+          slug
+        )
+        SELECT
+          'test' AS content_type,
+          resolved_test.test_id AS content_key,
+          resolved_test.slug
+        FROM resolved_test
+        ON CONFLICT (content_type, content_key) DO UPDATE
+        SET slug = EXCLUDED.slug
+        RETURNING id
+      ),
+      resolved_item AS (
+        SELECT id FROM upsert_item
+        UNION ALL
+        SELECT ci.id
+        FROM content_items ci
+        JOIN resolved_test
+          ON ci.content_type = 'test'
+          AND ci.content_key = resolved_test.test_id
+        LIMIT 1
       )
-      VALUES ($1, $2, $3, TRUE, now(), $4)
-      ON CONFLICT (tenant_id, test_id) DO UPDATE
+      INSERT INTO domain_publications (
+        tenant_id,
+        content_item_id,
+        published_version_id,
+        enabled,
+        published_at
+      )
+      SELECT
+        $1,
+        resolved_item.id,
+        $3::uuid,
+        TRUE,
+        now()
+      FROM resolved_item
+      ON CONFLICT (tenant_id, content_item_id) DO UPDATE
       SET
         published_version_id = EXCLUDED.published_version_id,
-        is_enabled = TRUE,
+        enabled = TRUE,
         published_at = CASE
-          WHEN tenant_tests.published_version_id IS DISTINCT FROM EXCLUDED.published_version_id
-            OR tenant_tests.is_enabled IS DISTINCT FROM TRUE
-            OR tenant_tests.published_at IS NULL
+          WHEN domain_publications.published_version_id IS DISTINCT FROM EXCLUDED.published_version_id
+            OR domain_publications.enabled IS DISTINCT FROM TRUE
+            OR domain_publications.published_at IS NULL
             THEN now()
-          ELSE tenant_tests.published_at
-        END,
-        published_by = CASE
-          WHEN tenant_tests.published_version_id IS DISTINCT FROM EXCLUDED.published_version_id
-            OR tenant_tests.is_enabled IS DISTINCT FROM TRUE
-            OR tenant_tests.published_by IS NULL
-            THEN EXCLUDED.published_by
-          ELSE tenant_tests.published_by
+          ELSE domain_publications.published_at
         END
     `,
-    [tenantId, testRowId, versionId, MIGRATION_ACTOR]
+    [tenantId, testRowId, versionId]
   );
 
   if (!existing) {
@@ -475,12 +542,50 @@ const upsertTenantPublishedVersion = async (client, input, summary) => {
     return;
   }
 
-  if (existing.published_version_id === versionId && existing.is_enabled === true) {
+  if (existing.published_version_id === versionId && existing.enabled === true) {
     summary.tenantMappingsUnchanged += 1;
     return;
   }
 
   summary.tenantMappingsUpdated += 1;
+};
+
+const ensureTenantRowsExist = async (client, tenantIds, tenantDefaultLocales) => {
+  if (!Array.isArray(tenantIds) || tenantIds.length === 0) {
+    return;
+  }
+
+  const normalizedTenantIds = Array.from(
+    new Set(
+      tenantIds
+        .map((tenantId) => normalizeNonEmptyString(tenantId))
+        .filter((tenantId) => tenantId !== null)
+    )
+  );
+  if (normalizedTenantIds.length === 0) {
+    return;
+  }
+
+  const defaultLocales = normalizedTenantIds.map(
+    (tenantId) => tenantDefaultLocales.get(tenantId) ?? "en"
+  );
+
+  await client.query(
+    `
+      INSERT INTO tenants (
+        tenant_id,
+        default_locale,
+        enabled
+      )
+      SELECT
+        tenant_id,
+        default_locale,
+        TRUE
+      FROM unnest($1::text[], $2::text[]) AS seed(tenant_id, default_locale)
+      ON CONFLICT (tenant_id) DO NOTHING
+    `,
+    [normalizedTenantIds, defaultLocales]
+  );
 };
 
 const printSummary = (summary) => {
@@ -508,6 +613,7 @@ const printSummary = (summary) => {
 const run = async () => {
   const specResult = loadSpecRecords();
   const catalogResult = loadCatalogEntries();
+  const tenantDefaultLocales = loadTenantDefaultLocales();
 
   const summary = {
     specFilesFound: specResult.specFilesFound,
@@ -551,6 +657,12 @@ const run = async () => {
       });
       summary.specsImported += 1;
     }
+
+    await ensureTenantRowsExist(
+      client,
+      catalogResult.entries.map((entry) => entry.tenantId),
+      tenantDefaultLocales
+    );
 
     for (const entry of catalogResult.entries) {
       const imported = importedVersionsByTestId.get(entry.testId) ?? null;

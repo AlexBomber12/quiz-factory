@@ -183,7 +183,7 @@ export default async function AdminTenantDetailPage({ params, searchParams }: Pa
             <span className="block">domains: {tenant.domains.length > 0 ? tenant.domains.join(", ") : "-"}</span>
             <span className="block">default_locale: {tenant.default_locale}</span>
             <span className="block">enabled: {tenant.enabled ? "true" : "false"}</span>
-            <span className="block">enabled published tests: {tenant.published_count}</span>
+            <span className="block">enabled published items: {tenant.published_count}</span>
             <span className="block">source: {source === "db" ? "content_db" : "config/tenants.json"}</span>
           </CardDescription>
         </CardHeader>
@@ -328,15 +328,18 @@ export default async function AdminTenantDetailPage({ params, searchParams }: Pa
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Published tests</CardTitle>
-          <CardDescription>Current tenant publication rows with linked test detail pages.</CardDescription>
+          <CardTitle className="text-base">Published content</CardTitle>
+          <CardDescription>
+            Current tenant publication rows across all content types (tests today, future types ready).
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[980px] border-collapse text-left text-sm">
+            <table className="w-full min-w-[1080px] border-collapse text-left text-sm">
               <thead>
                 <tr className="border-b">
-                  <th className="px-2 py-2 font-semibold">test_id</th>
+                  <th className="px-2 py-2 font-semibold">content_type</th>
+                  <th className="px-2 py-2 font-semibold">content_key</th>
                   <th className="px-2 py-2 font-semibold">slug</th>
                   <th className="px-2 py-2 font-semibold">published_version_id</th>
                   <th className="px-2 py-2 font-semibold">enabled</th>
@@ -346,39 +349,55 @@ export default async function AdminTenantDetailPage({ params, searchParams }: Pa
               </thead>
               <tbody>
                 {detail.published_tests.length > 0 ? (
-                  detail.published_tests.map((record) => (
-                    <tr className="border-b align-top" key={`${record.test_id}:${record.published_version_id}`}>
-                      <td className="px-2 py-2">
-                        <code>{record.test_id}</code>
-                      </td>
-                      <td className="px-2 py-2">{record.slug}</td>
-                      <td className="px-2 py-2">
-                        <code className="break-all">{record.published_version_id}</code>
-                      </td>
-                      <td className="px-2 py-2">{record.enabled ? "true" : "false"}</td>
-                      <td className="px-2 py-2">
-                        <Link className={inlineLinkClassName} href={`/admin/tests/${encodeURIComponent(record.test_id)}`}>
-                          Open test
-                        </Link>
-                      </td>
-                      <td className="px-2 py-2">
-                        {tenant.domains.length > 0 ? (
-                          <Link
-                            className={inlineLinkClassName}
-                            href={`https://${tenant.domains[0]}/t/${encodeURIComponent(record.slug)}`}
-                          >
-                            Open public
-                          </Link>
-                        ) : (
-                          "-"
-                        )}
-                      </td>
-                    </tr>
-                  ))
+                  detail.published_tests.map((record) => {
+                    const isTest = record.content_type === "test";
+                    return (
+                      <tr
+                        className="border-b align-top"
+                        key={`${record.content_type}:${record.content_key}:${record.published_version_id}`}
+                      >
+                        <td className="px-2 py-2">
+                          <code>{record.content_type}</code>
+                        </td>
+                        <td className="px-2 py-2">
+                          <code>{record.content_key}</code>
+                        </td>
+                        <td className="px-2 py-2">{record.slug}</td>
+                        <td className="px-2 py-2">
+                          <code className="break-all">{record.published_version_id}</code>
+                        </td>
+                        <td className="px-2 py-2">{record.enabled ? "true" : "false"}</td>
+                        <td className="px-2 py-2">
+                          {isTest ? (
+                            <Link
+                              className={inlineLinkClassName}
+                              href={`/admin/tests/${encodeURIComponent(record.content_key)}`}
+                            >
+                              Open test
+                            </Link>
+                          ) : (
+                            "-"
+                          )}
+                        </td>
+                        <td className="px-2 py-2">
+                          {isTest && tenant.domains.length > 0 ? (
+                            <Link
+                              className={inlineLinkClassName}
+                              href={`https://${tenant.domains[0]}/t/${encodeURIComponent(record.slug)}`}
+                            >
+                              Open public
+                            </Link>
+                          ) : (
+                            "-"
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
                 ) : (
                   <tr>
-                    <td className="px-2 py-4 text-muted-foreground" colSpan={6}>
-                      No published tests found for this tenant.
+                    <td className="px-2 py-4 text-muted-foreground" colSpan={7}>
+                      No published content found for this tenant.
                     </td>
                   </tr>
                 )}

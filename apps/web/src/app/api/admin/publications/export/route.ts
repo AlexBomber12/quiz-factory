@@ -33,7 +33,8 @@ const buildCsv = (
     [
       "tenant_id",
       "domains",
-      "test_id",
+      "content_type",
+      "content_key",
       "slug",
       "published_version_id",
       "is_enabled",
@@ -46,7 +47,8 @@ const buildCsv = (
       [
         toCsvValue(row.tenant_id),
         toCsvValue(row.domains.join("|")),
-        toCsvValue(row.test_id),
+        toCsvValue(row.content_type),
+        toCsvValue(row.content_key),
         toCsvValue(row.slug),
         toCsvValue(row.published_version_id),
         toCsvValue(String(row.is_enabled)),
@@ -74,6 +76,8 @@ export const GET = async (request: Request): Promise<Response> => {
   const filters = {
     q: requestUrl.searchParams.get("q"),
     tenant_id: requestUrl.searchParams.get("tenant_id"),
+    content_type: requestUrl.searchParams.get("content_type"),
+    content_key: requestUrl.searchParams.get("content_key"),
     test_id: requestUrl.searchParams.get("test_id"),
     only_published: parseBooleanFilter(requestUrl.searchParams.get("only_published")),
     only_enabled: parseBooleanFilter(requestUrl.searchParams.get("only_enabled"))

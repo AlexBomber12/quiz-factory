@@ -1,6 +1,10 @@
 import tenantsConfig from "../../../../../config/tenants.json";
 import type { PoolClient } from "pg";
 
+import {
+  publishDomainContent,
+  rollbackDomainContent
+} from "../content_db/domain_publications";
 import { invalidateTenant, invalidateTest } from "../content_db/repo";
 import { getContentDbPool } from "../content_db/pool";
 import { invalidateTenant as invalidateTenantSitemap } from "../seo/sitemap_cache";
@@ -39,7 +43,6 @@ type TenantPublishStateRow = {
 };
 
 type ResolvedVersionRow = {
-  test_row_id: string;
   version_id: string;
   version: number;
 };
@@ -150,6 +153,18 @@ const tenantRegistry = ((tenantsConfig as TenantRegistryRaw).tenants ?? [])
   .sort((left, right) => left.tenant_id.localeCompare(right.tenant_id));
 
 const tenantIdSet = new Set(tenantRegistry.map((entry) => entry.tenant_id));
+const tenantRegistryById = new Map(tenantRegistry.map((entry) => [entry.tenant_id, entry]));
+
+const normalizeTenantDefaultLocale = (value: string): "en" | "es" | "pt-BR" => {
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "es") {
+    return "es";
+  }
+  if (normalized === "pt-br") {
+    return "pt-BR";
+  }
+  return "en";
+};
 
 const normalizeTenantIds = (tenantIds: string[]): string[] => {
   const unique = new Set<string>();
@@ -216,6 +231,33 @@ const requireAdminRole = (actorRole: AdminRole): void => {
   }
 };
 
+const ensureTenantRowsExist = async (client: PoolClient, tenantIds: string[]): Promise<void> => {
+  if (tenantIds.length === 0) {
+    return;
+  }
+
+  const locales = tenantIds.map((tenantId) =>
+    normalizeTenantDefaultLocale(tenantRegistryById.get(tenantId)?.default_locale ?? "en")
+  );
+
+  await client.query(
+    `
+      INSERT INTO tenants (
+        tenant_id,
+        default_locale,
+        enabled
+      )
+      SELECT
+        tenant_id,
+        default_locale,
+        TRUE
+      FROM unnest($1::text[], $2::text[]) AS seed(tenant_id, default_locale)
+      ON CONFLICT (tenant_id) DO NOTHING
+    `,
+    [tenantIds, locales]
+  );
+};
+
 const resolveTestVersion = async (
   client: PoolClient,
   testId: string,
@@ -224,7 +266,6 @@ const resolveTestVersion = async (
   const { rows } = await client.query<ResolvedVersionRow>(
     `
       SELECT
-        t.id AS test_row_id,
         tv.id AS version_id,
         tv.version
       FROM tests t
@@ -252,7 +293,7 @@ const resolveTestVersion = async (
 const assertStagingPublishPrerequisite = async (
   client: PoolClient,
   params: {
-    testRowId: string;
+    testId: string;
     versionId: string;
     targetTenantIds: string[];
   }
@@ -281,14 +322,17 @@ const assertStagingPublishPrerequisite = async (
 
   const { rows } = await client.query<{ tenant_id: string }>(
     `
-      SELECT tenant_id
-      FROM tenant_tests
-      WHERE test_id = $1::uuid
-        AND published_version_id = $2::uuid
-        AND tenant_id = ANY($3::text[])
+      SELECT dp.tenant_id
+      FROM domain_publications dp
+      JOIN content_items ci
+        ON ci.id = dp.content_item_id
+      WHERE ci.content_type = 'test'
+        AND ci.content_key = $1
+        AND dp.published_version_id = $2::uuid
+        AND dp.tenant_id = ANY($3::text[])
       LIMIT 1
     `,
-    [params.testRowId, params.versionId, stagingTenantIds]
+    [params.testId, params.versionId, stagingTenantIds]
   );
 
   if (rows.length > 0) {
@@ -352,18 +396,21 @@ export const listPublishTests = async (): Promise<AdminPublishTest[]> => {
       `
         SELECT
           t.test_id,
-          tt.tenant_id,
-          tt.is_enabled,
-          tt.published_version_id,
+          dp.tenant_id,
+          dp.enabled AS is_enabled,
+          dp.published_version_id,
           tv.version AS published_version,
-          tt.published_at,
-          tt.published_by
+          dp.published_at,
+          NULL::text AS published_by
         FROM tests t
-        LEFT JOIN tenant_tests tt
-          ON tt.test_id = t.id
+        LEFT JOIN content_items ci
+          ON ci.content_type = 'test'
+          AND ci.content_key = t.test_id
+        LEFT JOIN domain_publications dp
+          ON dp.content_item_id = ci.id
         LEFT JOIN test_versions tv
-          ON tv.id = tt.published_version_id
-        ORDER BY t.slug ASC, tt.tenant_id ASC
+          ON tv.id = dp.published_version_id
+        ORDER BY t.slug ASC, dp.tenant_id ASC
       `
     )
   ]);
@@ -472,46 +519,28 @@ export const publishVersionToTenants = async (input: {
 
   try {
     await client.query("BEGIN");
+    await ensureTenantRowsExist(client, tenantIds);
     resolvedVersion = await resolveTestVersion(client, testId, versionId);
     await assertStagingPublishPrerequisite(client, {
-      testRowId: resolvedVersion.test_row_id,
+      testId,
       versionId: resolvedVersion.version_id,
       targetTenantIds: tenantIds
     });
 
-    await client.query(
-      `
-        INSERT INTO tenant_tests (
-          tenant_id,
-          test_id,
-          published_version_id,
-          is_enabled,
-          published_at,
-          published_by
-        )
-        SELECT
-          tenant_id,
-          $2::uuid,
-          $3::uuid,
-          $4,
-          now(),
-          $5
-        FROM unnest($1::text[]) AS tenant_id
-        ON CONFLICT (tenant_id, test_id) DO UPDATE
-        SET
-          published_version_id = EXCLUDED.published_version_id,
-          is_enabled = EXCLUDED.is_enabled,
-          published_at = EXCLUDED.published_at,
-          published_by = EXCLUDED.published_by
-      `,
-      [
-        tenantIds,
-        resolvedVersion.test_row_id,
+    const publishedAt = new Date();
+    for (const tenantId of tenantIds) {
+      await publishDomainContent(
+        tenantId,
+        "test",
+        testId,
         resolvedVersion.version_id,
         input.is_enabled,
-        input.actor_role
-      ]
-    );
+        {
+          client,
+          publishedAt
+        }
+      );
+    }
 
     await client.query("COMMIT");
   } catch (error) {
@@ -569,29 +598,19 @@ export const rollbackVersionForTenant = async (input: {
 
   try {
     await client.query("BEGIN");
+    await ensureTenantRowsExist(client, [tenantId]);
     resolvedVersion = await resolveTestVersion(client, testId, versionId);
-
-    const { rows } = await client.query<{ is_enabled: boolean }>(
-      `
-        INSERT INTO tenant_tests (
-          tenant_id,
-          test_id,
-          published_version_id,
-          is_enabled,
-          published_at,
-          published_by
-        )
-        VALUES ($1, $2::uuid, $3::uuid, TRUE, now(), $4)
-        ON CONFLICT (tenant_id, test_id) DO UPDATE
-        SET
-          published_version_id = EXCLUDED.published_version_id,
-          published_at = EXCLUDED.published_at,
-          published_by = EXCLUDED.published_by
-        RETURNING is_enabled
-      `,
-      [tenantId, resolvedVersion.test_row_id, resolvedVersion.version_id, input.actor_role]
+    const publication = await rollbackDomainContent(
+      tenantId,
+      "test",
+      testId,
+      resolvedVersion.version_id,
+      {
+        client,
+        publishedAt: new Date()
+      }
     );
-    effectiveIsEnabled = rows[0]?.is_enabled ?? true;
+    effectiveIsEnabled = publication.enabled;
 
     await client.query("COMMIT");
   } catch (error) {

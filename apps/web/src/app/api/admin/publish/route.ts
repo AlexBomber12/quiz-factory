@@ -259,6 +259,8 @@ export const POST = async (request: Request): Promise<Response> => {
         entity_type: "test",
         entity_id: updated.test_id,
         metadata: {
+          content_type: "test",
+          content_key: updated.test_id,
           version_id: updated.version_id,
           version: updated.version,
           tenant_ids: updated.tenant_ids,
