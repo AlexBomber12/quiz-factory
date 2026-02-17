@@ -39,6 +39,40 @@ describe("admin chart options", () => {
     expect(option.series).toEqual([]);
   });
 
+  it("does not stack bar series unless stack is provided", () => {
+    const option = buildStackedBarOption({
+      categories: ["A", "B"],
+      series: [
+        { name: "Sessions", values: [10, 20] },
+        { name: "Purchases", values: [2, 4] }
+      ]
+    });
+
+    expect(Array.isArray(option.series)).toBe(true);
+    const firstSeries = Array.isArray(option.series) ? option.series[0] : null;
+    expect(firstSeries).toMatchObject({
+      type: "bar"
+    });
+    expect(firstSeries && typeof firstSeries === "object" ? "stack" in firstSeries : false).toBe(false);
+  });
+
+  it("stacks bar series when stack is provided", () => {
+    const option = buildStackedBarOption({
+      categories: ["A", "B"],
+      series: [
+        { name: "Gross", values: [10, 20], stack: "revenue" },
+        { name: "Refunds", values: [1, 2], stack: "revenue" }
+      ]
+    });
+
+    expect(Array.isArray(option.series)).toBe(true);
+    const firstSeries = Array.isArray(option.series) ? option.series[0] : null;
+    expect(firstSeries).toMatchObject({
+      type: "bar",
+      stack: "revenue"
+    });
+  });
+
   it("builds funnel option for funnel steps", () => {
     const option = buildFunnelOption({
       steps: [

@@ -194,7 +194,7 @@ export const buildStackedBarOption = ({
       type: "bar",
       name: entry.name,
       data: entry.values,
-      stack: entry.stack ?? "total",
+      ...(entry.stack !== undefined ? { stack: entry.stack } : {}),
       barMaxWidth: 36,
       itemStyle: entry.color ? { color: entry.color } : undefined,
       emphasis: {
