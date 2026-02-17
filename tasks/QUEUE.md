@@ -631,7 +631,7 @@ Queue (in order)
 - Depends on: PR-TRIGGERS-01
 
 115) PR-PRODUCTS-01: Products Content Type Skeleton + Publish to Domains
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-PRODUCTS-01.md
 - Depends on: PR-DOMAINS-02
 
