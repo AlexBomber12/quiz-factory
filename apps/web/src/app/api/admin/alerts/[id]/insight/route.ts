@@ -169,7 +169,8 @@ export const POST = async (request: Request, context: RouteContext): Promise<Res
       model
     });
     const existingInsight = await getAlertAiInsightByInstanceId(id);
-    if (existingInsight && !force) {
+    const isPromptCacheHit = existingInsight?.prompt_hash === prompt.prompt_hash;
+    if (isPromptCacheHit && !force) {
       return NextResponse.json(
         {
           ok: true,

@@ -144,7 +144,7 @@ describe("admin alert insight route", () => {
     expect(payload.error).toBe("unauthorized");
   });
 
-  it("returns cached insight on POST when insight already exists and force is false", async () => {
+  it("returns cached insight on POST when prompt hash matches and force is false", async () => {
     mocks.getAlertAiInsightByInstanceId.mockResolvedValue({
       alert_instance_id: "instance-1",
       model: "gpt-4o",
@@ -177,6 +177,41 @@ describe("admin alert insight route", () => {
     expect(payload.cached).toBe(true);
     expect(mocks.generateAlertInsightFromPrompt).not.toHaveBeenCalled();
     expect(mocks.upsertAlertAiInsight).not.toHaveBeenCalled();
+  });
+
+  it("regenerates on POST when cached prompt hash is stale and force is false", async () => {
+    mocks.getAlertAiInsightByInstanceId.mockResolvedValue({
+      alert_instance_id: "instance-1",
+      model: "gpt-4o",
+      prompt_hash: "hash-stale",
+      insight_md: "Stale",
+      actions_json: { summary: "Stale", root_cause_hypotheses: ["Cause"], actions: [] },
+      created_at: "2026-02-17T10:20:00.000Z"
+    });
+
+    const response = await POST(
+      new Request("https://tenant.example.com/api/admin/alerts/instance-1/insight", {
+        method: "POST",
+        headers: {
+          accept: "application/json",
+          "content-type": "application/json",
+          "x-admin-csrf-token": csrfToken
+        },
+        body: JSON.stringify({
+          csrf_token: csrfToken,
+          force: false
+        })
+      }),
+      {
+        params: { id: "instance-1" }
+      }
+    );
+
+    expect(response.status).toBe(200);
+    const payload = await response.json();
+    expect(payload.cached).toBe(false);
+    expect(mocks.generateAlertInsightFromPrompt).toHaveBeenCalledTimes(1);
+    expect(mocks.upsertAlertAiInsight).toHaveBeenCalledTimes(1);
   });
 
   it("regenerates and upserts insight when force is true", async () => {
