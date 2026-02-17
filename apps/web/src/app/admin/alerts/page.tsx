@@ -234,6 +234,9 @@ export default async function AdminAlertsPage({ searchParams }: PageProps) {
           <Button asChild type="button" variant="outline">
             <Link href="/admin/alerts/rules">Manage rules</Link>
           </Button>
+          <Button asChild type="button" variant="outline">
+            <Link href="/admin/action-center">Open action center</Link>
+          </Button>
         </CardContent>
       </Card>
 
