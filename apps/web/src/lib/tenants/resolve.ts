@@ -2,6 +2,8 @@ import tenantsConfig from "../../../../../config/tenants.json";
 
 import { normalizeString } from "../analytics/session";
 import { normalizeHostname, resolveEffectiveHost } from "../security/request_host";
+import { resolveTenantByDomainFromDb } from "./runtime_db";
+import { getTenantsSource } from "./source";
 
 type TenantConfig = {
   tenant_id: string;
@@ -114,6 +116,34 @@ export const resolveTenant = (
       tenantId: tenant.tenant_id,
       defaultLocale: normalizeLocaleTag(tenant.default_locale)
     };
+  }
+
+  return { tenantId: buildFallbackTenantId(host), defaultLocale: null };
+};
+
+export const resolveTenantAsync = async (
+  headers: Headers,
+  fallbackHost?: string | null
+): Promise<TenantResolution> => {
+  if (getTenantsSource() !== "db") {
+    return resolveTenant(headers, fallbackHost);
+  }
+
+  const host = resolveEffectiveHost(headers, fallbackHost);
+  if (!host) {
+    return { tenantId: buildFallbackTenantId(null), defaultLocale: null };
+  }
+
+  try {
+    const tenant = await resolveTenantByDomainFromDb(host);
+    if (tenant) {
+      return {
+        tenantId: tenant.tenantId,
+        defaultLocale: normalizeLocaleTag(tenant.defaultLocale)
+      };
+    }
+  } catch {
+    // If DB lookup fails we degrade to a slug fallback and preserve request flow.
   }
 
   return { tenantId: buildFallbackTenantId(host), defaultLocale: null };

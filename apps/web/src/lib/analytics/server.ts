@@ -43,7 +43,7 @@ import {
   resolveAttemptTokenTtlSeconds,
   verifyAttemptToken
 } from "../security/attempt_token";
-import { resolveLocale, resolveTenant } from "../tenants/resolve";
+import { resolveLocale, resolveTenantAsync } from "../tenants/resolve";
 
 const TRACKING_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 90;
 
@@ -171,7 +171,10 @@ export const handleAnalyticsEvent = async (
     return respondBadRequest(missingRequiredError("session_id"));
   }
 
-  const { tenantId, defaultLocale } = resolveTenant(request.headers, url.hostname);
+  const { tenantId, defaultLocale } = await resolveTenantAsync(
+    request.headers,
+    url.hostname
+  );
   const locale = resolveLocale({
     defaultLocale,
     acceptLanguage: request.headers.get("accept-language")

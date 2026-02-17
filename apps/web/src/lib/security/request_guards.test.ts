@@ -2,7 +2,9 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
   assertAllowedHost,
+  assertAllowedHostAsync,
   assertAllowedOrigin,
+  assertAllowedOriginAsync,
   rateLimit,
   resetRateLimitState
 } from "./request_guards";
@@ -14,7 +16,8 @@ const ENV_KEYS = [
   "RATE_LIMIT_SALT",
   "TRUST_X_FORWARDED_HOST",
   "NODE_ENV",
-  "EXTRA_ALLOWED_HOSTS"
+  "EXTRA_ALLOWED_HOSTS",
+  "TENANTS_SOURCE"
 ] as const;
 
 const setEnv = (key: (typeof ENV_KEYS)[number], value: string | undefined): void => {
@@ -55,6 +58,13 @@ describe("request guards", () => {
 
   it("allows known hosts", () => {
     const response = assertAllowedHost(buildRequest({ host: "tenant.example.com" }));
+    expect(response).toBeNull();
+  });
+
+  it("allows known hosts via async guard in file mode", async () => {
+    const response = await assertAllowedHostAsync(
+      buildRequest({ host: "tenant.example.com" })
+    );
     expect(response).toBeNull();
   });
 
@@ -122,6 +132,13 @@ describe("request guards", () => {
 
   it("allows known origins", () => {
     const response = assertAllowedOrigin(
+      buildRequest({ origin: "https://tenant.example.com" })
+    );
+    expect(response).toBeNull();
+  });
+
+  it("allows known origins via async guard in file mode", async () => {
+    const response = await assertAllowedOriginAsync(
       buildRequest({ origin: "https://tenant.example.com" })
     );
     expect(response).toBeNull();

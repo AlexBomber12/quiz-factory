@@ -16,7 +16,7 @@ import {
 } from "../../../../lib/admin/session";
 import { logAdminEvent } from "../../../../lib/admin/audit";
 import { buildRedirectUrl } from "../../../../lib/security/redirect_base";
-import { resolveTenant } from "../../../../lib/tenants/resolve";
+import { resolveTenantAsync } from "../../../../lib/tenants/resolve";
 
 const normalizeString = (value: unknown): string | null => {
   if (typeof value !== "string") {
@@ -105,7 +105,10 @@ export const POST = async (request: Request): Promise<Response> => {
   }
 
   const requestUrl = new URL(request.url);
-  const tenantResolution = resolveTenant(request.headers, requestUrl.hostname);
+  const tenantResolution = await resolveTenantAsync(
+    request.headers,
+    requestUrl.hostname
+  );
 
   const response = NextResponse.redirect(buildRedirectUrl(request, "/admin"), 303);
   response.cookies.set({
