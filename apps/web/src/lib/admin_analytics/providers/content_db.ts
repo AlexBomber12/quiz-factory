@@ -9,6 +9,11 @@ import type { AdminAnalyticsProvider } from "../provider";
 import {
   resolveAdminAnalyticsDistributionOptions,
   resolveAdminAnalyticsTrafficOptions,
+  type AdminAnalyticsAttributionGroupBy,
+  type AdminAnalyticsAttributionMixRow,
+  type AdminAnalyticsAttributionOptions,
+  type AdminAnalyticsAttributionResponse,
+  type AdminAnalyticsAttributionRow,
   type AdminAnalyticsDataAlertRow,
   type AdminAnalyticsDataDbtRunMarker,
   type AdminAnalyticsDataFreshnessRow,
@@ -470,6 +475,49 @@ const buildOverviewFunnel = (aggregate: OverviewAggregate): FunnelStep[] => {
       conversion_rate: safeRatio(aggregate.purchases, aggregate.sessions)
     }
   ];
+};
+
+const normalizeAttributionOption = (value: string | null): string | null => {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const normalized = value.trim();
+  return normalized.length > 0 ? normalized : null;
+};
+
+const buildAttributionMixRows = (
+  rows: AdminAnalyticsAttributionRow[],
+  groupedBy: AdminAnalyticsAttributionGroupBy
+): AdminAnalyticsAttributionMixRow[] => {
+  const bySegment = new Map<string, AdminAnalyticsAttributionMixRow>();
+
+  for (const row of rows) {
+    const segment = groupedBy === "tenant" ? row.tenant_id : row.content_key;
+    const current = bySegment.get(segment) ?? {
+      segment,
+      gross_revenue_eur: 0,
+      refunds_eur: 0,
+      disputes_fees_eur: 0,
+      payment_fees_eur: 0,
+      net_revenue_eur: 0
+    };
+
+    current.gross_revenue_eur = roundCurrency(current.gross_revenue_eur + row.gross_revenue_eur);
+    current.refunds_eur = roundCurrency(current.refunds_eur + row.refunds_eur);
+    current.disputes_fees_eur = roundCurrency(current.disputes_fees_eur + row.disputes_fees_eur);
+    current.payment_fees_eur = roundCurrency(current.payment_fees_eur + row.payment_fees_eur);
+    current.net_revenue_eur = roundCurrency(current.net_revenue_eur + row.net_revenue_eur);
+    bySegment.set(segment, current);
+  }
+
+  return [...bySegment.values()]
+    .sort(
+      (left, right) =>
+        right.net_revenue_eur - left.net_revenue_eur ||
+        left.segment.localeCompare(right.segment)
+    )
+    .slice(0, 20);
 };
 
 const emptyEventMetrics = (): EventDimensionMetrics => ({
@@ -2526,6 +2574,120 @@ export class ContentDbAdminAnalyticsProvider implements AdminAnalyticsProvider {
       by_tenant,
       by_test,
       reconciliation
+    };
+  }
+
+  async getAttribution(
+    filters: AdminAnalyticsFilters,
+    options: AdminAnalyticsAttributionOptions
+  ): Promise<AdminAnalyticsAttributionResponse> {
+    const tables = await this.resolveTableAvailability();
+    const contentType = normalizeAttributionOption(options.content_type)?.toLowerCase() ?? null;
+    const contentKey = normalizeAttributionOption(options.content_key);
+
+    if (contentType && contentType !== "test") {
+      return {
+        filters,
+        generated_at_utc: generatedAtUtc(),
+        content_type: contentType,
+        content_key: contentKey,
+        grouped_by: filters.tenant_id ? "content" : "tenant",
+        mix: [],
+        rows: []
+      };
+    }
+
+    const scopedFilters: AdminAnalyticsFilters = {
+      ...filters,
+      test_id: contentKey ?? filters.test_id
+    };
+
+    const [stripeRows, contentRows] = await Promise.all([
+      this.fetchStripeByDimension(
+        scopedFilters,
+        tables,
+        "CONCAT(COALESCE(fp.tenant_id, ''), '::', COALESCE(fp.test_id, ''), '::', COALESCE(NULLIF(fp.offer_key, ''), 'unknown'), '::', COALESCE(NULLIF(fp.pricing_variant, ''), 'unknown'))",
+        "attribution_key",
+        {
+          orderBy: "net_revenue_eur DESC, purchases DESC",
+          limit: DETAIL_ROWS_LIMIT
+        }
+      ),
+      this.fetchEventByDimension(
+        scopedFilters,
+        tables,
+        "CONCAT(COALESCE(ae.tenant_id, ''), '::', COALESCE(ae.test_id, ''))",
+        "content_key_pair",
+        {
+          orderBy: "sessions DESC",
+          limit: DETAIL_ROWS_LIMIT
+        }
+      )
+    ]);
+
+    const visitsByContentPair = new Map<string, number>();
+    for (const row of contentRows) {
+      const pairKey = toNullableString(row.content_key_pair)?.trim();
+      if (!pairKey) {
+        continue;
+      }
+
+      visitsByContentPair.set(pairKey, toNumber(row.sessions));
+    }
+
+    const rows: AdminAnalyticsAttributionRow[] = stripeRows
+      .map((row) => {
+        const rawKey = toNullableString(row.attribution_key)?.trim();
+        if (!rawKey) {
+          return null;
+        }
+
+        const [tenantIdRaw, testIdRaw, offerKeyRaw, pricingVariantRaw] = rawKey.split("::");
+        const tenantId = tenantIdRaw?.trim() ?? "";
+        const testId = testIdRaw?.trim() ?? "";
+        if (!tenantId || !testId) {
+          return null;
+        }
+
+        const visits = visitsByContentPair.get(`${tenantId}::${testId}`) ?? 0;
+        const purchases = toNumber(row.purchases);
+
+        return {
+          tenant_id: tenantId,
+          content_type: contentType ?? "test",
+          content_key: testId,
+          offer_key: offerKeyRaw?.trim() || "unknown",
+          pricing_variant: pricingVariantRaw?.trim() || "default",
+          purchases,
+          visits,
+          conversion: safeRatio(purchases, visits),
+          gross_revenue_eur: roundCurrency(toNumber(row.gross_revenue_eur)),
+          refunds_eur: roundCurrency(toNumber(row.refunds_eur)),
+          disputes_fees_eur: roundCurrency(toNumber(row.disputes_eur)),
+          payment_fees_eur: roundCurrency(toNumber(row.payment_fees_eur)),
+          net_revenue_eur: roundCurrency(toNumber(row.net_revenue_eur))
+        };
+      })
+      .filter((row): row is AdminAnalyticsAttributionRow => row !== null)
+      .sort(
+        (left, right) =>
+          right.net_revenue_eur - left.net_revenue_eur ||
+          right.purchases - left.purchases ||
+          left.tenant_id.localeCompare(right.tenant_id) ||
+          left.content_key.localeCompare(right.content_key) ||
+          left.offer_key.localeCompare(right.offer_key)
+      );
+
+    const groupedBy: AdminAnalyticsAttributionGroupBy = filters.tenant_id ? "content" : "tenant";
+
+    return {
+      filters: scopedFilters,
+      generated_at_utc: generatedAtUtc(),
+      content_type: contentType ?? "test",
+      content_key: contentKey,
+      grouped_by: groupedBy,
+      mix: buildAttributionMixRows(rows, groupedBy),
+      rows
     };
   }
 

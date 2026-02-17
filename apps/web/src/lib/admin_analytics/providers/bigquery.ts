@@ -10,6 +10,11 @@ import {
 } from "../provider";
 import { getContentDbPool, hasContentDatabaseUrl } from "../../content_db/pool";
 import {
+  type AdminAnalyticsAttributionGroupBy,
+  type AdminAnalyticsAttributionMixRow,
+  type AdminAnalyticsAttributionOptions,
+  type AdminAnalyticsAttributionResponse,
+  type AdminAnalyticsAttributionRow,
   resolveAdminAnalyticsDistributionOptions,
   type AdminAnalyticsDataAlertRow,
   type AdminAnalyticsDataDbtRunMarker,
@@ -57,6 +62,7 @@ const ALERTS_LIMIT = 20;
 const FRESHNESS_CACHE_TTL_MS = 60_000;
 const REVENUE_TOP_ROWS_LIMIT = 10;
 const REVENUE_BY_OFFER_ROWS_LIMIT = 20;
+const ATTRIBUTION_ROWS_LIMIT = 200;
 
 type BigQueryAdminAnalyticsDatasets = {
   stripe: string;
@@ -224,6 +230,10 @@ const safeRatio = (numerator: number, denominator: number): number => {
   return Math.round((numerator / denominator) * 10_000) / 10_000;
 };
 
+const roundCurrency = (value: number): number => {
+  return Math.round(value * 100) / 100;
+};
+
 const reconciliationDiffPct = (
   diff: number,
   stripeTotal: number,
@@ -279,6 +289,49 @@ const mergeParams = (...parts: Array<Record<string, unknown>>): Record<string, u
   }
 
   return merged;
+};
+
+const normalizeAttributionOption = (value: string | null): string | null => {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const normalized = value.trim();
+  return normalized.length > 0 ? normalized : null;
+};
+
+const buildAttributionMixRows = (
+  rows: AdminAnalyticsAttributionRow[],
+  groupedBy: AdminAnalyticsAttributionGroupBy
+): AdminAnalyticsAttributionMixRow[] => {
+  const bySegment = new Map<string, AdminAnalyticsAttributionMixRow>();
+
+  for (const row of rows) {
+    const segment = groupedBy === "tenant" ? row.tenant_id : row.content_key;
+    const current = bySegment.get(segment) ?? {
+      segment,
+      gross_revenue_eur: 0,
+      refunds_eur: 0,
+      disputes_fees_eur: 0,
+      payment_fees_eur: 0,
+      net_revenue_eur: 0
+    };
+
+    current.gross_revenue_eur = roundCurrency(current.gross_revenue_eur + row.gross_revenue_eur);
+    current.refunds_eur = roundCurrency(current.refunds_eur + row.refunds_eur);
+    current.disputes_fees_eur = roundCurrency(current.disputes_fees_eur + row.disputes_fees_eur);
+    current.payment_fees_eur = roundCurrency(current.payment_fees_eur + row.payment_fees_eur);
+    current.net_revenue_eur = roundCurrency(current.net_revenue_eur + row.net_revenue_eur);
+    bySegment.set(segment, current);
+  }
+
+  return [...bySegment.values()]
+    .sort(
+      (left, right) =>
+        right.net_revenue_eur - left.net_revenue_eur ||
+        left.segment.localeCompare(right.segment)
+    )
+    .slice(0, 20);
 };
 
 type MartFilterClause = {
@@ -2958,6 +3011,139 @@ export class BigQueryAdminAnalyticsProvider implements AdminAnalyticsProvider {
       by_tenant: byTenant,
       by_test: byTest,
       reconciliation
+    };
+  }
+
+  async getAttribution(
+    filters: AdminAnalyticsFilters,
+    options: AdminAnalyticsAttributionOptions
+  ): Promise<AdminAnalyticsAttributionResponse> {
+    const contentType = normalizeAttributionOption(options.content_type)?.toLowerCase() ?? null;
+    const contentKey = normalizeAttributionOption(options.content_key);
+    const scopedFilters: AdminAnalyticsFilters = {
+      ...filters,
+      test_id: contentKey ?? filters.test_id
+    };
+    const groupedBy: AdminAnalyticsAttributionGroupBy = filters.tenant_id ? "content" : "tenant";
+
+    if (contentType && contentType !== "test") {
+      return {
+        filters: scopedFilters,
+        generated_at_utc: new Date().toISOString(),
+        content_type: contentType,
+        content_key: contentKey,
+        grouped_by: groupedBy,
+        mix: [],
+        rows: []
+      };
+    }
+
+    const revenueFilter = buildMartFilterClause(scopedFilters, {
+      includeDeviceTypeFilter: false
+    });
+    const visitsFilter = buildMartFilterClause(scopedFilters);
+    const revenueTable = `\`${this.projectId}.${this.datasets.marts}.mart_unit_econ_offers_daily\``;
+    const visitsTable = `\`${this.projectId}.${this.datasets.marts}.mart_funnel_daily\``;
+    const query = `
+      WITH revenue AS (
+        SELECT
+          tenant_id,
+          test_id,
+          COALESCE(NULLIF(offer_key, ''), 'unknown') AS offer_key,
+          COALESCE(NULLIF(pricing_variant, ''), 'unknown') AS pricing_variant,
+          COALESCE(SUM(purchases_count), 0) AS purchases,
+          COALESCE(SUM(gross_revenue_eur), 0) AS gross_revenue_eur,
+          COALESCE(SUM(refunds_eur), 0) AS refunds_eur,
+          COALESCE(SUM(disputes_eur), 0) AS disputes_fees_eur,
+          COALESCE(SUM(payment_fees_eur), 0) AS payment_fees_eur,
+          COALESCE(SUM(net_revenue_eur), 0) AS net_revenue_eur
+        FROM ${revenueTable}
+        ${revenueFilter.whereSql}
+        GROUP BY tenant_id, test_id, offer_key, pricing_variant
+      ),
+      visits AS (
+        SELECT
+          tenant_id,
+          test_id,
+          COALESCE(SUM(visits), 0) AS visits
+        FROM ${visitsTable}
+        ${visitsFilter.whereSql}
+        GROUP BY tenant_id, test_id
+      )
+      SELECT
+        revenue.tenant_id,
+        revenue.test_id,
+        revenue.offer_key,
+        revenue.pricing_variant,
+        revenue.purchases,
+        revenue.gross_revenue_eur,
+        revenue.refunds_eur,
+        revenue.disputes_fees_eur,
+        revenue.payment_fees_eur,
+        revenue.net_revenue_eur,
+        COALESCE(visits.visits, 0) AS visits
+      FROM revenue
+      LEFT JOIN visits
+        ON revenue.tenant_id = visits.tenant_id
+        AND revenue.test_id = visits.test_id
+      ORDER BY
+        revenue.net_revenue_eur DESC,
+        revenue.purchases DESC,
+        revenue.tenant_id ASC,
+        revenue.test_id ASC,
+        revenue.offer_key ASC,
+        revenue.pricing_variant ASC
+      LIMIT ${ATTRIBUTION_ROWS_LIMIT}
+    `;
+
+    let rawRows: BigQueryRow[] = [];
+    try {
+      rawRows = await this.runQuery<BigQueryRow>(
+        query,
+        mergeParams(revenueFilter.params, visitsFilter.params)
+      );
+    } catch (error) {
+      if (!isNotFoundError(error)) {
+        throw error;
+      }
+    }
+
+    const rows: AdminAnalyticsAttributionRow[] = rawRows
+      .map((row) => {
+        const tenantId = asNonEmptyString(row.tenant_id);
+        const testId = asNonEmptyString(row.test_id);
+        if (!tenantId || !testId) {
+          return null;
+        }
+
+        const purchases = asNumber(row.purchases);
+        const visits = asNumber(row.visits);
+        return {
+          tenant_id: tenantId,
+          content_type: contentType ?? "test",
+          content_key: testId,
+          offer_key: asNonEmptyString(row.offer_key) ?? "unknown",
+          pricing_variant: asNonEmptyString(row.pricing_variant) ?? "unknown",
+          purchases,
+          visits,
+          conversion: safeRatio(purchases, visits),
+          gross_revenue_eur: roundCurrency(asNumber(row.gross_revenue_eur)),
+          refunds_eur: roundCurrency(asNumber(row.refunds_eur)),
+          disputes_fees_eur: roundCurrency(asNumber(row.disputes_fees_eur)),
+          payment_fees_eur: roundCurrency(asNumber(row.payment_fees_eur)),
+          net_revenue_eur: roundCurrency(asNumber(row.net_revenue_eur))
+        };
+      })
+      .filter((row): row is AdminAnalyticsAttributionRow => row !== null);
+
+    return {
+      filters: scopedFilters,
+      generated_at_utc: new Date().toISOString(),
+      content_type: contentType ?? "test",
+      content_key: contentKey ?? scopedFilters.test_id,
+      grouped_by: groupedBy,
+      mix: buildAttributionMixRows(rows, groupedBy),
+      rows
     };
   }
 

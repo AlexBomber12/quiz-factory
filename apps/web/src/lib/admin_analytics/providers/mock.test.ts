@@ -142,6 +142,26 @@ describe("MockAdminAnalyticsProvider", () => {
       gross_revenue_diff_pct: expect.any(Number)
     });
 
+    const attribution = await provider.getAttribution(FILTERS, {
+      content_type: "test",
+      content_key: null
+    });
+    expect(attribution.grouped_by).toMatch(/^(tenant|content)$/);
+    expect(attribution.mix.length).toBeGreaterThan(0);
+    expect(attribution.rows.length).toBeGreaterThan(0);
+    expect(attribution.rows[0]).toMatchObject({
+      tenant_id: expect.any(String),
+      content_type: "test",
+      content_key: expect.any(String),
+      offer_key: expect.any(String),
+      pricing_variant: expect.any(String),
+      purchases: expect.any(Number),
+      visits: expect.any(Number),
+      conversion: expect.any(Number),
+      gross_revenue_eur: expect.any(Number),
+      net_revenue_eur: expect.any(Number)
+    });
+
     const dataHealth = await provider.getDataHealth(FILTERS);
     expect(["ok", "warn", "error"]).toContain(dataHealth.status);
     expect(dataHealth.checks.length).toBeGreaterThan(0);
