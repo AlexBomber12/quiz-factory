@@ -31,7 +31,13 @@ const ACTION_OPTIONS = [
   "import_uploaded",
   "import_converted",
   "test_published",
-  "test_rollback"
+  "test_rollback",
+  "alert_rule_created",
+  "alert_rule_updated",
+  "alert_rule_run",
+  "alert_instance_acknowledged",
+  "alert_instance_resolved",
+  "alert_instance_updated"
 ] as const;
 
 const asSingleValue = (value: string | string[] | undefined): string | null => {

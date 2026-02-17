@@ -621,7 +621,7 @@ Queue (in order)
 - Depends on: PR-ADMIN-VIZ-01
 
 113) PR-TRIGGERS-01: Alerts Rules Engine (Rules, Instances, Runner, UI)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-TRIGGERS-01.md
 - Depends on: PR-REVENUE-ATTRIB-01 and PR-DOMAINS-02
 
