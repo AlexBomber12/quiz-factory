@@ -6,9 +6,9 @@ import { RESULT_COOKIE, verifyResultCookie } from "../../../../lib/product/resul
 import {
   DEFAULT_EVENT_BODY_BYTES,
   DEFAULT_EVENT_RATE_LIMIT,
-  assertAllowedHost,
+  assertAllowedHostAsync,
   assertAllowedMethod,
-  assertAllowedOrigin,
+  assertAllowedOriginAsync,
   assertMaxBodyBytes,
   rateLimit,
   resolveRequestHost
@@ -23,7 +23,7 @@ import {
 import { createStripeClient } from "../../../../lib/stripe/client";
 import { assertStripeEnvConfigured } from "../../../../lib/stripe/env";
 import { buildStripeMetadata } from "../../../../lib/stripe/metadata";
-import { resolveLocale, resolveTenant } from "../../../../lib/tenants/resolve";
+import { resolveLocale, resolveTenantAsync } from "../../../../lib/tenants/resolve";
 import eventsContract from "../../../../../../../analytics/events.json";
 
 type EventsContract = {
@@ -126,12 +126,12 @@ export const POST = async (request: Request): Promise<Response> => {
     return methodResponse;
   }
 
-  const hostResponse = assertAllowedHost(request);
+  const hostResponse = await assertAllowedHostAsync(request);
   if (hostResponse) {
     return hostResponse;
   }
 
-  const originResponse = assertAllowedOrigin(request);
+  const originResponse = await assertAllowedOriginAsync(request);
   if (originResponse) {
     return originResponse;
   }
@@ -198,7 +198,7 @@ export const POST = async (request: Request): Promise<Response> => {
     return NextResponse.json({ error: "Host is required." }, { status: 400 });
   }
 
-  const tenantResolution = resolveTenant(request.headers, host);
+  const tenantResolution = await resolveTenantAsync(request.headers, host);
   if (tenantResolution.tenantId !== resultPayload.tenant_id) {
     return NextResponse.json(
       { error: "Result cookie does not match tenant." },

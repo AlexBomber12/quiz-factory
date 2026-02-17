@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 
 import { normalizeLocaleTag, LocaleTag } from "../content/types";
-import { resolveLocale, resolveTenant } from "./resolve";
+import { resolveLocale, resolveTenantAsync } from "./resolve";
 
 type HeaderLike = {
   get(name: string): string | null;
@@ -98,7 +98,7 @@ const resolveRequestProtocol = (
 
 export const resolveTenantContext = async (): Promise<TenantRequestContext> => {
   const headerStore = await headers();
-  const tenantResolution = resolveTenant(new Headers(headerStore));
+  const tenantResolution = await resolveTenantAsync(new Headers(headerStore));
   const locale = resolveLocale({
     defaultLocale: tenantResolution.defaultLocale,
     acceptLanguage: headerStore.get("accept-language")

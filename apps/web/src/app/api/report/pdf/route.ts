@@ -17,9 +17,9 @@ import { renderReportPdf } from "../../../../lib/report/pdf_renderer";
 import {
   DEFAULT_EVENT_BODY_BYTES,
   DEFAULT_EVENT_RATE_LIMIT,
-  assertAllowedHost,
+  assertAllowedHostAsync,
   assertAllowedMethod,
-  assertAllowedOrigin,
+  assertAllowedOriginAsync,
   assertMaxBodyBytes,
   rateLimit
 } from "../../../../lib/security/request_guards";
@@ -97,12 +97,12 @@ export const POST = async (request: Request): Promise<Response> => {
     return methodResponse;
   }
 
-  const hostResponse = assertAllowedHost(request);
+  const hostResponse = await assertAllowedHostAsync(request);
   if (hostResponse) {
     return hostResponse;
   }
 
-  const originResponse = assertAllowedOrigin(request);
+  const originResponse = await assertAllowedOriginAsync(request);
   if (originResponse) {
     return originResponse;
   }

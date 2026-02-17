@@ -5,6 +5,8 @@ import tenantsConfig from "../../../../../config/tenants.json";
 
 import { DISTINCT_COOKIE_NAME } from "../analytics/constants";
 import { parseCookies } from "../analytics/session";
+import { listAllowedHostsFromDb } from "../tenants/runtime_db";
+import { getTenantsSource } from "../tenants/source";
 import { normalizeHostname, resolveEffectiveRequestHost } from "./request_host";
 
 type TenantConfig = {
@@ -79,13 +81,13 @@ export const getAllowlistMode = (): AllowlistMode => {
 };
 
 const tenantRegistry = (tenantsConfig as TenantRegistry).tenants ?? [];
-const allowedHosts = new Set<string>();
+const fileAllowedHosts = new Set<string>();
 
 for (const tenant of tenantRegistry) {
   for (const domain of tenant.domains ?? []) {
     const normalized = normalizeHostname(domain);
     if (normalized) {
-      allowedHosts.add(normalized);
+      fileAllowedHosts.add(normalized);
     }
   }
 }
@@ -112,7 +114,11 @@ const isAllowedHost = (host: string | null): boolean => {
     return false;
   }
 
-  if (allowedHosts.has(host)) {
+  if (getTenantsSource() !== "file") {
+    return false;
+  }
+
+  if (fileAllowedHosts.has(host)) {
     return true;
   }
 
@@ -134,6 +140,46 @@ const isAllowedOrigin = (originHeader: string | null | undefined): boolean => {
   }
 
   return isAllowedHost(originHost);
+};
+
+const isAllowedHostAsync = async (host: string | null): Promise<boolean> => {
+  if (!host) {
+    return false;
+  }
+
+  if (getTenantsSource() === "db") {
+    try {
+      const dbAllowedHosts = await listAllowedHostsFromDb();
+      if (dbAllowedHosts.has(host)) {
+        return true;
+      }
+    } catch {
+      return false;
+    }
+
+    if (getAllowlistMode() !== "dev") {
+      return false;
+    }
+
+    if (DEV_LOCALHOST_HOSTS.has(host)) {
+      return true;
+    }
+
+    return getExtraAllowedHosts().has(host);
+  }
+
+  return isAllowedHost(host);
+};
+
+const isAllowedOriginAsync = async (
+  originHeader: string | null | undefined
+): Promise<boolean> => {
+  const originHost = normalizeOrigin(originHeader);
+  if (!originHost) {
+    return false;
+  }
+
+  return isAllowedHostAsync(originHost);
 };
 
 const parseBoolean = (value: string | undefined): boolean | undefined => {
@@ -272,6 +318,35 @@ export const assertAllowedOrigin = (request: Request): Response | null => {
   }
 
   if (!isAllowedOrigin(originHeader)) {
+    return buildForbiddenResponse("Origin is not allowed.");
+  }
+
+  return null;
+};
+
+export const assertAllowedHostAsync = async (
+  request: Request
+): Promise<Response | null> => {
+  const host = resolveRequestHost(request);
+  if (!(await isAllowedHostAsync(host))) {
+    return buildForbiddenResponse("Host is not allowed.");
+  }
+
+  return null;
+};
+
+export const assertAllowedOriginAsync = async (
+  request: Request
+): Promise<Response | null> => {
+  const originHeader = request.headers.get("origin");
+  if (!originHeader) {
+    if (getAllowlistMode() === "dev") {
+      return null;
+    }
+    return buildForbiddenResponse("Origin is not allowed.");
+  }
+
+  if (!(await isAllowedOriginAsync(originHeader))) {
     return buildForbiddenResponse("Origin is not allowed.");
   }
 

@@ -12,7 +12,7 @@ import {
 import { logAdminEvent } from "../../../../lib/admin/audit";
 import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "../../../../lib/admin/session";
 import { buildRedirectUrl } from "../../../../lib/security/redirect_base";
-import { resolveTenant } from "../../../../lib/tenants/resolve";
+import { resolveTenantAsync } from "../../../../lib/tenants/resolve";
 
 const parseCsrfToken = async (request: Request): Promise<string | null> => {
   const headerToken = readAdminCsrfTokenFromHeader(request);
@@ -64,7 +64,10 @@ export const POST = async (request: Request): Promise<Response> => {
 
   if (session) {
     const requestUrl = new URL(request.url);
-    const tenantResolution = resolveTenant(request.headers, requestUrl.hostname);
+    const tenantResolution = await resolveTenantAsync(
+      request.headers,
+      requestUrl.hostname
+    );
 
     await logAdminEvent({
       actor: session.role,

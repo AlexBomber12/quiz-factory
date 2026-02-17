@@ -601,7 +601,7 @@ Queue (in order)
 - Depends on: none
 
 109) PR-DOMAINS-01: DB-backed Domain Registry (Tenants Source of Truth)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-DOMAINS-01.md
 - Depends on: PR-ADMIN-CONSOLE-09 and PR-CONTENT-DB-04
 

@@ -9,9 +9,9 @@ import { sanitizeAttemptSummaryInput } from "../../../../lib/report/report_job_i
 import {
   DEFAULT_EVENT_BODY_BYTES,
   DEFAULT_EVENT_RATE_LIMIT,
-  assertAllowedHost,
+  assertAllowedHostAsync,
   assertAllowedMethod,
-  assertAllowedOrigin,
+  assertAllowedOriginAsync,
   assertMaxBodyBytes,
   rateLimit
 } from "../../../../lib/security/request_guards";
@@ -19,7 +19,7 @@ import {
   assertAttemptTokenMatchesContext,
   verifyAttemptToken
 } from "../../../../lib/security/attempt_token";
-import { resolveTenant } from "../../../../lib/tenants/resolve";
+import { resolveTenantAsync } from "../../../../lib/tenants/resolve";
 
 const requireString = (value: unknown): string | null => {
   if (typeof value !== "string") {
@@ -44,12 +44,12 @@ export const POST = async (request: Request): Promise<Response> => {
     return methodResponse;
   }
 
-  const hostResponse = assertAllowedHost(request);
+  const hostResponse = await assertAllowedHostAsync(request);
   if (hostResponse) {
     return hostResponse;
   }
 
-  const originResponse = assertAllowedOrigin(request);
+  const originResponse = await assertAllowedOriginAsync(request);
   if (originResponse) {
     return originResponse;
   }
@@ -101,7 +101,7 @@ export const POST = async (request: Request): Promise<Response> => {
     return NextResponse.json({ error: "Distinct id is required." }, { status: 401 });
   }
 
-  const { tenantId, defaultLocale } = resolveTenant(
+  const { tenantId, defaultLocale } = await resolveTenantAsync(
     request.headers,
     new URL(request.url).hostname
   );
