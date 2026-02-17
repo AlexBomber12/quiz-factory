@@ -1,6 +1,8 @@
 import { headers } from "next/headers";
 import Link from "next/link";
 
+import AdminChart from "../../../../components/admin/charts/AdminChart";
+import { buildStackedBarOption } from "../../../../components/admin/charts/options";
 import AdminAnalyticsPageScaffold from "../../../../components/admin/analytics/PageScaffold";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../../components/ui/card";
 import type {
@@ -284,13 +286,35 @@ const renderTrafficTable = (
   field: TrafficSortField,
   direction: SortDirection
 ) => {
+  const chartRows = rows.slice(0, 25);
+
   return (
     <Card>
       <CardHeader>
         <CardTitle className="text-base">{title}</CardTitle>
-        <CardDescription>{description}</CardDescription>
+        <CardDescription>
+          {description} Chart preview shows the top {Math.min(chartRows.length, 25)} segments by the active sort.
+        </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-4">
+        <AdminChart
+          option={buildStackedBarOption({
+            categories: chartRows.map((row) => row.segment),
+            series: [
+              {
+                name: "Sessions",
+                values: chartRows.map((row) => row.sessions),
+                color: "#0284c7"
+              },
+              {
+                name: "Purchases",
+                values: chartRows.map((row) => row.purchases),
+                color: "#0f766e"
+              }
+            ],
+            emptyMessage: "No rows available for the selected filters."
+          })}
+        />
         <div className="overflow-x-auto">
           <table className="w-full min-w-[860px] border-collapse text-left text-sm">
             <thead>

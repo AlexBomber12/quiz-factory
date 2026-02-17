@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  output: "standalone"
+  output: "standalone",
+  transpilePackages: ["echarts", "zrender"]
 };
 
 export default nextConfig;

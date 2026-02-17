@@ -1,5 +1,13 @@
 import { headers } from "next/headers";
 
+import AdminChart from "../../../components/admin/charts/AdminChart";
+import {
+  buildEmptyChartOption,
+  buildFunnelOption,
+  buildLineChartOption,
+  buildSparklineOption,
+  buildStackedBarOption
+} from "../../../components/admin/charts/options";
 import AdminAnalyticsPageScaffold from "../../../components/admin/analytics/PageScaffold";
 import {
   Card,
@@ -138,6 +146,88 @@ const formatAlertMetric = (value: number | null): string => {
   return alertMetricFormatter.format(value);
 };
 
+const buildOverviewTimeseriesOption = (payload: AdminAnalyticsOverviewResponse | null) => {
+  const visits = payload?.visits_timeseries ?? [];
+  const revenue = payload?.revenue_timeseries ?? [];
+  const dateSet = new Set<string>();
+
+  for (const point of visits) {
+    dateSet.add(point.date);
+  }
+  for (const point of revenue) {
+    dateSet.add(point.date);
+  }
+
+  const categories = [...dateSet].sort((left, right) => left.localeCompare(right));
+  if (categories.length === 0) {
+    return buildEmptyChartOption("No trend data for the selected filters.");
+  }
+
+  const visitsByDate = new Map(visits.map((point) => [point.date, point.value]));
+  const revenueByDate = new Map(revenue.map((point) => [point.date, point.value]));
+
+  return buildLineChartOption({
+    categories,
+    yAxes: 2,
+    series: [
+      {
+        name: "Visits",
+        values: categories.map((date) => visitsByDate.get(date) ?? 0),
+        area: true,
+        color: "#0ea5e9"
+      },
+      {
+        name: "Net revenue (EUR)",
+        values: categories.map((date) => revenueByDate.get(date) ?? 0),
+        yAxisIndex: 1,
+        color: "#0f766e"
+      }
+    ]
+  });
+};
+
+const buildFunnelChartOption = (payload: AdminAnalyticsOverviewResponse | null) => {
+  return buildFunnelOption({
+    steps: (payload?.funnel ?? []).map((step) => ({
+      name: step.label,
+      value: step.count
+    })),
+    emptyMessage: "No funnel data for the selected filters."
+  });
+};
+
+const buildTopTestsChartOption = (payload: AdminAnalyticsOverviewResponse | null) => {
+  const rows = payload?.top_tests ?? [];
+
+  return buildStackedBarOption({
+    categories: rows.map((row) => row.test_id),
+    series: [
+      {
+        name: "Purchases",
+        values: rows.map((row) => row.purchases),
+        color: "#0369a1"
+      }
+    ],
+    emptyMessage: "No top tests available."
+  });
+};
+
+const buildTopTenantsChartOption = (payload: AdminAnalyticsOverviewResponse | null) => {
+  const rows = payload?.top_tenants ?? [];
+
+  return buildStackedBarOption({
+    categories: rows.map((row) => row.tenant_id),
+    series: [
+      {
+        name: "Purchases",
+        values: rows.map((row) => row.purchases),
+        color: "#0f766e"
+      }
+    ],
+    emptyMessage: "No top tenants available."
+  });
+};
+
 const fetchOverview = async (
   searchParams: PageProps["searchParams"]
 ): Promise<{ payload: AdminAnalyticsOverviewResponse | null; error: string | null }> => {
@@ -242,6 +332,8 @@ const renderFreshness = (rows: AdminAnalyticsOverviewFreshnessRow[]) => {
 
 export default async function AdminAnalyticsOverviewPage({ searchParams }: PageProps) {
   const { payload, error } = await fetchOverview(searchParams);
+  const visitsSparkline = (payload?.visits_timeseries ?? []).map((point) => point.value);
+  const revenueSparkline = (payload?.revenue_timeseries ?? []).map((point) => point.value);
 
   return (
     <AdminAnalyticsPageScaffold
@@ -283,6 +375,28 @@ export default async function AdminAnalyticsOverviewPage({ searchParams }: PageP
               <div className="rounded-md border bg-card p-3" key={kpi.key}>
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">{kpi.label}</p>
                 <p className="mt-1 text-lg font-semibold">{formatKpiValue(kpi)}</p>
+                {kpi.unit === "currency_eur" && revenueSparkline.length > 1 ? (
+                  <div className="mt-2 h-10">
+                    <AdminChart
+                      height={40}
+                      option={buildSparklineOption({
+                        points: revenueSparkline,
+                        color: "#0f766e"
+                      })}
+                    />
+                  </div>
+                ) : null}
+                {kpi.unit !== "currency_eur" && visitsSparkline.length > 1 ? (
+                  <div className="mt-2 h-10">
+                    <AdminChart
+                      height={40}
+                      option={buildSparklineOption({
+                        points: visitsSparkline,
+                        color: "#0284c7"
+                      })}
+                    />
+                  </div>
+                ) : null}
               </div>
             ))}
           </div>
@@ -294,10 +408,21 @@ export default async function AdminAnalyticsOverviewPage({ searchParams }: PageP
 
       <Card>
         <CardHeader>
+          <CardTitle className="text-base">Traffic and revenue trend</CardTitle>
+          <CardDescription>Daily visits and net revenue in the selected date range.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <AdminChart option={buildOverviewTimeseriesOption(payload)} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle className="text-base">Funnel</CardTitle>
           <CardDescription>Counts and conversion rates from mart_funnel_daily.</CardDescription>
         </CardHeader>
         <CardContent>
+          <AdminChart option={buildFunnelChartOption(payload)} />
           <div className="overflow-x-auto">
             <table className="w-full min-w-[640px] border-collapse text-left text-sm">
               <thead>
@@ -334,6 +459,7 @@ export default async function AdminAnalyticsOverviewPage({ searchParams }: PageP
           <CardDescription>Sorted by net revenue and paid conversion.</CardDescription>
         </CardHeader>
         <CardContent>
+          <AdminChart option={buildTopTestsChartOption(payload)} />
           <div className="overflow-x-auto">
             <table className="w-full min-w-[640px] border-collapse text-left text-sm">
               <thead>
@@ -374,6 +500,7 @@ export default async function AdminAnalyticsOverviewPage({ searchParams }: PageP
           <CardDescription>Sorted by net revenue.</CardDescription>
         </CardHeader>
         <CardContent>
+          <AdminChart option={buildTopTenantsChartOption(payload)} />
           <div className="overflow-x-auto">
             <table className="w-full min-w-[640px] border-collapse text-left text-sm">
               <thead>

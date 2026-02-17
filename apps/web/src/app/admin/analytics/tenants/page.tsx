@@ -1,6 +1,8 @@
 import { headers } from "next/headers";
 import Link from "next/link";
 
+import AdminChart from "../../../../components/admin/charts/AdminChart";
+import { buildLineChartOption, buildStackedBarOption } from "../../../../components/admin/charts/options";
 import AdminAnalyticsPageScaffold from "../../../../components/admin/analytics/PageScaffold";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../../components/ui/card";
 import type { AdminAnalyticsTenantsResponse, AdminAnalyticsTenantsRow } from "../../../../lib/admin_analytics/types";
@@ -255,6 +257,51 @@ const formatUtcDate = (value: string | null): string => {
   return parsed.toISOString();
 };
 
+const buildTenantVolumeChartOption = (rows: AdminAnalyticsTenantsRow[]) => {
+  const chartRows = rows.slice(0, 20);
+
+  return buildStackedBarOption({
+    categories: chartRows.map((row) => row.tenant_id),
+    series: [
+      {
+        name: "Sessions",
+        values: chartRows.map((row) => row.sessions),
+        color: "#0284c7"
+      },
+      {
+        name: "Purchases",
+        values: chartRows.map((row) => row.purchases),
+        color: "#0f766e"
+      }
+    ],
+    emptyMessage: "No tenant rows for the selected filters."
+  });
+};
+
+const buildTenantRevenueChartOption = (rows: AdminAnalyticsTenantsRow[]) => {
+  const chartRows = rows.slice(0, 20);
+
+  return buildLineChartOption({
+    categories: chartRows.map((row) => row.tenant_id),
+    yAxes: 2,
+    series: [
+      {
+        name: "Net revenue",
+        values: chartRows.map((row) => row.net_revenue_eur),
+        area: true,
+        color: "#0f766e"
+      },
+      {
+        name: "Paid conversion (%)",
+        values: chartRows.map((row) => row.paid_conversion * 100),
+        yAxisIndex: 1,
+        color: "#f59e0b"
+      }
+    ],
+    emptyMessage: "No tenant revenue rows for the selected filters."
+  });
+};
+
 export default async function AdminAnalyticsTenantsPage({ searchParams }: PageProps) {
   const resolvedSearchParams = await resolveSearchParams(searchParams);
   const { field, direction } = readSort(resolvedSearchParams);
@@ -285,6 +332,17 @@ export default async function AdminAnalyticsTenantsPage({ searchParams }: PagePr
           </CardContent>
         </Card>
       ) : null}
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Tenant performance charts</CardTitle>
+          <CardDescription>Top 20 tenants by the active sort for quick comparison.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <AdminChart option={buildTenantVolumeChartOption(rows)} />
+          <AdminChart option={buildTenantRevenueChartOption(rows)} />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

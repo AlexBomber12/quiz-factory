@@ -1,5 +1,11 @@
 import { headers } from "next/headers";
 
+import AdminChart from "../../../../components/admin/charts/AdminChart";
+import {
+  buildLineChartOption,
+  buildSparklineOption,
+  buildStackedBarOption
+} from "../../../../components/admin/charts/options";
 import AdminAnalyticsPageScaffold from "../../../../components/admin/analytics/PageScaffold";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../../components/ui/card";
 import type {
@@ -162,6 +168,94 @@ const formatKpiValue = (kpi: KpiCard): string => {
   }
 };
 
+const buildDailyRevenueChartOption = (payload: AdminAnalyticsRevenueResponse | null) => {
+  const rows = payload?.daily ?? [];
+
+  return buildLineChartOption({
+    categories: rows.map((row) => row.date),
+    series: [
+      {
+        name: "Gross revenue",
+        values: rows.map((row) => row.gross_revenue_eur),
+        area: true,
+        color: "#0284c7"
+      },
+      {
+        name: "Refunds",
+        values: rows.map((row) => row.refunds_eur),
+        color: "#f59e0b"
+      },
+      {
+        name: "Net revenue",
+        values: rows.map((row) => row.net_revenue_eur),
+        area: true,
+        color: "#0f766e"
+      }
+    ],
+    emptyMessage: "No daily revenue data for the selected filters."
+  });
+};
+
+const buildOfferMixChartOption = (payload: AdminAnalyticsRevenueResponse | null) => {
+  const rows = (payload?.by_offer ?? []).slice(0, 20);
+  const categories = rows.map((row) => `${row.offer_type}:${row.pricing_variant}`);
+
+  return buildStackedBarOption({
+    categories,
+    series: [
+      {
+        name: "Gross",
+        values: rows.map((row) => row.gross_revenue_eur),
+        color: "#0284c7"
+      },
+      {
+        name: "Refunds",
+        values: rows.map((row) => row.refunds_eur),
+        color: "#f59e0b"
+      },
+      {
+        name: "Fees",
+        values: rows.map((row) => row.payment_fees_eur + row.disputes_fees_eur),
+        color: "#dc2626"
+      },
+      {
+        name: "Net",
+        values: rows.map((row) => row.net_revenue_eur),
+        color: "#0f766e"
+      }
+    ],
+    emptyMessage: "No offer mix rows for the selected filters."
+  });
+};
+
+const buildEntityMixChartOption = (
+  rows: Array<AdminAnalyticsRevenueByTenantRow | AdminAnalyticsRevenueByTestRow>,
+  idKey: "tenant_id" | "test_id",
+  emptyMessage: string
+) => {
+  const limitedRows = rows.slice(0, 20);
+
+  return buildLineChartOption({
+    categories: limitedRows.map((row) => row[idKey] as string),
+    yAxes: 2,
+    series: [
+      {
+        name: "Net revenue",
+        values: limitedRows.map((row) => row.net_revenue_eur),
+        area: true,
+        color: "#0f766e"
+      },
+      {
+        name: "Purchases",
+        values: limitedRows.map((row) => row.purchases),
+        yAxisIndex: 1,
+        color: "#0284c7"
+      }
+    ],
+    emptyMessage
+  });
+};
+
 const renderOfferRows = (rows: AdminAnalyticsRevenueByOfferRow[]) => {
   return (
     <div className="overflow-x-auto">
@@ -261,6 +355,7 @@ const renderEntityRows = (
 export default async function AdminAnalyticsRevenuePage({ searchParams }: PageProps) {
   const resolvedSearchParams = await resolveSearchParams(searchParams);
   const { payload, error } = await fetchRevenue(resolvedSearchParams);
+  const netRevenueSparkline = (payload?.daily ?? []).map((row) => row.net_revenue_eur);
 
   return (
     <AdminAnalyticsPageScaffold
@@ -298,12 +393,33 @@ export default async function AdminAnalyticsRevenuePage({ searchParams }: PagePr
               <div className="rounded-md border bg-card p-3" key={kpi.key}>
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">{kpi.label}</p>
                 <p className="mt-1 text-lg font-semibold">{formatKpiValue(kpi)}</p>
+                {kpi.unit === "currency_eur" && netRevenueSparkline.length > 1 ? (
+                  <div className="mt-2 h-10">
+                    <AdminChart
+                      height={40}
+                      option={buildSparklineOption({
+                        points: netRevenueSparkline,
+                        color: "#0f766e"
+                      })}
+                    />
+                  </div>
+                ) : null}
               </div>
             ))}
           </div>
           {(payload?.kpis ?? []).length === 0 ? (
             <p className="text-sm text-muted-foreground">No KPI data for the selected filters.</p>
           ) : null}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Daily revenue trend</CardTitle>
+          <CardDescription>Gross, refunds, and net revenue over time.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <AdminChart option={buildDailyRevenueChartOption(payload)} />
         </CardContent>
       </Card>
 
@@ -362,7 +478,10 @@ export default async function AdminAnalyticsRevenuePage({ searchParams }: PagePr
           <CardTitle className="text-base">By offer and pricing variant</CardTitle>
           <CardDescription>Offer-level purchase and revenue composition.</CardDescription>
         </CardHeader>
-        <CardContent>{renderOfferRows(payload?.by_offer ?? [])}</CardContent>
+        <CardContent className="space-y-4">
+          <AdminChart option={buildOfferMixChartOption(payload)} />
+          {renderOfferRows(payload?.by_offer ?? [])}
+        </CardContent>
       </Card>
 
       <Card>
@@ -370,7 +489,16 @@ export default async function AdminAnalyticsRevenuePage({ searchParams }: PagePr
           <CardTitle className="text-base">Top tenants</CardTitle>
           <CardDescription>Revenue contribution by tenant_id.</CardDescription>
         </CardHeader>
-        <CardContent>{renderEntityRows(payload?.by_tenant ?? [], "tenant_id")}</CardContent>
+        <CardContent className="space-y-4">
+          <AdminChart
+            option={buildEntityMixChartOption(
+              payload?.by_tenant ?? [],
+              "tenant_id",
+              "No tenant revenue rows for the selected filters."
+            )}
+          />
+          {renderEntityRows(payload?.by_tenant ?? [], "tenant_id")}
+        </CardContent>
       </Card>
 
       <Card>
@@ -378,7 +506,16 @@ export default async function AdminAnalyticsRevenuePage({ searchParams }: PagePr
           <CardTitle className="text-base">Top tests</CardTitle>
           <CardDescription>Revenue contribution by test_id.</CardDescription>
         </CardHeader>
-        <CardContent>{renderEntityRows(payload?.by_test ?? [], "test_id")}</CardContent>
+        <CardContent className="space-y-4">
+          <AdminChart
+            option={buildEntityMixChartOption(
+              payload?.by_test ?? [],
+              "test_id",
+              "No test revenue rows for the selected filters."
+            )}
+          />
+          {renderEntityRows(payload?.by_test ?? [], "test_id")}
+        </CardContent>
       </Card>
     </AdminAnalyticsPageScaffold>
   );
