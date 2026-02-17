@@ -199,4 +199,85 @@ describe("ContentDbAdminAnalyticsProvider regressions", () => {
     expect(payload.column_order).toEqual(["test-focus-rhythm"]);
     expect(payload.rows["tenant-quizfactory-en"]?.net_revenue_eur_7d).toBe(150);
   });
+
+  it("does not truncate visits lookup for attribution rows", async () => {
+    const filters: AdminAnalyticsFilters = {
+      ...FILTERS,
+      tenant_id: null,
+      test_id: null,
+      locale: "all",
+      device_type: "all",
+      utm_source: null
+    };
+
+    const { provider, calls } = makeProviderWithQueryResolver((query) => {
+      if (query.includes("information_schema.tables")) {
+        return [
+          { table_name: "analytics_events" },
+          { table_name: "stripe_purchases" }
+        ];
+      }
+
+      if (query.includes("AS attribution_key")) {
+        return [
+          {
+            attribution_key: "tenant-quizfactory-en::test-focus-rhythm::single_base_299::base",
+            purchases: 2,
+            gross_revenue_eur: 120,
+            refunds_eur: 10,
+            disputes_eur: 2,
+            payment_fees_eur: 8,
+            net_revenue_eur: 100
+          },
+          {
+            attribution_key: "tenant-quizfactory-es::test-energy-balance::pack5::base",
+            purchases: 1,
+            gross_revenue_eur: 90,
+            refunds_eur: 5,
+            disputes_eur: 1,
+            payment_fees_eur: 4,
+            net_revenue_eur: 80
+          }
+        ];
+      }
+
+      if (query.includes("AS content_key_pair")) {
+        if (query.includes("LIMIT")) {
+          return [
+            {
+              content_key_pair: "tenant-quizfactory-en::test-focus-rhythm",
+              sessions: 200
+            }
+          ];
+        }
+
+        return [
+          {
+            content_key_pair: "tenant-quizfactory-en::test-focus-rhythm",
+            sessions: 200
+          },
+          {
+            content_key_pair: "tenant-quizfactory-es::test-energy-balance",
+            sessions: 50
+          }
+        ];
+      }
+
+      return [];
+    });
+
+    const payload = await provider.getAttribution(filters, {
+      content_type: "test",
+      content_key: null
+    });
+
+    const visitsLookupQuery = calls.find((entry) => entry.query.includes("AS content_key_pair"))?.query ?? "";
+    expect(visitsLookupQuery).not.toContain("LIMIT");
+
+    const secondRow = payload.rows.find((row) =>
+      row.tenant_id === "tenant-quizfactory-es" && row.content_key === "test-energy-balance"
+    );
+    expect(secondRow?.visits).toBe(50);
+    expect(secondRow?.conversion).toBe(0.02);
+  });
 });

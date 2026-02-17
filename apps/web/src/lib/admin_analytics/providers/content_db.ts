@@ -2619,8 +2619,7 @@ export class ContentDbAdminAnalyticsProvider implements AdminAnalyticsProvider {
         "CONCAT(COALESCE(ae.tenant_id, ''), '::', COALESCE(ae.test_id, ''))",
         "content_key_pair",
         {
-          orderBy: "sessions DESC",
-          limit: DETAIL_ROWS_LIMIT
+          orderBy: "sessions DESC"
         }
       )
     ]);
