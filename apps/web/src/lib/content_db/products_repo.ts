@@ -1,3 +1,4 @@
+import tenantsConfig from "../../../../../config/tenants.json";
 import type { PoolClient } from "pg";
 
 import { publishDomainContent } from "./domain_publications";
@@ -49,7 +50,17 @@ type TenantPublishedProductRow = {
   spec_json: unknown;
 };
 
+type TenantRegistryEntryRaw = {
+  tenant_id?: string;
+  default_locale?: string;
+};
+
+type TenantRegistryRaw = {
+  tenants?: TenantRegistryEntryRaw[];
+};
+
 export type ProductVersionStatus = "draft" | "published" | "archived";
+type SupportedTenantLocale = "en" | "es" | "pt-BR";
 
 export type AdminProductListRecord = {
   product_id: string;
@@ -167,6 +178,32 @@ const normalizeNonEmptyString = (value: unknown): string | null => {
   return trimmed.length > 0 ? trimmed : null;
 };
 
+const normalizeTenantDefaultLocale = (value: unknown): SupportedTenantLocale => {
+  const normalized = normalizeNonEmptyString(value)?.toLowerCase() ?? "";
+  if (normalized === "es") {
+    return "es";
+  }
+
+  if (normalized === "pt-br") {
+    return "pt-BR";
+  }
+
+  return "en";
+};
+
+const tenantDefaultLocaleById = new Map<string, SupportedTenantLocale>(
+  (((tenantsConfig as TenantRegistryRaw).tenants ?? [])
+    .map((entry) => {
+      const tenantId = normalizeNonEmptyString(entry?.tenant_id);
+      if (!tenantId) {
+        return null;
+      }
+
+      return [tenantId, normalizeTenantDefaultLocale(entry.default_locale)] as const;
+    })
+    .filter((entry): entry is readonly [string, SupportedTenantLocale] => entry !== null))
+);
+
 const normalizeSlug = (value: unknown): string | null => {
   const normalized = normalizeNonEmptyString(value)?.toLowerCase() ?? null;
   if (!normalized || !PRODUCT_SLUG_RE.test(normalized)) {
@@ -248,6 +285,8 @@ const requireSpecJson = (value: unknown): Record<string, unknown> => {
 };
 
 const ensureTenantRow = async (client: PoolClient, tenantId: string): Promise<void> => {
+  const tenantDefaultLocale = tenantDefaultLocaleById.get(tenantId) ?? "en";
+
   await client.query(
     `
       INSERT INTO tenants (
@@ -255,10 +294,10 @@ const ensureTenantRow = async (client: PoolClient, tenantId: string): Promise<vo
         default_locale,
         enabled
       )
-      VALUES ($1, 'en', TRUE)
+      VALUES ($1, $2, TRUE)
       ON CONFLICT (tenant_id) DO NOTHING
     `,
-    [tenantId]
+    [tenantId, tenantDefaultLocale]
   );
 };
 
@@ -630,44 +669,74 @@ export const createProductDraftVersion = async (
   const specJson = requireSpecJson(specJsonInput);
   const createdBy = normalizeNonEmptyString(createdByInput ?? null);
   const pool = getContentDbPool();
-  const { rows } = await pool.query<ProductVersionRow>(
-    `
-      WITH next_version AS (
-        SELECT COALESCE(MAX(version), 0) + 1 AS version
-        FROM product_versions
-        WHERE product_id = $1
-      )
-      INSERT INTO product_versions (
-        product_id,
-        version,
-        status,
-        spec_json,
-        created_by
-      )
-      SELECT
-        p.product_id,
-        next_version.version,
-        'draft',
-        $2::jsonb,
-        $3
-      FROM products p
-      CROSS JOIN next_version
-      WHERE p.product_id = $1
-      RETURNING
-        id AS version_id,
-        product_id,
-        version,
-        status,
-        spec_json,
-        created_at,
-        created_by
-    `,
-    [productId, specJson, createdBy]
-  );
+  const client = await pool.connect();
+  let row: ProductVersionRow | null = null;
 
-  const row = rows[0];
+  try {
+    await client.query("BEGIN");
+    const { rows: lockedProductRows } = await client.query<{ product_id: string }>(
+      `
+        SELECT product_id
+        FROM products
+        WHERE product_id = $1
+        FOR UPDATE
+      `,
+      [productId]
+    );
+    if (lockedProductRows.length === 0) {
+      throw new ProductRepoError("product_not_found", 404, `product_id '${productId}' not found.`);
+    }
+
+    const { rows } = await client.query<ProductVersionRow>(
+      `
+        WITH next_version AS (
+          SELECT COALESCE(MAX(version), 0) + 1 AS version
+          FROM product_versions
+          WHERE product_id = $1
+        )
+        INSERT INTO product_versions (
+          product_id,
+          version,
+          status,
+          spec_json,
+          created_by
+        )
+        SELECT
+          p.product_id,
+          next_version.version,
+          'draft',
+          $2::jsonb,
+          $3
+        FROM products p
+        CROSS JOIN next_version
+        WHERE p.product_id = $1
+        RETURNING
+          id AS version_id,
+          product_id,
+          version,
+          status,
+          spec_json,
+          created_at,
+          created_by
+      `,
+      [productId, specJson, createdBy]
+    );
+
+    row = rows[0] ?? null;
+    if (!row) {
+      throw new ProductRepoError("db_error", 500, "Unable to create product version.");
+    }
+
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+
   if (!row) {
-    throw new ProductRepoError("product_not_found", 404, `product_id '${productId}' not found.`);
+    throw new ProductRepoError("db_error", 500, "Unable to create product version.");
   }
 
   const versionId = normalizeVersionId(row.version_id);

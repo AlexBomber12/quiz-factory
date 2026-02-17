@@ -19,6 +19,7 @@ vi.mock("./domain_publications", () => ({
 
 import {
   createProduct,
+  createProductDraftVersion,
   getPublishedProductBySlug,
   listTenantProducts,
   ProductRepoError,
@@ -129,6 +130,12 @@ describe("products_repo", () => {
         slug: "focus-kit"
       })
     );
+
+    const seedTenantCall = mocks.clientQuery.mock.calls.find((call) =>
+      typeof call[0] === "string" && call[0].includes("INSERT INTO tenants")
+    );
+    expect(seedTenantCall?.[1]).toEqual(["tenant-a", "en"]);
+
     expect(result).toMatchObject({
       product_id: "product-focus-kit",
       slug: "focus-kit",
@@ -150,5 +157,52 @@ describe("products_repo", () => {
         is_enabled: true
       })
     ).rejects.toBeInstanceOf(ProductRepoError);
+  });
+
+  it("serializes draft version allocation with row-level locking", async () => {
+    const specJson = { title: "Focus Kit" };
+
+    mocks.clientQuery.mockResolvedValueOnce({});
+    mocks.clientQuery.mockResolvedValueOnce({
+      rows: [{ product_id: "product-focus-kit" }]
+    });
+    mocks.clientQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          version_id: "a31d5c32-b458-4a9b-aac9-97de33e9ef33",
+          product_id: "product-focus-kit",
+          version: 4,
+          status: "draft",
+          spec_json: specJson,
+          created_at: "2026-02-17T19:00:00.000Z",
+          created_by: "admin"
+        }
+      ]
+    });
+    mocks.clientQuery.mockResolvedValueOnce({});
+    mocks.connect.mockResolvedValue({
+      query: mocks.clientQuery,
+      release: mocks.release
+    });
+
+    const version = await createProductDraftVersion("product-focus-kit", specJson, "admin");
+
+    expect(mocks.clientQuery).toHaveBeenNthCalledWith(1, "BEGIN");
+    expect(mocks.clientQuery).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining("FOR UPDATE"),
+      ["product-focus-kit"]
+    );
+    expect(mocks.clientQuery).toHaveBeenNthCalledWith(
+      3,
+      expect.stringContaining("WITH next_version AS"),
+      ["product-focus-kit", specJson, "admin"]
+    );
+    expect(mocks.clientQuery).toHaveBeenNthCalledWith(4, "COMMIT");
+    expect(version).toMatchObject({
+      version: 4,
+      status: "draft"
+    });
+    expect(mocks.release).toHaveBeenCalledTimes(1);
   });
 });
