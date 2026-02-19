@@ -61,6 +61,10 @@ const serializeValue = (
   value: unknown,
   visited: WeakSet<object> = new WeakSet()
 ): unknown => {
+  if (typeof value === "bigint") {
+    return value.toString();
+  }
+
   if (value instanceof Error) {
     return {
       name: value.name,

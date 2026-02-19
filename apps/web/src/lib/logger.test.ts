@@ -116,4 +116,27 @@ describe("logger", () => {
     expect(payload.circular?.self).toBe("[Circular]");
     expect(payload.circular?.nested?.parent).toBe("[Circular]");
   });
+
+  it("serializes bigint values safely", () => {
+    setEnv("NODE_ENV", "production");
+    setEnv("LOG_LEVEL", "debug");
+
+    expect(() =>
+      logger.error(
+        { count: 1n, nested: { value: 2n }, list: [3n, { deep: 4n }] },
+        "bigint context"
+      )
+    ).not.toThrow();
+    expect(errorSpy).toHaveBeenCalledTimes(1);
+
+    const payload = JSON.parse(String(errorSpy.mock.calls[0]?.[0]).trim()) as {
+      count?: string;
+      nested?: { value?: string };
+      list?: Array<string | { deep?: string }>;
+    };
+    expect(payload.count).toBe("1");
+    expect(payload.nested?.value).toBe("2");
+    expect(payload.list?.[0]).toBe("3");
+    expect((payload.list?.[1] as { deep?: string }).deep).toBe("4");
+  });
 });
