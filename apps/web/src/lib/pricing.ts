@@ -1,3 +1,5 @@
+import { env } from "@/lib/env";
+
 export const OFFER_KEYS = ["single_intro_149", "pack5", "pack10", "single_base_299"] as const;
 
 export type OfferKey = (typeof OFFER_KEYS)[number];
@@ -12,7 +14,11 @@ type OfferConfig = {
   credits_granted: number;
   pricing_variant: PricingVariant;
   currency: Currency;
-  stripe_price_env_var: string;
+  stripe_price_env_var:
+    | "STRIPE_PRICE_SINGLE_INTRO_149_EUR"
+    | "STRIPE_PRICE_PACK5_EUR"
+    | "STRIPE_PRICE_PACK10_EUR"
+    | "STRIPE_PRICE_SINGLE_BASE_299_EUR";
   display_price_eur: number;
   ui: {
     label: string;
@@ -81,9 +87,9 @@ const OFFER_CONFIGS: Record<OfferKey, OfferConfig> = {
   }
 };
 
-const getStripePriceId = (envVarName: string): string | null => {
-  const value = process.env[envVarName];
-  if (!value) {
+const getStripePriceId = (envVarName: OfferConfig["stripe_price_env_var"]): string | null => {
+  const value = env[envVarName];
+  if (typeof value !== "string") {
     return null;
   }
 

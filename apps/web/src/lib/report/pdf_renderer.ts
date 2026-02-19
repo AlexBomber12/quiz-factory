@@ -1,3 +1,4 @@
+import { env } from "@/lib/env";
 import { normalizeStringStrict, parsePositiveInt } from "@/lib/utils/strings";
 
 const DEFAULT_RENDER_TIMEOUT_MS = 45_000;
@@ -14,7 +15,7 @@ export type ReportPdfRenderOptions = {
 };
 
 const resolveRenderTimeoutMs = (): number => {
-  const fromEnv = parsePositiveInt(process.env.REPORT_PDF_RENDER_TIMEOUT_MS);
+  const fromEnv = parsePositiveInt(env.REPORT_PDF_RENDER_TIMEOUT_MS);
   return fromEnv ?? DEFAULT_RENDER_TIMEOUT_MS;
 };
 

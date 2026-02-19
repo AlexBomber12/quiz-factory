@@ -1,3 +1,4 @@
+import { env } from "@/lib/env";
 import { NextResponse } from "next/server";
 
 import { parseCookies } from "@/lib/analytics/session";
@@ -108,9 +109,9 @@ const requireRecord = (value: unknown): Record<string, unknown> | null => {
   return value as Record<string, unknown>;
 };
 
-const hasOpenAiApiKey = (): boolean => Boolean(requireString(process.env.OPENAI_API_KEY));
+const hasOpenAiApiKey = (): boolean => Boolean(requireString(env.OPENAI_API_KEY));
 
-const resolveModel = (): string => requireString(process.env.OPENAI_MODEL) ?? DEFAULT_OPENAI_MODEL;
+const resolveModel = (): string => requireString(env.OPENAI_MODEL) ?? DEFAULT_OPENAI_MODEL;
 
 const buildScaleEntries = (scaleScores: Record<string, number>): ScaleEntry[] => {
   return Object.entries(scaleScores)

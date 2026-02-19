@@ -1,3 +1,4 @@
+import { env } from "@/lib/env";
 import { NextResponse } from "next/server";
 
 const normalizeEnv = (value: string | undefined): string | null => {
@@ -10,7 +11,7 @@ const normalizeEnv = (value: string | undefined): string | null => {
 };
 
 export const GET = async (): Promise<Response> => {
-  const commitSha = normalizeEnv(process.env.COMMIT_SHA);
+  const commitSha = normalizeEnv(env.COMMIT_SHA);
   const payload: Record<string, string> = {
     status: "ok",
     server_time: new Date().toISOString()

@@ -1,3 +1,4 @@
+import { env } from "@/lib/env";
 import { createHmac, timingSafeEqual } from "crypto";
 import { normalizeString } from "@/lib/utils/strings";
 import { encodeBase64Url, decodeBase64Url } from "@/lib/utils/encoding";
@@ -179,7 +180,7 @@ const getCookieValue = (cookies: CookieSource, name: string): string | null => {
 
 
 const resolveCreditsCookieSecret = (): string => {
-  const secret = normalizeString(process.env.REPORT_TOKEN_SECRET);
+  const secret = normalizeString(env.REPORT_TOKEN_SECRET);
   if (secret) {
     return secret;
   }

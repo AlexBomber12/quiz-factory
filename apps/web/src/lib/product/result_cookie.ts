@@ -1,3 +1,4 @@
+import { env } from "@/lib/env";
 import { createHmac, timingSafeEqual } from "crypto";
 import { normalizeString } from "@/lib/utils/strings";
 import { encodeBase64Url, decodeBase64Url } from "@/lib/utils/encoding";
@@ -17,7 +18,7 @@ export const RESULT_COOKIE = "RESULT_COOKIE";
 const DEV_RESULT_COOKIE_SECRET = "dev-result-cookie-secret";
 
 const resolveResultCookieSecret = (): string => {
-  const secret = normalizeString(process.env.RESULT_COOKIE_SECRET);
+  const secret = normalizeString(env.RESULT_COOKIE_SECRET);
   if (secret) {
     return secret;
   }

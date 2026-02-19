@@ -607,7 +607,7 @@ Queue (in order)
   - shared @/lib/utils module with tests
 
 118) PR-REFACTOR-03: Centralized Environment Variable Validation (zod)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-REFACTOR-03.md
 - Depends on: PR-REFACTOR-01
 - Outcome:

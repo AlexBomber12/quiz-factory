@@ -1,3 +1,4 @@
+import { env } from "@/lib/env";
 import { NextResponse } from "next/server";
 
 import { runAlertRules } from "@/lib/alerts/engine";
@@ -14,7 +15,7 @@ const normalizeNonEmptyString = (value: unknown): string | null => {
 };
 
 const isAuthorizedRunner = (request: Request): boolean => {
-  const expectedSecret = normalizeNonEmptyString(process.env.ALERTS_RUNNER_SECRET);
+  const expectedSecret = normalizeNonEmptyString(env.ALERTS_RUNNER_SECRET);
   const providedSecret = normalizeNonEmptyString(
     request.headers.get("x-alerts-runner-secret")
   );

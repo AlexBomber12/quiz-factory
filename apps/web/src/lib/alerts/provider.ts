@@ -1,4 +1,5 @@
 import { BigQuery } from "@google-cloud/bigquery";
+import { env } from "@/lib/env";
 
 import { resolveAdminAnalyticsProviderMode } from "../admin_analytics/provider";
 import { getContentDbPool } from "../content_db/pool";
@@ -602,8 +603,10 @@ class BigQueryAlertsProvider implements AlertsProvider {
   }
 }
 
-const readRequiredEnv = (name: string): string => {
-  const value = normalizeNonEmptyString(process.env[name]);
+const readRequiredEnv = (
+  name: "BIGQUERY_PROJECT_ID" | "BIGQUERY_STRIPE_DATASET"
+): string => {
+  const value = normalizeNonEmptyString(env[name]);
   if (!value) {
     throw new Error(`Missing required env var ${name}.`);
   }

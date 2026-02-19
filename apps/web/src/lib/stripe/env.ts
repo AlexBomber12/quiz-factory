@@ -1,3 +1,5 @@
+import { validateEnv } from "@/lib/env";
+
 const PRODUCTION_BUILD_PHASE = "phase-production-build";
 
 const normalizeEnv = (value: string | undefined): string | null => {
@@ -35,7 +37,10 @@ export const assertStripeEnvConfigured = (options: {
     return;
   }
 
-  const missing = options.required.filter((name) => !normalizeEnv(process.env[name]));
+  const resolvedEnv = validateEnv({ enforceProductionRequirements: false });
+  const missing = options.required.filter((name) =>
+    !normalizeEnv(resolvedEnv[name as keyof typeof resolvedEnv])
+  );
   if (missing.length > 0) {
     throw new Error(
       `[Stripe env] Missing required environment variables for ${options.context}: ${missing.join(
@@ -50,4 +55,3 @@ export const assertStripeEnvConfigured = (options: {
 export const resetStripeEnvValidationState = (): void => {
   validatedContexts.clear();
 };
-
