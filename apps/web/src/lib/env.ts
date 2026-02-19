@@ -124,6 +124,10 @@ const collectClientEnv = (rawEnv: ProcessEnv): ClientEnv => {
 };
 
 const buildEnvSnapshot = (rawEnv: ProcessEnv): string => {
+  const runtimeModeSnapshot = [
+    `NODE_ENV=${rawEnv.NODE_ENV ?? ""}`,
+    `NEXT_PHASE=${rawEnv.NEXT_PHASE ?? ""}`
+  ].join("\n");
   const serverSnapshot = SERVER_ENV_KEYS.map(
     (key) => `${key}=${rawEnv[key] ?? ""}`
   ).join("\n");
@@ -133,7 +137,7 @@ const buildEnvSnapshot = (rawEnv: ProcessEnv): string => {
     .map(([key, value]) => `${key}=${value ?? ""}`)
     .join("\n");
 
-  return `${serverSnapshot}\n${clientSnapshot}`;
+  return `${runtimeModeSnapshot}\n${serverSnapshot}\n${clientSnapshot}`;
 };
 
 const parseServerEnv = (
