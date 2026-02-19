@@ -1,5 +1,6 @@
 import { env } from "@/lib/env";
 import { createHash } from "crypto";
+import { logger } from "@/lib/logger";
 
 import { normalizeString } from "./session";
 
@@ -106,25 +107,29 @@ export const sanitizePageUrl = (value: unknown): string | null => {
   if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
     try {
       pathname = new URL(trimmed).pathname;
-    } catch {
+    } catch (error) {
+      logger.warn({ error }, "lib/analytics/page_view.ts fallback handling failed");
       pathname = trimmed;
     }
   } else if (trimmed.startsWith("//")) {
     try {
       pathname = new URL(`https:${trimmed}`).pathname;
-    } catch {
+    } catch (error) {
+      logger.warn({ error }, "lib/analytics/page_view.ts fallback handling failed");
       pathname = trimmed;
     }
   } else if (trimmed.startsWith("/")) {
     try {
       pathname = new URL(trimmed, "https://placeholder.invalid").pathname;
-    } catch {
+    } catch (error) {
+      logger.warn({ error }, "lib/analytics/page_view.ts fallback handling failed");
       pathname = trimmed;
     }
   } else if (trimmed.includes(".")) {
     try {
       pathname = new URL(`https://${trimmed}`).pathname;
-    } catch {
+    } catch (error) {
+      logger.warn({ error }, "lib/analytics/page_view.ts fallback handling failed");
       pathname = trimmed;
     }
   }

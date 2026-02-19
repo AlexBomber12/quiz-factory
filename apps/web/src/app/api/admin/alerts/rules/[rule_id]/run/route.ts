@@ -1,5 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+import { requestContext } from "@/lib/logger_context";
 
 import {
   ADMIN_CSRF_COOKIE,
@@ -60,7 +62,8 @@ const parseRunPayload = async (request: Request): Promise<ParsedRunPayload> => {
         csrfToken: csrfFromHeader ?? readAdminCsrfTokenFromJson(body),
         dryRunFromBody: parseBoolean(body.dry_run)
       };
-    } catch {
+    } catch (error) {
+      logger.error({ error, ...requestContext(request) }, "app/api/admin/alerts/rules/[rule_id]/run/route.ts operation failed");
       return {
         csrfToken: csrfFromHeader,
         dryRunFromBody: false
@@ -74,7 +77,8 @@ const parseRunPayload = async (request: Request): Promise<ParsedRunPayload> => {
       csrfToken: csrfFromHeader ?? readAdminCsrfTokenFromFormData(formData),
       dryRunFromBody: parseBoolean(formData.get("dry_run"))
     };
-  } catch {
+  } catch (error) {
+    logger.error({ error, ...requestContext(request) }, "app/api/admin/alerts/rules/[rule_id]/run/route.ts operation failed");
     return {
       csrfToken: csrfFromHeader,
       dryRunFromBody: false

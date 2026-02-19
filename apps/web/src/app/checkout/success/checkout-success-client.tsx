@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
+import { logger } from "@/lib/logger";
 
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
@@ -55,7 +56,8 @@ const CheckoutSuccessContent = () => {
           },
           body: JSON.stringify({ stripe_session_id: sessionId })
         });
-      } catch {
+      } catch (error) {
+        logger.warn({ error }, "app/checkout/success/checkout-success-client.tsx fallback handling failed");
         response = null;
       }
 
@@ -72,7 +74,8 @@ const CheckoutSuccessContent = () => {
       let payload: ConfirmResponse | null = null;
       try {
         payload = (await response.json()) as ConfirmResponse;
-      } catch {
+      } catch (error) {
+        logger.warn({ error }, "app/checkout/success/checkout-success-client.tsx fallback handling failed");
         payload = null;
       }
 

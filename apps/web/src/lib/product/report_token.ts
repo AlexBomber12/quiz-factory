@@ -2,6 +2,7 @@ import { env } from "@/lib/env";
 import { createHmac, timingSafeEqual } from "crypto";
 import { normalizeString } from "@/lib/utils/strings";
 import { encodeBase64Url, decodeBase64Url } from "@/lib/utils/encoding";
+import { logger } from "@/lib/logger";
 
 export type ReportTokenPayload = {
   purchase_id: string;
@@ -128,7 +129,8 @@ export const verifyReportToken = (value: string): ReportTokenPayload | null => {
   let parsed: unknown = null;
   try {
     parsed = JSON.parse(decodeBase64Url(payloadEncoded));
-  } catch {
+  } catch (error) {
+    logger.error({ error }, "lib/product/report_token.ts operation failed");
     return null;
   }
 

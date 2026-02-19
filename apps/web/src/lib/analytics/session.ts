@@ -1,4 +1,5 @@
 import { randomUUID } from "crypto";
+import { logger } from "@/lib/logger";
 
 import {
   CLICK_COOKIE_NAME,
@@ -112,7 +113,8 @@ export const hasClickIdValues = (clickIds: ClickIdParams): boolean => {
 const safeDecodeCookieValue = (value: string): string => {
   try {
     return decodeURIComponent(value);
-  } catch {
+  } catch (error) {
+    logger.warn({ error }, "lib/analytics/session.ts fallback handling failed");
     return value;
   }
 };
@@ -138,7 +140,8 @@ const parseCookieObject = (
     let parsed: unknown = null;
     try {
       parsed = JSON.parse(candidate);
-    } catch {
+    } catch (error) {
+      logger.warn({ error }, "lib/analytics/session.ts fallback handling failed");
       parsed = null;
     }
 
@@ -152,7 +155,8 @@ const parseCookieObject = (
         if (nested && typeof nested === "object" && !Array.isArray(nested)) {
           return nested as Record<string, string | null | undefined>;
         }
-      } catch {
+      } catch (error) {
+        logger.warn({ error }, "lib/analytics/session.ts fallback handling failed");
         continue;
       }
     }

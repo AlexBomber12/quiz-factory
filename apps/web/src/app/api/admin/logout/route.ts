@@ -1,5 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+import { requestContext } from "@/lib/logger_context";
 
 import {
   ADMIN_CSRF_COOKIE,
@@ -25,7 +27,8 @@ const parseCsrfToken = async (request: Request): Promise<string | null> => {
     try {
       const body = (await request.json()) as Record<string, unknown>;
       return readAdminCsrfTokenFromJson(body);
-    } catch {
+    } catch (error) {
+      logger.error({ error, ...requestContext(request) }, "app/api/admin/logout/route.ts operation failed");
       return null;
     }
   }
@@ -33,7 +36,8 @@ const parseCsrfToken = async (request: Request): Promise<string | null> => {
   try {
     const formData = await request.formData();
     return readAdminCsrfTokenFromFormData(formData);
-  } catch {
+  } catch (error) {
+    logger.error({ error, ...requestContext(request) }, "app/api/admin/logout/route.ts operation failed");
     return null;
   }
 };

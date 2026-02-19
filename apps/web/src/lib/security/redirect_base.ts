@@ -1,4 +1,5 @@
 import { normalizeStringStrict } from "@/lib/utils/strings";
+import { logger } from "@/lib/logger";
 
 export type PublicBaseParts = { origin: string; protocol: string; host: string };
 
@@ -39,7 +40,8 @@ const isUnspecifiedHost = (host: string): boolean => {
 const parseRequestUrl = (request: Request): URL | null => {
   try {
     return new URL(request.url);
-  } catch {
+  } catch (error) {
+    logger.warn({ error }, "lib/security/redirect_base.ts fallback handling failed");
     return null;
   }
 };

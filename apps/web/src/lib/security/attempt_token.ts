@@ -2,6 +2,7 @@ import { env } from "@/lib/env";
 import { createHmac, timingSafeEqual } from "crypto";
 import { normalizeString, parsePositiveInt } from "@/lib/utils/strings";
 import { encodeBase64Url, decodeBase64Url } from "@/lib/utils/encoding";
+import { logger } from "@/lib/logger";
 
 export type AttemptTokenPayload = {
   tenant_id: string;
@@ -77,7 +78,8 @@ const parsePayload = (payloadEncoded: string): AttemptTokenPayload => {
   let parsed: unknown = null;
   try {
     parsed = JSON.parse(decodeBase64Url(payloadEncoded));
-  } catch {
+  } catch (error) {
+    logger.warn({ error }, "lib/security/attempt_token.ts fallback handling failed");
     throw new Error("Attempt token is invalid.");
   }
 

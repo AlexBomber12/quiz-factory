@@ -9,6 +9,7 @@ import {
   type ReactNode
 } from "react";
 import { useRouter } from "next/navigation";
+import { logger } from "@/lib/logger";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -175,7 +176,8 @@ export default function TestRunnerClient({ test }: RunnerProps) {
         page_type: "attempt_entry",
         page_url: window.location.pathname
       }).catch(() => null);
-    } catch {
+    } catch (error) {
+      logger.warn({ error }, "app/t/[slug]/run/test-runner.tsx fallback handling failed");
       setError("Unable to start the test. Please try again.");
     } finally {
       setIsStarting(false);
@@ -285,7 +287,8 @@ export default function TestRunnerClient({ test }: RunnerProps) {
         throw new Error("Score preview failed.");
       }
       router.push(`/t/${test.slug}/preview`);
-    } catch {
+    } catch (error) {
+      logger.warn({ error }, "app/t/[slug]/run/test-runner.tsx fallback handling failed");
       setError("Unable to finish the test. Please try again.");
     } finally {
       setIsCompleting(false);

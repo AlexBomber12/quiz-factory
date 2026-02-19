@@ -1,6 +1,7 @@
 import { env } from "@/lib/env";
 import { createHash } from "crypto";
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 
 import tenantsConfig from "../../../../../config/tenants.json";
 
@@ -53,7 +54,8 @@ const normalizeOrigin = (originHeader: string | null | undefined): string | null
   let originUrl: URL | null = null;
   try {
     originUrl = new URL(trimmed);
-  } catch {
+  } catch (error) {
+    logger.error({ error }, "lib/security/request_guards.ts operation failed");
     originUrl = null;
   }
 
@@ -146,7 +148,8 @@ const isAllowedHostAsync = async (host: string | null): Promise<boolean> => {
       if (dbAllowedHosts.has(host)) {
         return true;
       }
-    } catch {
+    } catch (error) {
+      logger.error({ error }, "lib/security/request_guards.ts operation failed");
       return false;
     }
 
@@ -366,7 +369,8 @@ export const assertMaxBodyBytes = async (
     if (buffer.byteLength > maxBytes) {
       return NextResponse.json({ error: "Request body is too large." }, { status: 413 });
     }
-  } catch {
+  } catch (error) {
+    logger.error({ error }, "lib/security/request_guards.ts operation failed");
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
 

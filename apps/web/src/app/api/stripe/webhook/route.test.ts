@@ -4,7 +4,8 @@ import type { StripeAnalyticsStore } from "@/lib/stripe/store";
 
 const mocks = vi.hoisted(() => ({
   createStripeBigQueryStore: vi.fn(),
-  createStripeContentDbStore: vi.fn()
+  createStripeContentDbStore: vi.fn(),
+  loggerError: vi.fn()
 }));
 
 vi.mock("../../../../lib/stripe/bigquery", () => ({
@@ -13,6 +14,15 @@ vi.mock("../../../../lib/stripe/bigquery", () => ({
 
 vi.mock("../../../../lib/stripe/content_db", () => ({
   createStripeContentDbStore: mocks.createStripeContentDbStore
+}));
+
+vi.mock("@/lib/logger", () => ({
+  logger: {
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: mocks.loggerError
+  }
 }));
 
 const BIGQUERY_ENV_KEYS = [
@@ -127,10 +137,6 @@ describe("stripe webhook store selection", () => {
     mocks.createStripeBigQueryStore.mockReturnValue(bigqueryStore);
     mocks.createStripeContentDbStore.mockReturnValue(contentDbStore);
 
-    const consoleErrorSpy = vi
-      .spyOn(console, "error")
-      .mockImplementation(() => undefined);
-
     const { createStripeAnalyticsStore } = await import("./route");
     const store = createStripeAnalyticsStore();
     const inserted = await store.recordWebhookEvent({
@@ -148,7 +154,7 @@ describe("stripe webhook store selection", () => {
     expect(inserted).toBe(true);
     expect(recordWebhookEventFailure).toHaveBeenCalledTimes(1);
     expect(contentDbStore.recordWebhookEvent).toHaveBeenCalledTimes(1);
-    expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
+    expect(mocks.loggerError).toHaveBeenCalledTimes(1);
   });
 
   it("returns false when every configured store write fails", async () => {
@@ -168,10 +174,6 @@ describe("stripe webhook store selection", () => {
     mocks.createStripeBigQueryStore.mockReturnValue(bigqueryStore);
     mocks.createStripeContentDbStore.mockReturnValue(contentDbStore);
 
-    const consoleErrorSpy = vi
-      .spyOn(console, "error")
-      .mockImplementation(() => undefined);
-
     const { createStripeAnalyticsStore } = await import("./route");
     const store = createStripeAnalyticsStore();
     const inserted = await store.recordWebhookEvent({
@@ -189,6 +191,6 @@ describe("stripe webhook store selection", () => {
     expect(inserted).toBe(false);
     expect(bigqueryFailure).toHaveBeenCalledTimes(1);
     expect(contentDbFailure).toHaveBeenCalledTimes(1);
-    expect(consoleErrorSpy).toHaveBeenCalledTimes(2);
+    expect(mocks.loggerError).toHaveBeenCalledTimes(2);
   });
 });

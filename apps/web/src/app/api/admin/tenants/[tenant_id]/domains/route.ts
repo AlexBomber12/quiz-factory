@@ -1,5 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+import { requestContext } from "@/lib/logger_context";
 
 import {
   ADMIN_CSRF_COOKIE,
@@ -151,7 +153,8 @@ const runAdd = async (request: Request, context: RouteContext): Promise<Response
   let payload: ParsedDomainPayload;
   try {
     payload = await parsePayload(request);
-  } catch {
+  } catch (error) {
+    logger.error({ error, ...requestContext(request) }, "app/api/admin/tenants/[tenant_id]/domains/route.ts operation failed");
     return buildErrorResponse(request, tenantId, "invalid_payload", 400);
   }
 
@@ -196,7 +199,8 @@ const runDelete = async (request: Request, context: RouteContext): Promise<Respo
   let payload: ParsedDomainPayload;
   try {
     payload = await parsePayload(request);
-  } catch {
+  } catch (error) {
+    logger.error({ error, ...requestContext(request) }, "app/api/admin/tenants/[tenant_id]/domains/route.ts operation failed");
     return buildErrorResponse(request, tenantId, "invalid_payload", 400);
   }
 

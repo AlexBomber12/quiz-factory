@@ -1,4 +1,5 @@
 import { getContentDbPool } from "../content_db/pool";
+import { logger } from "@/lib/logger";
 
 type TimestampValue = Date | string;
 
@@ -201,7 +202,8 @@ export const listAdminTests = async (
       params
     );
     rows = result.rows;
-  } catch {
+  } catch (error) {
+    logger.error({ error }, "lib/admin/tests.ts operation failed");
     throw new Error("Unable to load tests.");
   }
 
@@ -258,7 +260,8 @@ export const getAdminTestDetail = async (
     );
 
     testRow = result.rows[0] ?? null;
-  } catch {
+  } catch (error) {
+    logger.error({ error }, "lib/admin/tests.ts operation failed");
     throw new Error("Unable to load test detail.");
   }
 
@@ -313,7 +316,8 @@ export const getAdminTestDetail = async (
 
     versionRows = versionsResult.rows;
     publicationRows = publicationsResult.rows;
-  } catch {
+  } catch (error) {
+    logger.error({ error }, "lib/admin/tests.ts operation failed");
     throw new Error("Unable to load test detail.");
   }
 

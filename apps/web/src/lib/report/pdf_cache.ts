@@ -3,6 +3,7 @@ import { createHash } from "crypto";
 import { promises as fs } from "fs";
 import path from "path";
 import { normalizeStringStrict, parsePositiveInt } from "@/lib/utils/strings";
+import { logger } from "@/lib/logger";
 
 const DEFAULT_CACHE_DIR = path.join(process.cwd(), ".cache", "report-pdf");
 const DEFAULT_TTL_SECONDS = 60 * 60 * 24;
@@ -83,7 +84,8 @@ const isExpired = (mtimeMs: number, nowMs: number, ttlMs: number): boolean => {
 const safeUnlink = async (filePath: string): Promise<void> => {
   try {
     await fs.unlink(filePath);
-  } catch {
+  } catch (error) {
+    logger.warn({ error }, "lib/report/pdf_cache.ts fallback handling failed");
     // Best-effort cleanup.
   }
 };
@@ -109,7 +111,8 @@ export const cleanupExpiredCacheEntries = async (): Promise<void> => {
   let entries: string[] = [];
   try {
     entries = await fs.readdir(dir);
-  } catch {
+  } catch (error) {
+    logger.warn({ error }, "lib/report/pdf_cache.ts fallback handling failed");
     return;
   }
 
@@ -123,7 +126,8 @@ export const cleanupExpiredCacheEntries = async (): Promise<void> => {
           if (isExpired(stat.mtimeMs, nowMs, ttlMs)) {
             await safeUnlink(filePath);
           }
-        } catch {
+        } catch (error) {
+          logger.warn({ error }, "lib/report/pdf_cache.ts fallback handling failed");
           // Ignore missing or unreadable entries.
         }
       })
@@ -149,7 +153,8 @@ export const readReportPdfCache = async (
     const buffer = await fs.readFile(cachePath);
     const ageSeconds = Math.max(0, Math.floor((nowMs - stat.mtimeMs) / 1000));
     return { buffer, cachePath, ageSeconds };
-  } catch {
+  } catch (error) {
+    logger.warn({ error }, "lib/report/pdf_cache.ts fallback handling failed");
     return null;
   }
 };

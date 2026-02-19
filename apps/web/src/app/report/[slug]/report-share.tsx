@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { logger } from "@/lib/logger";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,7 +28,8 @@ const buildResolvedUrl = (sharePath: string, shareUrl: string | null): string =>
 
   try {
     return new URL(sharePath, window.location.origin).toString();
-  } catch {
+  } catch (error) {
+    logger.warn({ error }, "app/report/[slug]/report-share.tsx fallback handling failed");
     return sharePath;
   }
 };
@@ -39,7 +41,8 @@ const postShareClick = async (testId: string, sessionId: string, shareTarget: st
       session_id: sessionId,
       share_target: shareTarget
     });
-  } catch {
+  } catch (error) {
+    logger.warn({ error }, "app/report/[slug]/report-share.tsx fallback handling failed");
     // Best-effort analytics; sharing should still work.
   }
 };
@@ -98,7 +101,8 @@ export default function ReportShare({
     try {
       await navigator.clipboard.writeText(resolvedUrl);
       setIsCopied(true);
-    } catch {
+    } catch (error) {
+      logger.warn({ error }, "app/report/[slug]/report-share.tsx fallback handling failed");
       setIsCopied(false);
     }
   };
@@ -117,7 +121,8 @@ export default function ReportShare({
     try {
       await navigator.clipboard.writeText(resolvedReportUrl);
       setIsReportCopied(true);
-    } catch {
+    } catch (error) {
+      logger.warn({ error }, "app/report/[slug]/report-share.tsx fallback handling failed");
       setIsReportCopied(false);
     }
   };

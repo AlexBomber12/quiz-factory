@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { logger } from "@/lib/logger";
 
 import { emitReportPdfDownload } from "@/lib/product/client";
 import type { ReportPdfMode } from "@/lib/report/pdf_mode";
@@ -60,7 +61,8 @@ export default function ReportPdfButton({
         const downloaded = await downloadPdf(response);
         shouldNavigateToPrint = !downloaded;
       }
-    } catch {
+    } catch (error) {
+      logger.warn({ error }, "app/report/[slug]/report-pdf-button.tsx fallback handling failed");
       // Best-effort analytics, continue to print view.
       shouldNavigateToPrint = true;
     } finally {

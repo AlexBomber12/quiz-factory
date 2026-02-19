@@ -1,5 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+import { requestContext } from "@/lib/logger_context";
 
 import {
   ADMIN_CSRF_COOKIE,
@@ -139,7 +141,8 @@ const runPatch = async (request: Request, context: RouteContext): Promise<Respon
   let payload: ParsedStatusPayload;
   try {
     payload = await parsePayload(request);
-  } catch {
+  } catch (error) {
+    logger.error({ error, ...requestContext(request) }, "app/api/admin/alerts/instances/[instance_id]/route.ts operation failed");
     return buildErrorResponse(request, instanceId, "invalid_payload", 400);
   }
 

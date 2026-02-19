@@ -8,6 +8,8 @@ import {
   type OfferKey
 } from "@/lib/pricing";
 import { buildStripeMetadata } from "@/lib/stripe/metadata";
+import { logger } from "@/lib/logger";
+import { requestContext } from "@/lib/logger_context";
 
 const normalizeBoolean = (value: unknown): boolean | null => {
   if (typeof value === "boolean") {
@@ -38,7 +40,8 @@ export const POST = withApiGuards(async (request: Request): Promise<Response> =>
       }
       offerKey = requestedOfferKey;
     }
-  } catch {
+  } catch (error) {
+    logger.error({ error, ...requestContext(request) }, "app/api/checkout/start/route.ts operation failed");
     offerKey = DEFAULT_OFFER_KEY;
   }
 

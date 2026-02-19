@@ -1,5 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+import { requestContext } from "@/lib/logger_context";
 
 import {
   MAX_IMPORT_FILES,
@@ -81,7 +83,8 @@ const parseUploadForm = async (
   let formData: FormData;
   try {
     formData = await request.formData();
-  } catch {
+  } catch (error) {
+    logger.error({ error, ...requestContext(request) }, "app/api/admin/imports/route.ts operation failed");
     throw new ImportUploadError("invalid_form_data", 400);
   }
 
@@ -218,7 +221,8 @@ export const POST = async (request: Request): Promise<Response> => {
     }
 
     return NextResponse.redirect(buildRedirectUrl(request, `/admin/imports/${created.id}`), 303);
-  } catch {
+  } catch (error) {
+    logger.error({ error, ...requestContext(request) }, "app/api/admin/imports/route.ts operation failed");
     return buildErrorResponse(request, "db_error", 500);
   }
 };

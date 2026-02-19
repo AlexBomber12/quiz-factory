@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+import { requestContext } from "@/lib/logger_context";
 
 import { buildBaseEventProperties } from "@/lib/analytics/events";
 import { recordAnalyticsEventToContentDb } from "@/lib/analytics/event_store";
@@ -77,7 +79,8 @@ export const POST = withApiGuards(async (request: Request): Promise<Response> =>
   let body: Record<string, unknown> | null = null;
   try {
     body = requireRecord(await request.json());
-  } catch {
+  } catch (error) {
+    logger.error({ error, ...requestContext(request) }, "app/api/checkout/confirm/route.ts operation failed");
     body = null;
   }
 
@@ -104,7 +107,8 @@ export const POST = withApiGuards(async (request: Request): Promise<Response> =>
   let session: Awaited<ReturnType<typeof stripeClient.checkout.sessions.retrieve>>;
   try {
     session = await stripeClient.checkout.sessions.retrieve(stripeSessionId);
-  } catch {
+  } catch (error) {
+    logger.error({ error, ...requestContext(request) }, "app/api/checkout/confirm/route.ts operation failed");
     return NextResponse.json(
       { error: "Unable to retrieve Stripe checkout session." },
       { status: 502 }
@@ -169,7 +173,8 @@ export const POST = withApiGuards(async (request: Request): Promise<Response> =>
     try {
       // Safe to attempt on every confirmation retry because enqueue is idempotent by purchase_id.
       await enqueueReportJob(enqueueInput);
-    } catch {
+    } catch (error) {
+      logger.error({ error, ...requestContext(request) }, "app/api/checkout/confirm/route.ts operation failed");
       // Best-effort enqueue; checkout confirm must still succeed.
     }
   }

@@ -1,5 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+import { requestContext } from "@/lib/logger_context";
 
 import {
   ADMIN_CSRF_COOKIE,
@@ -66,7 +68,8 @@ const parseRequest = async (request: Request): Promise<ParsedRequest> => {
   let parsedSpec: unknown;
   try {
     parsedSpec = JSON.parse(rawSpec);
-  } catch {
+  } catch (error) {
+    logger.error({ error, ...requestContext(request) }, "app/api/admin/products/[product_id]/versions/route.ts operation failed");
     throw new Error("invalid_spec_json");
   }
 
@@ -146,7 +149,8 @@ export const POST = async (
   let parsed: ParsedRequest;
   try {
     parsed = await parseRequest(request);
-  } catch {
+  } catch (error) {
+    logger.error({ error, ...requestContext(request) }, "app/api/admin/products/[product_id]/versions/route.ts operation failed");
     return buildErrorResponse(request, productId, "invalid_spec_json", 400);
   }
 

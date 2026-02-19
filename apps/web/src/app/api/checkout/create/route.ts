@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+import { requestContext } from "@/lib/logger_context";
 
 import { getTrackingContextFromRequest, parseCookies } from "@/lib/analytics/session";
 import { loadPublishedTestById } from "@/lib/content/provider";
@@ -116,7 +118,8 @@ export const POST = withApiGuards(async (request: Request): Promise<Response> =>
   let body: Record<string, unknown> | null = null;
   try {
     body = requireRecord(await request.json());
-  } catch {
+  } catch (error) {
+    logger.error({ error, ...requestContext(request) }, "app/api/checkout/create/route.ts operation failed");
     body = null;
   }
 
@@ -277,7 +280,8 @@ export const POST = withApiGuards(async (request: Request): Promise<Response> =>
       success_url: successUrl,
       cancel_url: cancelUrl
     });
-  } catch {
+  } catch (error) {
+    logger.error({ error, ...requestContext(request) }, "app/api/checkout/create/route.ts operation failed");
     session = null;
   }
 

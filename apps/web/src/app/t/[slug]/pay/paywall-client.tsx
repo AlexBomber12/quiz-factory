@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { logger } from "@/lib/logger";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -146,7 +147,8 @@ export default function PaywallClient({
       }
 
       window.location.assign(checkoutUrl);
-    } catch {
+    } catch (error) {
+      logger.warn({ error }, "app/t/[slug]/pay/paywall-client.tsx fallback handling failed");
       setError("Unable to start checkout. Please try again.");
     } finally {
       setIsSubmitting(false);
@@ -187,7 +189,8 @@ export default function PaywallClient({
       }
 
       window.location.assign(`/report/${slug}`);
-    } catch {
+    } catch (error) {
+      logger.warn({ error }, "app/t/[slug]/pay/paywall-client.tsx fallback handling failed");
       setError("Unable to unlock your report. Please try again.");
     } finally {
       setIsSubmitting(false);

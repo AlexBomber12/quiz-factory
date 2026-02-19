@@ -51,6 +51,7 @@ import {
   type KpiCard,
   type TimeseriesPoint
 } from "../types";
+import { logger } from "@/lib/logger";
 
 type ContentDbClient = {
   query: (
@@ -586,7 +587,8 @@ export class ContentDbAdminAnalyticsProvider implements AdminAnalyticsProvider {
             tests: available.has("tests"),
             tenant_tests: available.has("tenant_tests")
           };
-        } catch {
+        } catch (error) {
+          logger.error({ error }, "lib/admin_analytics/providers/content_db.ts operation failed");
           return {
             analytics_events: false,
             stripe_purchases: false,
