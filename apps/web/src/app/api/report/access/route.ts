@@ -27,15 +27,7 @@ import {
 import { enqueueReportJob, getReportJobByPurchaseId, markJobReady } from "@/lib/report/report_job_repo";
 import { inferStyleIdFromBrief } from "@/lib/report/style_inference";
 import { verifyReportLinkToken } from "@/lib/report_link_token";
-import {
-  DEFAULT_EVENT_BODY_BYTES,
-  DEFAULT_EVENT_RATE_LIMIT,
-  assertAllowedHostAsync,
-  assertAllowedMethod,
-  assertAllowedOriginAsync,
-  assertMaxBodyBytes,
-  rateLimit
-} from "@/lib/security/request_guards";
+import { withApiGuards } from "@/lib/security/with_api_guards";
 import { resolveTenantContext } from "@/lib/tenants/request";
 
 const DEFAULT_OPENAI_MODEL = "gpt-4o";
@@ -304,32 +296,7 @@ const respondWithGenerated = async (context: AccessContext): Promise<Response> =
   );
 };
 
-export const POST = async (request: Request): Promise<Response> => {
-  const methodResponse = assertAllowedMethod(request, ["POST"]);
-  if (methodResponse) {
-    return methodResponse;
-  }
-
-  const hostResponse = await assertAllowedHostAsync(request);
-  if (hostResponse) {
-    return hostResponse;
-  }
-
-  const originResponse = await assertAllowedOriginAsync(request);
-  if (originResponse) {
-    return originResponse;
-  }
-
-  const rateLimitResponse = rateLimit(request, DEFAULT_EVENT_RATE_LIMIT);
-  if (rateLimitResponse) {
-    return rateLimitResponse;
-  }
-
-  const bodyResponse = await assertMaxBodyBytes(request, DEFAULT_EVENT_BODY_BYTES);
-  if (bodyResponse) {
-    return bodyResponse;
-  }
-
+export const POST = withApiGuards(async (request: Request): Promise<Response> => {
   let body: Record<string, unknown> | null = null;
   try {
     body = requireRecord(await request.json());
@@ -503,4 +470,4 @@ export const POST = async (request: Request): Promise<Response> => {
   }
 
   return NextResponse.json({ error: "Report access is invalid." }, { status: 403 });
-};
+}, { methods: ["POST"] });

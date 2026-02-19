@@ -17,15 +17,7 @@ import {
   signReportToken
 } from "@/lib/product/report_token";
 import { RESULT_COOKIE, verifyResultCookie } from "@/lib/product/result_cookie";
-import {
-  DEFAULT_EVENT_BODY_BYTES,
-  DEFAULT_EVENT_RATE_LIMIT,
-  assertAllowedHostAsync,
-  assertAllowedMethod,
-  assertAllowedOriginAsync,
-  assertMaxBodyBytes,
-  rateLimit
-} from "@/lib/security/request_guards";
+import { withApiGuards } from "@/lib/security/with_api_guards";
 import { resolveTenantContext } from "@/lib/tenants/request";
 
 const REPORT_TOKEN_TTL_SECONDS = 60 * 60 * 24;
@@ -47,32 +39,7 @@ const requireRecord = (value: unknown): Record<string, unknown> | null => {
   return value as Record<string, unknown>;
 };
 
-export const POST = async (request: Request): Promise<Response> => {
-  const methodResponse = assertAllowedMethod(request, ["POST"]);
-  if (methodResponse) {
-    return methodResponse;
-  }
-
-  const hostResponse = await assertAllowedHostAsync(request);
-  if (hostResponse) {
-    return hostResponse;
-  }
-
-  const originResponse = await assertAllowedOriginAsync(request);
-  if (originResponse) {
-    return originResponse;
-  }
-
-  const rateLimitResponse = rateLimit(request, DEFAULT_EVENT_RATE_LIMIT);
-  if (rateLimitResponse) {
-    return rateLimitResponse;
-  }
-
-  const bodyResponse = await assertMaxBodyBytes(request, DEFAULT_EVENT_BODY_BYTES);
-  if (bodyResponse) {
-    return bodyResponse;
-  }
-
+export const POST = withApiGuards(async (request: Request): Promise<Response> => {
   let body: Record<string, unknown> | null = null;
   try {
     body = requireRecord(await request.json());
@@ -188,4 +155,4 @@ export const POST = async (request: Request): Promise<Response> => {
   }
 
   return response;
-};
+}, { methods: ["POST"] });

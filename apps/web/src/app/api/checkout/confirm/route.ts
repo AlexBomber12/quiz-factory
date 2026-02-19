@@ -27,15 +27,7 @@ import {
 } from "@/lib/product/report_token";
 import { sanitizeEnqueueReportJobInput } from "@/lib/report/report_job_inputs";
 import { enqueueReportJob } from "@/lib/report/report_job_repo";
-import {
-  DEFAULT_EVENT_BODY_BYTES,
-  DEFAULT_EVENT_RATE_LIMIT,
-  assertAllowedHostAsync,
-  assertAllowedMethod,
-  assertAllowedOriginAsync,
-  assertMaxBodyBytes,
-  rateLimit
-} from "@/lib/security/request_guards";
+import { withApiGuards } from "@/lib/security/with_api_guards";
 import { createStripeClient } from "@/lib/stripe/client";
 import { assertStripeEnvConfigured } from "@/lib/stripe/env";
 import { parseStripeMetadata } from "@/lib/stripe/metadata";
@@ -81,32 +73,7 @@ const isPaidSession = (session: {
   return paymentStatus === "paid" || paymentStatus === "no_payment_required" || status === "complete";
 };
 
-export const POST = async (request: Request): Promise<Response> => {
-  const methodResponse = assertAllowedMethod(request, ["POST"]);
-  if (methodResponse) {
-    return methodResponse;
-  }
-
-  const hostResponse = await assertAllowedHostAsync(request);
-  if (hostResponse) {
-    return hostResponse;
-  }
-
-  const originResponse = await assertAllowedOriginAsync(request);
-  if (originResponse) {
-    return originResponse;
-  }
-
-  const rateLimitResponse = rateLimit(request, DEFAULT_EVENT_RATE_LIMIT);
-  if (rateLimitResponse) {
-    return rateLimitResponse;
-  }
-
-  const bodyResponse = await assertMaxBodyBytes(request, DEFAULT_EVENT_BODY_BYTES);
-  if (bodyResponse) {
-    return bodyResponse;
-  }
-
+export const POST = withApiGuards(async (request: Request): Promise<Response> => {
   let body: Record<string, unknown> | null = null;
   try {
     body = requireRecord(await request.json());
@@ -311,4 +278,4 @@ export const POST = async (request: Request): Promise<Response> => {
   }
 
   return response;
-};
+}, { methods: ["POST"] });
