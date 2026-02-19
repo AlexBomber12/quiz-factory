@@ -1,3 +1,4 @@
+import { env } from "@/lib/env";
 import { createHash } from "crypto";
 import { NextResponse } from "next/server";
 
@@ -86,7 +87,7 @@ for (const tenant of tenantRegistry) {
 
 const getExtraAllowedHosts = (): Set<string> => {
   const extraHosts = new Set<string>();
-  const raw = process.env.EXTRA_ALLOWED_HOSTS;
+  const raw = env.EXTRA_ALLOWED_HOSTS;
   if (!raw) {
     return extraHosts;
   }
@@ -207,13 +208,13 @@ const cleanupRateLimitState = (now: number): void => {
 const resolveRateLimitConfig = (
   options: RateLimitOptions
 ): { enabled: boolean; windowSeconds: number; maxRequests: number } => {
-  const envEnabled = parseBoolean(process.env.RATE_LIMIT_ENABLED);
+  const envEnabled = parseBoolean(env.RATE_LIMIT_ENABLED);
   const enabled = envEnabled ?? options.enabled ?? true;
 
-  const envWindowSeconds = parsePositiveInt(process.env.RATE_LIMIT_WINDOW_SECONDS);
+  const envWindowSeconds = parsePositiveInt(env.RATE_LIMIT_WINDOW_SECONDS);
   const windowSeconds = envWindowSeconds ?? options.windowSeconds;
 
-  const envMaxRequests = parsePositiveInt(process.env.RATE_LIMIT_MAX_REQUESTS);
+  const envMaxRequests = parsePositiveInt(env.RATE_LIMIT_MAX_REQUESTS);
   const maxRequests = envMaxRequests ?? options.maxRequests;
 
   return { enabled, windowSeconds, maxRequests };
@@ -233,7 +234,7 @@ const resolveRateLimitKey = (
     return { key: "ip:unknown", error: null };
   }
 
-  let salt = process.env.RATE_LIMIT_SALT;
+  let salt = env.RATE_LIMIT_SALT;
   if (!salt) {
     if (process.env.NODE_ENV === "production") {
       return {

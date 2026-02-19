@@ -1,3 +1,4 @@
+import { env } from "@/lib/env";
 import { createHmac, timingSafeEqual } from "crypto";
 import { normalizeString, parsePositiveInt } from "@/lib/utils/strings";
 import { encodeBase64Url, decodeBase64Url } from "@/lib/utils/encoding";
@@ -25,12 +26,12 @@ export const resolveAttemptTokenTtlSeconds = (override?: number): number => {
     return Math.floor(override);
   }
 
-  const envTtl = parsePositiveInt(process.env.ATTEMPT_TOKEN_TTL_SECONDS);
+  const envTtl = parsePositiveInt(env.ATTEMPT_TOKEN_TTL_SECONDS);
   return envTtl ?? DEFAULT_ATTEMPT_TOKEN_TTL_SECONDS;
 };
 
 const resolveAttemptTokenSecret = (): string => {
-  const secret = normalizeString(process.env.ATTEMPT_TOKEN_SECRET);
+  const secret = normalizeString(env.ATTEMPT_TOKEN_SECRET);
   if (secret) {
     return secret;
   }

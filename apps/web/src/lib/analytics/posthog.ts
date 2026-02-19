@@ -1,3 +1,4 @@
+import { env } from "@/lib/env";
 import type { AnalyticsEventName, AnalyticsEventProperties } from "./events";
 
 type CapturePayload = {
@@ -21,12 +22,12 @@ export const capturePosthogEvent = async (
   properties: AnalyticsEventProperties,
   fetchFn: typeof fetch = fetch
 ): Promise<{ ok: boolean; skipped: boolean }> => {
-  const apiKey = process.env.POSTHOG_SERVER_KEY;
+  const apiKey = env.POSTHOG_SERVER_KEY;
   if (!apiKey) {
     return { ok: false, skipped: true };
   }
 
-  const host = process.env.POSTHOG_HOST ?? "https://app.posthog.com";
+  const host = env.POSTHOG_HOST ?? "https://app.posthog.com";
   const url = new URL("/capture/", host).toString();
 
   const propertiesWithGeo: AnalyticsEventProperties & { $geoip_disable?: boolean } = {

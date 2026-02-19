@@ -1,3 +1,4 @@
+import { env } from "@/lib/env";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
@@ -60,11 +61,11 @@ const resolveParams = async (params: RouteContext["params"]): Promise<{ id: stri
 };
 
 const resolveModel = (): string => {
-  return normalizeNonEmptyString(process.env.OPENAI_MODEL) ?? DEFAULT_OPENAI_MODEL;
+  return normalizeNonEmptyString(env.OPENAI_MODEL) ?? DEFAULT_OPENAI_MODEL;
 };
 
 const hasOpenAiApiKey = (): boolean => {
-  return Boolean(normalizeNonEmptyString(process.env.OPENAI_API_KEY));
+  return Boolean(normalizeNonEmptyString(env.OPENAI_API_KEY));
 };
 
 const parsePayloadFromJson = async (request: Request): Promise<ParsedInsightPayload> => {

@@ -1,3 +1,4 @@
+import { env } from "@/lib/env";
 import { normalizeString } from "@/lib/utils/strings";
 
 const textEncoder = new TextEncoder();
@@ -53,7 +54,7 @@ const decodeString = (value: string): string => {
 };
 
 const getSessionSecret = (): string | null => {
-  return normalizeString(process.env.ADMIN_SESSION_SECRET);
+  return normalizeString(env.ADMIN_SESSION_SECRET);
 };
 
 const requireSessionSecret = (): string => {
@@ -143,7 +144,7 @@ const isSessionPayload = (value: unknown): value is AdminSessionPayload => {
 };
 
 const getEnvToken = (key: "ADMIN_TOKEN" | "EDITOR_TOKEN"): string | null => {
-  return normalizeString(process.env[key]);
+  return normalizeString(env[key]);
 };
 
 export const resolveAdminRoleFromToken = (token: string): AdminRole | null => {

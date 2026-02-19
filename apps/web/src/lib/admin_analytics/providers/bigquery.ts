@@ -1,4 +1,5 @@
 import { BigQuery } from "@google-cloud/bigquery";
+import { env } from "@/lib/env";
 
 import {
   combineHealthStatus,
@@ -3174,9 +3175,15 @@ export class BigQueryAdminAnalyticsProvider implements AdminAnalyticsProvider {
   }
 }
 
-const readRequiredEnv = (name: string): string => {
-  const value = process.env[name];
-  if (!value || value.trim().length === 0) {
+const readRequiredEnv = (
+  name:
+    | "BIGQUERY_PROJECT_ID"
+    | "BIGQUERY_STRIPE_DATASET"
+    | "BIGQUERY_RAW_COSTS_DATASET"
+    | "BIGQUERY_TMP_DATASET"
+): string => {
+  const value = env[name];
+  if (typeof value !== "string" || value.trim().length === 0) {
     throw new Error(`Missing required env var ${name}.`);
   }
 

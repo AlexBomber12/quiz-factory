@@ -1,3 +1,4 @@
+import { env } from "@/lib/env";
 import { createHash } from "crypto";
 
 import { normalizeString } from "./session";
@@ -62,7 +63,7 @@ export const resolvePageViewSampleRate = (pageType: string): number => {
     return 1;
   }
 
-  return resolveSampleRate(process.env.PAGE_VIEW_SAMPLE_RATE);
+  return resolveSampleRate(env.PAGE_VIEW_SAMPLE_RATE);
 };
 
 export const shouldEmitPageView = (options: {

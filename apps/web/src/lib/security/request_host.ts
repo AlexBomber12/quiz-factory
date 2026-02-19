@@ -1,3 +1,4 @@
+import { env } from "@/lib/env";
 import { normalizeStringStrict, parseBoolean } from "@/lib/utils/strings";
 
 type HeaderLike = Pick<Headers, "get">;
@@ -18,7 +19,7 @@ const takeFirstHost = (value: string | null | undefined): string | null => {
 };
 
 const shouldTrustForwardedHost = (): boolean => {
-  return parseBoolean(process.env.TRUST_X_FORWARDED_HOST) ?? false;
+  return parseBoolean(env.TRUST_X_FORWARDED_HOST) ?? false;
 };
 
 export const normalizeHostname = (value: string | null | undefined): string | null => {

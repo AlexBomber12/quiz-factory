@@ -1,3 +1,4 @@
+import { env } from "@/lib/env";
 import { getContentDbPool, hasContentDatabaseUrl } from "../content_db/pool";
 import { resolveContentSource, type ContentSource } from "../content/provider";
 import { listTenantRegistry } from "./publish";
@@ -56,7 +57,7 @@ const readAppliedMigrationsState = async (): Promise<boolean> => {
 
 export const readAdminDiagnostics = async (): Promise<AdminDiagnostics> => {
   const nodeEnv = normalizeEnvString(process.env.NODE_ENV) ?? "unknown";
-  const commitSha = normalizeEnvString(process.env.COMMIT_SHA);
+  const commitSha = normalizeEnvString(env.COMMIT_SHA);
   const contentSource = resolveContentSource();
   const contentDatabaseUrlConfigured = hasContentDatabaseUrl();
   const tenantRegistryCount = listTenantRegistry().length;

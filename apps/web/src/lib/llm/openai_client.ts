@@ -1,3 +1,4 @@
+import { env } from "@/lib/env";
 import { normalizeString } from "@/lib/utils/strings";
 
 const DEFAULT_OPENAI_BASE_URL = "https://api.openai.com/v1";
@@ -22,12 +23,12 @@ const requireNonEmptyString = (value: string, name: string): string => {
 };
 
 const resolveBaseUrl = (): string => {
-  const configuredBaseUrl = normalizeString(process.env.OPENAI_BASE_URL) ?? DEFAULT_OPENAI_BASE_URL;
+  const configuredBaseUrl = normalizeString(env.OPENAI_BASE_URL) ?? DEFAULT_OPENAI_BASE_URL;
   return configuredBaseUrl.endsWith("/") ? configuredBaseUrl.slice(0, -1) : configuredBaseUrl;
 };
 
 const resolveApiKey = (): string => {
-  const apiKey = normalizeString(process.env.OPENAI_API_KEY);
+  const apiKey = normalizeString(env.OPENAI_API_KEY);
   if (!apiKey) {
     throw new Error("OPENAI_API_KEY is required.");
   }

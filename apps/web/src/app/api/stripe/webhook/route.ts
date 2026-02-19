@@ -1,3 +1,4 @@
+import { env } from "@/lib/env";
 import { NextResponse } from "next/server";
 
 import { capturePosthogEvent } from "@/lib/analytics/posthog";
@@ -38,15 +39,15 @@ const isJsonLikeContentType = (value: string | null): boolean => {
 
 const getMissingStripeEnv = (): string[] => {
   const required = ["STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET"] as const;
-  return required.filter((name) => !isNonEmptyEnv(process.env[name]));
+  return required.filter((name) => !isNonEmptyEnv(env[name]));
 };
 
 const hasBigQueryStripeConfig = (): boolean => {
   return (
-    isNonEmptyEnv(process.env.BIGQUERY_PROJECT_ID) ||
-    isNonEmptyEnv(process.env.GOOGLE_CLOUD_PROJECT) ||
-    isNonEmptyEnv(process.env.GCP_PROJECT) ||
-    isNonEmptyEnv(process.env.BIGQUERY_STRIPE_DATASET)
+    isNonEmptyEnv(env.BIGQUERY_PROJECT_ID) ||
+    isNonEmptyEnv(env.GOOGLE_CLOUD_PROJECT) ||
+    isNonEmptyEnv(env.GCP_PROJECT) ||
+    isNonEmptyEnv(env.BIGQUERY_STRIPE_DATASET)
   );
 };
 
@@ -167,7 +168,7 @@ export const POST = async (request: Request): Promise<Response> => {
   }
 
   const signature = request.headers.get("stripe-signature");
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET as string;
+  const webhookSecret = env.STRIPE_WEBHOOK_SECRET as string;
 
   const payload = await request.text();
   const validSignature = verifyStripeSignature({

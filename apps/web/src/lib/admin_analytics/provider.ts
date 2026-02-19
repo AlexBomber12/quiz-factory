@@ -17,6 +17,7 @@ import type {
 import { createBigQueryAdminAnalyticsProvider } from "./providers/bigquery";
 import { createContentDbAdminAnalyticsProvider } from "./providers/content_db";
 import { createMockAdminAnalyticsProvider } from "./providers/mock";
+import { env } from "@/lib/env";
 
 export interface AdminAnalyticsProvider {
   getOverview(filters: AdminAnalyticsFilters): Promise<AdminAnalyticsOverviewResponse>;
@@ -70,17 +71,17 @@ const isNonEmptyEnv = (value: string | undefined): boolean => {
   return typeof value === "string" && value.trim().length > 0;
 };
 
-const hasBigQueryConfig = (env: ProviderEnv = process.env as ProviderEnv): boolean => {
+const hasBigQueryConfig = (values: ProviderEnv = env as ProviderEnv): boolean => {
   return (
-    isNonEmptyEnv(env.BIGQUERY_PROJECT_ID) &&
-    isNonEmptyEnv(env.BIGQUERY_STRIPE_DATASET) &&
-    isNonEmptyEnv(env.BIGQUERY_RAW_COSTS_DATASET) &&
-    isNonEmptyEnv(env.BIGQUERY_TMP_DATASET)
+    isNonEmptyEnv(values.BIGQUERY_PROJECT_ID) &&
+    isNonEmptyEnv(values.BIGQUERY_STRIPE_DATASET) &&
+    isNonEmptyEnv(values.BIGQUERY_RAW_COSTS_DATASET) &&
+    isNonEmptyEnv(values.BIGQUERY_TMP_DATASET)
   );
 };
 
-const hasContentDbConfig = (env: ProviderEnv = process.env as ProviderEnv): boolean => {
-  return isNonEmptyEnv(env.CONTENT_DATABASE_URL);
+const hasContentDbConfig = (values: ProviderEnv = env as ProviderEnv): boolean => {
+  return isNonEmptyEnv(values.CONTENT_DATABASE_URL);
 };
 
 const logProviderSelectionWarning = (key: string, message: string): void => {
@@ -93,9 +94,9 @@ const logProviderSelectionWarning = (key: string, message: string): void => {
 };
 
 export const resolveAdminAnalyticsProviderMode = (
-  env: ProviderEnv = process.env as ProviderEnv
+  values: ProviderEnv = env as ProviderEnv
 ): AdminAnalyticsProviderMode => {
-  const override = env.ADMIN_ANALYTICS_MODE?.trim().toLowerCase() ?? "";
+  const override = values.ADMIN_ANALYTICS_MODE?.trim().toLowerCase() ?? "";
 
   if (override.length > 0) {
     if (override === "mock") {
@@ -103,7 +104,7 @@ export const resolveAdminAnalyticsProviderMode = (
     }
 
     if (override === "bigquery") {
-      if (hasBigQueryConfig(env)) {
+      if (hasBigQueryConfig(values)) {
         return "bigquery";
       }
 
@@ -115,7 +116,7 @@ export const resolveAdminAnalyticsProviderMode = (
     }
 
     if (override === "content_db") {
-      if (hasContentDbConfig(env)) {
+      if (hasContentDbConfig(values)) {
         return "content_db";
       }
 
@@ -133,11 +134,11 @@ export const resolveAdminAnalyticsProviderMode = (
     return "mock";
   }
 
-  if (hasBigQueryConfig(env)) {
+  if (hasBigQueryConfig(values)) {
     return "bigquery";
   }
 
-  if (hasContentDbConfig(env)) {
+  if (hasContentDbConfig(values)) {
     return "content_db";
   }
 

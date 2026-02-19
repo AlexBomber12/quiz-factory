@@ -1,3 +1,4 @@
+import { env } from "@/lib/env";
 import { createHmac, timingSafeEqual } from "crypto";
 
 import { normalizeLocaleTag, type LocaleTag } from "./content/types";
@@ -80,7 +81,7 @@ const parseEpochSeconds = (value: Date | string | number): number | null => {
 };
 
 const resolveReportLinkTokenSecret = (): string => {
-  const secret = normalizeString(process.env.REPORT_TOKEN_SECRET);
+  const secret = normalizeString(env.REPORT_TOKEN_SECRET);
   if (secret) {
     return secret;
   }

@@ -1,3 +1,4 @@
+import { env } from "@/lib/env";
 import {
   getPublishedProductBySlug as getPublishedProductBySlugFromDb,
   listTenantProducts as listTenantProductsFromDb,
@@ -71,7 +72,7 @@ const DEFAULT_CONTENT_SOURCE: ContentSource = "fs";
 const DEFAULT_PRODUCT_LOCALE: LocaleTag = "en";
 
 export const resolveContentSource = (): ContentSource => {
-  const rawSource = process.env.CONTENT_SOURCE;
+  const rawSource = env.CONTENT_SOURCE;
   if (!rawSource) {
     return DEFAULT_CONTENT_SOURCE;
   }

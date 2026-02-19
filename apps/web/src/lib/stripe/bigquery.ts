@@ -1,3 +1,4 @@
+import { env } from "@/lib/env";
 import { BigQuery } from "@google-cloud/bigquery";
 
 import type {
@@ -77,10 +78,10 @@ export class BigQueryStripeAnalyticsStore implements StripeAnalyticsStore {
 
 export const createStripeBigQueryStore = (): BigQueryStripeAnalyticsStore => {
   const projectId =
-    process.env.BIGQUERY_PROJECT_ID ??
-    process.env.GOOGLE_CLOUD_PROJECT ??
-    process.env.GCP_PROJECT;
-  const datasetId = process.env.BIGQUERY_STRIPE_DATASET ?? DEFAULT_DATASET_ID;
+    env.BIGQUERY_PROJECT_ID ??
+    env.GOOGLE_CLOUD_PROJECT ??
+    env.GCP_PROJECT;
+  const datasetId = env.BIGQUERY_STRIPE_DATASET ?? DEFAULT_DATASET_ID;
   const bigquery = projectId ? new BigQuery({ projectId }) : new BigQuery();
 
   return new BigQueryStripeAnalyticsStore(bigquery, datasetId);

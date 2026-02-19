@@ -1,3 +1,5 @@
+import { env } from "@/lib/env";
+
 export type ReportPdfMode = "client" | "server";
 
 const DEFAULT_MODE: ReportPdfMode = "client";
@@ -11,7 +13,7 @@ const normalizeMode = (value: string | undefined): ReportPdfMode => {
 };
 
 export const resolveReportPdfMode = (): ReportPdfMode => {
-  return normalizeMode(process.env.REPORT_PDF_MODE);
+  return normalizeMode(env.REPORT_PDF_MODE);
 };
 
 export const isServerReportPdfMode = (): boolean => {

@@ -1,3 +1,4 @@
+import { env } from "@/lib/env";
 import { createHash } from "crypto";
 import { promises as fs } from "fs";
 import path from "path";
@@ -25,17 +26,17 @@ export type ReportPdfCacheHit = {
 };
 
 export const resolveReportPdfCacheDir = (): string => {
-  const fromEnv = normalizeStringStrict(process.env.REPORT_PDF_CACHE_DIR);
+  const fromEnv = normalizeStringStrict(env.REPORT_PDF_CACHE_DIR);
   return fromEnv ?? DEFAULT_CACHE_DIR;
 };
 
 export const resolveReportPdfCacheTtlSeconds = (): number => {
-  const fromEnv = parsePositiveInt(process.env.REPORT_PDF_CACHE_TTL_SECONDS);
+  const fromEnv = parsePositiveInt(env.REPORT_PDF_CACHE_TTL_SECONDS);
   return fromEnv ?? DEFAULT_TTL_SECONDS;
 };
 
 const resolveTemplateSeed = (): string => {
-  const fromEnv = normalizeStringStrict(process.env.REPORT_PDF_TEMPLATE_VERSION);
+  const fromEnv = normalizeStringStrict(env.REPORT_PDF_TEMPLATE_VERSION);
   return fromEnv ?? DEFAULT_TEMPLATE_VERSION;
 };
 

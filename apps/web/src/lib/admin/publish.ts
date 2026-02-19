@@ -1,3 +1,4 @@
+import { env } from "@/lib/env";
 import tenantsConfig from "../../../../../config/tenants.json";
 import type { PoolClient } from "pg";
 
@@ -183,7 +184,7 @@ const parseBooleanEnv = (value: string | undefined): boolean => {
 
 const listStagingTenantAllowlist = (): Set<string> => {
   const allowlist = new Set<string>();
-  const raw = normalizeString(process.env.ADMIN_STAGING_TENANT_ALLOWLIST);
+  const raw = normalizeString(env.ADMIN_STAGING_TENANT_ALLOWLIST);
   if (!raw) {
     return allowlist;
   }
@@ -207,7 +208,7 @@ const isStagingTenantId = (tenantId: string): boolean => {
 };
 
 const shouldRequireStagingPublish = (): boolean => {
-  return parseBooleanEnv(process.env.ADMIN_REQUIRE_STAGING_PUBLISH);
+  return parseBooleanEnv(env.ADMIN_REQUIRE_STAGING_PUBLISH);
 };
 
 const assertKnownTenantIds = (tenantIds: string[]): void => {

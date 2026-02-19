@@ -1,7 +1,8 @@
+import { env } from "@/lib/env";
 import { notFound } from "next/navigation";
 
 export function enforceStudioEnabled() {
-  if (process.env.STUDIO_ENABLED !== "true") {
+  if (env.STUDIO_ENABLED !== "true") {
     notFound();
   }
 }

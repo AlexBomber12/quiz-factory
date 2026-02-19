@@ -1,3 +1,4 @@
+import { env } from "@/lib/env";
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
@@ -285,7 +286,7 @@ const normalizeImportListLimit = (value: number | null | undefined): number => {
 
 const resolveImportLocaleAllowlistRegex = (): RegExp => {
   const fromEnv = normalizeNonEmptyString(
-    process.env.ADMIN_IMPORT_LOCALE_ALLOWLIST_REGEX
+    env.ADMIN_IMPORT_LOCALE_ALLOWLIST_REGEX
   );
   const pattern = fromEnv ?? DEFAULT_IMPORT_LOCALE_ALLOWLIST_REGEX;
 

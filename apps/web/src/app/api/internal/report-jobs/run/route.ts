@@ -1,3 +1,4 @@
+import { env } from "@/lib/env";
 import { NextResponse } from "next/server";
 
 import { loadPublishedTestById } from "@/lib/content/provider";
@@ -16,9 +17,9 @@ const OPENAI_NOT_CONFIGURED_ERROR = "openai not configured";
 const MAX_ERROR_LENGTH = 160;
 
 
-const resolveModel = (): string => normalizeString(process.env.OPENAI_MODEL) ?? DEFAULT_OPENAI_MODEL;
+const resolveModel = (): string => normalizeString(env.OPENAI_MODEL) ?? DEFAULT_OPENAI_MODEL;
 
-const hasOpenAiApiKey = (): boolean => Boolean(normalizeString(process.env.OPENAI_API_KEY));
+const hasOpenAiApiKey = (): boolean => Boolean(normalizeString(env.OPENAI_API_KEY));
 
 const toShortError = (error: unknown): string => {
   if (!(error instanceof Error)) {
@@ -30,7 +31,7 @@ const toShortError = (error: unknown): string => {
 };
 
 const isAuthorizedWorker = (request: Request): boolean => {
-  const expectedSecret = process.env.REPORT_WORKER_SECRET?.trim() ?? "";
+  const expectedSecret = env.REPORT_WORKER_SECRET?.trim() ?? "";
   const providedSecret = request.headers.get("x-worker-secret")?.trim() ?? "";
 
   return expectedSecret.length > 0 && providedSecret === expectedSecret;
