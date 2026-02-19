@@ -16,6 +16,7 @@ const LEVEL_COLORS: Record<LogLevel, string> = {
 };
 
 const COLOR_RESET = "\u001b[0m";
+const CIRCULAR_REFERENCE = "[Circular]";
 
 const parseLogLevel = (value: string | undefined): LogLevel | undefined => {
   if (!value) {
@@ -56,7 +57,10 @@ const shouldLog = (level: LogLevel): boolean => {
   return LEVEL_PRIORITY[level] >= LEVEL_PRIORITY[minimumLevel];
 };
 
-const serializeValue = (value: unknown): unknown => {
+const serializeValue = (
+  value: unknown,
+  visited: WeakSet<object> = new WeakSet()
+): unknown => {
   if (value instanceof Error) {
     return {
       name: value.name,
@@ -66,12 +70,29 @@ const serializeValue = (value: unknown): unknown => {
   }
 
   if (Array.isArray(value)) {
-    return value.map((item) => serializeValue(item));
+    if (visited.has(value)) {
+      return CIRCULAR_REFERENCE;
+    }
+
+    visited.add(value);
+    const serialized = value.map((item) => serializeValue(item, visited));
+    visited.delete(value);
+    return serialized;
   }
 
   if (value && typeof value === "object") {
-    const entries = Object.entries(value as Record<string, unknown>);
-    return Object.fromEntries(entries.map(([key, item]) => [key, serializeValue(item)]));
+    const record = value as Record<string, unknown>;
+    if (visited.has(record)) {
+      return CIRCULAR_REFERENCE;
+    }
+
+    visited.add(record);
+    const entries = Object.entries(record);
+    const serialized = Object.fromEntries(
+      entries.map(([key, item]) => [key, serializeValue(item, visited)])
+    );
+    visited.delete(record);
+    return serialized;
   }
 
   return value;
@@ -98,7 +119,19 @@ const buildEntry = (level: LogLevel, context: LogContext, message: string): LogE
 
 const write = (entry: LogEntry): void => {
   if (process.env.NODE_ENV === "production") {
-    console.log(JSON.stringify(entry));
+    const rendered = JSON.stringify(entry);
+
+    if (entry.level === "error") {
+      console.error(rendered);
+      return;
+    }
+
+    if (entry.level === "warn") {
+      console.warn(rendered);
+      return;
+    }
+
+    console.log(rendered);
     return;
   }
 

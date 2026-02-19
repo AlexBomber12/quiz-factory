@@ -17,9 +17,13 @@ const setEnv = (key: string, value: string | undefined): void => {
 
 describe("logger", () => {
   const logSpy = vi.spyOn(console, "log");
+  const warnSpy = vi.spyOn(console, "warn");
+  const errorSpy = vi.spyOn(console, "error");
 
   beforeEach(() => {
     logSpy.mockImplementation(() => undefined);
+    warnSpy.mockImplementation(() => undefined);
+    errorSpy.mockImplementation(() => undefined);
   });
 
   afterEach(() => {
@@ -27,15 +31,19 @@ describe("logger", () => {
     setEnv("LOG_LEVEL", ORIGINAL_LOG_LEVEL);
 
     logSpy.mockClear();
+    warnSpy.mockClear();
+    errorSpy.mockClear();
   });
 
-  it("writes JSON entries in production", () => {
+  it("writes info JSON entries to stdout in production", () => {
     setEnv("NODE_ENV", "production");
     setEnv("LOG_LEVEL", "debug");
 
     logger.info({ tenantId: "tenant-1" }, "event ingested");
 
     expect(logSpy).toHaveBeenCalledTimes(1);
+    expect(warnSpy).not.toHaveBeenCalled();
+    expect(errorSpy).not.toHaveBeenCalled();
     const output = logSpy.mock.calls[0]?.[0];
     expect(typeof output).toBe("string");
 
@@ -53,7 +61,10 @@ describe("logger", () => {
     const error = new Error("boom");
     logger.error({ error }, "failed to send webhook");
 
-    const output = logSpy.mock.calls[0]?.[0];
+    expect(errorSpy).toHaveBeenCalledTimes(1);
+    expect(logSpy).not.toHaveBeenCalled();
+    expect(warnSpy).not.toHaveBeenCalled();
+    const output = errorSpy.mock.calls[0]?.[0];
     const parsed = JSON.parse(String(output).trim()) as {
       error?: { message?: string; stack?: string; name?: string };
     };
@@ -68,12 +79,41 @@ describe("logger", () => {
     setEnv("LOG_LEVEL", "warn");
 
     logger.info({}, "ignore this");
+    logger.warn({}, "warn this");
     logger.error({}, "keep this");
 
-    expect(logSpy).toHaveBeenCalledTimes(1);
-    const output = logSpy.mock.calls[0]?.[0];
-    const parsed = JSON.parse(String(output).trim()) as Record<string, unknown>;
-    expect(parsed.level).toBe("error");
-    expect(parsed.message).toBe("keep this");
+    expect(logSpy).toHaveBeenCalledTimes(0);
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    expect(errorSpy).toHaveBeenCalledTimes(1);
+    const warning = JSON.parse(String(warnSpy.mock.calls[0]?.[0]).trim()) as Record<
+      string,
+      unknown
+    >;
+    const failure = JSON.parse(String(errorSpy.mock.calls[0]?.[0]).trim()) as Record<
+      string,
+      unknown
+    >;
+    expect(warning.level).toBe("warn");
+    expect(warning.message).toBe("warn this");
+    expect(failure.level).toBe("error");
+    expect(failure.message).toBe("keep this");
+  });
+
+  it("serializes circular objects safely", () => {
+    setEnv("NODE_ENV", "production");
+    setEnv("LOG_LEVEL", "debug");
+
+    const circular: { self?: unknown; nested?: unknown } = {};
+    circular.self = circular;
+    circular.nested = { parent: circular };
+
+    expect(() => logger.error({ circular }, "circular context")).not.toThrow();
+    expect(errorSpy).toHaveBeenCalledTimes(1);
+
+    const payload = JSON.parse(String(errorSpy.mock.calls[0]?.[0]).trim()) as {
+      circular?: { self?: string; nested?: { parent?: string } };
+    };
+    expect(payload.circular?.self).toBe("[Circular]");
+    expect(payload.circular?.nested?.parent).toBe("[Circular]");
   });
 });
