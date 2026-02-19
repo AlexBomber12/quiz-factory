@@ -110,94 +110,56 @@ Queue (in order)
 - Status: DONE
 - Tasks file: tasks/PR-ANALYTICS-17.md
 - Depends on: PR-OPS-POSTHOG-02
-- Outcome:
-  - dbt build fails if unexpected datasets or schemas are created
-  - sanity checks prevent silent regressions in P&L completeness
 
 20) PR-ANALYTICS-18: Runtime Event Validation and Sanitization
 - Status: DONE
 - Tasks file: tasks/PR-ANALYTICS-18.md
 - Depends on: PR-ANALYTICS-17
-- Outcome:
-  - all event API routes validate payloads (required fields, forbidden fields)
-  - no accidental PII or forbidden keys can enter tracking
-  - validation is shared and enforced consistently
 
 21) PR-TENANTS-02: Tenant Provisioning CLI and CI Validation
 - Status: DONE
 - Tasks file: tasks/PR-TENANTS-02.md
 - Depends on: PR-ANALYTICS-18
-- Outcome:
-  - tenants.json can be generated and validated automatically
-  - domains uniqueness and locale correctness are enforced in CI
-  - provisioning scales to 200 domains without manual edits
 
 22) PR-OPS-BQ-01: BigQuery Retention and Cost Control Automation
 - Status: DONE
 - Tasks file: tasks/PR-OPS-BQ-01.md
 - Depends on: PR-TENANTS-02
-- Outcome:
-  - retention policy is codified (SQL and runbook)
-  - raw datasets do not grow without bounds
-  - changes are safe and reversible
 
 23) PR-ANALYTICS-19: Automated Ad Spend Import (Meta) + Operationalization
 - Status: DONE
 - Tasks file: tasks/PR-ANALYTICS-19.md
 - Depends on: PR-OPS-BQ-01
-- Outcome:
-  - daily Meta ad spend is imported automatically into raw_costs.ad_spend_daily
-  - idempotent merges prevent double counting
-  - CSV fallback remains supported
 
 24) PR-SECURITY-01: Edge Rate Limiting and Domain Allowlist
 - Status: DONE
 - Tasks file: tasks/PR-SECURITY-01.md
 - Depends on: PR-OPS-POSTHOG-02
-- Outcome:
-  - public API routes are rate limited and protected from abuse
-  - only known tenant domains can call event endpoints
-  - request size limits and method guards are enforced
 
 25) PR-SECURITY-02: Attempt Token and Replay Protection
 - Status: DONE
 - Tasks file: tasks/PR-SECURITY-02.md
 - Depends on: PR-SECURITY-01
-- Outcome:
-  - attempt-scoped routes require a signed attempt_token
-  - replay attempts do not duplicate events
 
 26) PR-ANALYTICS-20: BigQuery Cost Observability and Budget Guardrails
 - Status: DONE
 - Tasks file: tasks/PR-ANALYTICS-20.md
 - Depends on: PR-OPS-POSTHOG-02
-- Outcome:
-  - daily BigQuery cost table is available
-  - budget guardrails and query hygiene are documented
 
 27) PR-ANALYTICS-21: Event Volume Control and High-Cardinality Policy
 - Status: DONE
 - Tasks file: tasks/PR-ANALYTICS-21.md
 - Depends on: PR-ANALYTICS-20
-- Outcome:
-  - page_view volume is bounded by default
-  - high-cardinality fields are sanitized and kept out of marts
 
 28) PR-OPS-POSTHOG-03: PostHog Hardening and Backups
 - Status: DONE
 - Tasks file: tasks/PR-OPS-POSTHOG-03.md
 - Depends on: PR-OPS-POSTHOG-02
-- Outcome:
-  - PostHog operational runbook exists
-  - backup and restore scripts exist
 
 29) PR-OPS-BQ-02: Scheduled Anomaly Checks and Alerts
 - Status: DONE
 - Tasks file: tasks/PR-OPS-BQ-02.md
 - Depends on: PR-ANALYTICS-20
-- Outcome:
-  - anomaly checks are codified as scheduled query templates
-  - alert runbook exists and alerts are stored in marts.alert_events
 
 30) PR-PRODUCT-01: Test Content Format, Registry, and Validation (1 Golden Test EN-ES-PT-BR)
 - Status: DONE
@@ -248,9 +210,6 @@ Queue (in order)
 - Status: DONE
 - Tasks file: tasks/PR-UI-GOLDEN-01.md
 - Depends on: PR-PRODUCT-05
-- Outcome:
-  - internal Template Studio exists (/studio/golden, /studio/blocks)
-  - UI blocks and theme tokens are codified for repeatable UI evolution
 
 40) PR-CONTENT-02: Content Factory Tooling (New Test Generator and CSV Import)
 - Status: DONE
@@ -261,10 +220,6 @@ Queue (in order)
 - Status: DONE
 - Tasks file: tasks/PR-OPS-AUTOMATION-01.md
 - Depends on: none
-- Outcome:
-  - remove manual waiting/copy-paste for Codex Review feedback
-  - enable hands-free merges via auto-merge
-  - update local main without Cursor Sync
 
 42) PR-UI-01: Tailwind + shadcn/ui Foundation (Design Tokens, Layout, Primitives)
 - Status: DONE
@@ -350,8 +305,6 @@ Queue (in order)
 - Status: DONE
 - Tasks file: tasks/PR-OPS-ARTIFACT-02.md
 - Depends on: none
-- Outcome:
-  - snapshot/archive filenames include date and time (and optionally short commit) to avoid ambiguity and overwrite confusion
 
 60) PR-HUB-01: Hub Tenant IA (Tests, Categories, Search, Trust Pages, Sitemap)
 - Status: DONE
@@ -443,7 +396,6 @@ Queue (in order)
 - Tasks file: tasks/PR-E2E-PLAYWRIGHT-SMOKE-01.md
 - Depends on: PR-FIX-ATTEMPT-TOKEN-CONTEXT-01
 
-
 78) PR-UI-07: Primary Ink CTA (Decouple --primary from --color-primary)
 - Status: DONE
 - Tasks file: tasks/PR-UI-07.md
@@ -523,7 +475,6 @@ Queue (in order)
 - Status: DONE
 - Tasks file: tasks/PR-ADMIN-CONSOLE-07.md
 - Depends on: PR-ADMIN-CONSOLE-06
-
 
 94) PR-ADMIN-ANALYTICS-01: Analytics UI Skeleton + Global FilterBar
 - Status: DONE
@@ -634,6 +585,71 @@ Queue (in order)
 - Status: DONE
 - Tasks file: tasks/PR-PRODUCTS-01.md
 - Depends on: PR-DOMAINS-02
+
+## ============================================================
+## TECH DEBT REFACTORING TRACK
+## ============================================================
+
+116) PR-REFACTOR-01: TypeScript Path Aliases (@/ imports)
+- Status: TODO
+- Tasks file: tasks/PR-REFACTOR-01.md
+- Depends on: none
+- Outcome:
+  - all imports deeper than 2 levels use @/ aliases
+  - tsconfig paths configured for @/lib, @/components, @/app, @/studio
+
+117) PR-REFACTOR-02: Shared Utility Functions (Deduplicate normalizeString and friends)
+- Status: TODO
+- Tasks file: tasks/PR-REFACTOR-02.md
+- Depends on: PR-REFACTOR-01
+- Outcome:
+  - zero local normalizeString/parsePositiveInt/parseBoolean definitions
+  - shared @/lib/utils module with tests
+
+118) PR-REFACTOR-03: Centralized Environment Variable Validation (zod)
+- Status: TODO
+- Tasks file: tasks/PR-REFACTOR-03.md
+- Depends on: PR-REFACTOR-01
+- Outcome:
+  - all env vars validated through @/lib/env.ts
+  - clear startup error if required vars missing in production
+  - .env.example updated with documentation
+
+119) PR-REFACTOR-04: API Route Guards Wrapper (withApiGuards)
+- Status: TODO
+- Tasks file: tasks/PR-REFACTOR-04.md
+- Depends on: PR-REFACTOR-01 and PR-REFACTOR-02
+- Outcome:
+  - zero manual guard chains in public API routes
+  - all public routes use withApiGuards wrapper
+  - impossible to forget a guard on new routes
+
+120) PR-REFACTOR-05: Structured Logging (Replace empty catch blocks)
+- Status: TODO
+- Tasks file: tasks/PR-REFACTOR-05.md
+- Depends on: PR-REFACTOR-01 and PR-REFACTOR-03
+- Outcome:
+  - zero empty catch blocks in production code
+  - zero bare console.* calls
+  - structured JSON logs in production
+
+121) PR-REFACTOR-06: Tailwind Brand Tokens and UI Component Extraction
+- Status: TODO
+- Tasks file: tasks/PR-REFACTOR-06.md
+- Depends on: PR-REFACTOR-01
+- Outcome:
+  - brand colors as first-class Tailwind tokens
+  - zero raw hsl(var(--brand-*)) patterns
+  - FlowFrame, ErrorBanner, ProgressBar as reusable components
+
+122) PR-REFACTOR-07: Unit Tests for Critical UI Flows (Test Runner, Paywall)
+- Status: TODO
+- Tasks file: tasks/PR-REFACTOR-07.md
+- Depends on: PR-REFACTOR-01
+- Outcome:
+  - TestRunnerClient has 10+ test cases
+  - Paywall has 4+ test cases
+  - component-level test coverage for critical user flows
 
 Execution rules (apply to every PR)
 - Work on exactly 1 PR at a time.
