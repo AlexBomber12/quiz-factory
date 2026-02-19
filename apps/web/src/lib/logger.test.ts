@@ -160,4 +160,26 @@ describe("logger", () => {
     };
     expect(payload.error).toBe("[Unserializable Object]");
   });
+
+  it("falls back when array serialization throws", () => {
+    setEnv("NODE_ENV", "production");
+    setEnv("LOG_LEVEL", "debug");
+
+    const throwingArray: unknown[] = [];
+    Object.defineProperty(throwingArray, "0", {
+      enumerable: true,
+      get() {
+        throw new Error("array getter failed");
+      }
+    });
+    throwingArray.length = 1;
+
+    expect(() => logger.error({ error: throwingArray }, "unserializable array")).not.toThrow();
+    expect(errorSpy).toHaveBeenCalledTimes(1);
+
+    const payload = JSON.parse(String(errorSpy.mock.calls[0]?.[0]).trim()) as {
+      error?: string;
+    };
+    expect(payload.error).toBe("[Unserializable Array]");
+  });
 });
