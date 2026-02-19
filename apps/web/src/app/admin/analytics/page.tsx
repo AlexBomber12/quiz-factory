@@ -1,27 +1,27 @@
 import { headers } from "next/headers";
 
-import AdminChart from "../../../components/admin/charts/AdminChart";
+import AdminChart from "@/components/admin/charts/AdminChart";
 import {
   buildEmptyChartOption,
   buildFunnelOption,
   buildLineChartOption,
   buildSparklineOption,
   buildStackedBarOption
-} from "../../../components/admin/charts/options";
-import AdminAnalyticsPageScaffold from "../../../components/admin/analytics/PageScaffold";
+} from "@/components/admin/charts/options";
+import AdminAnalyticsPageScaffold from "@/components/admin/analytics/PageScaffold";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle
-} from "../../../components/ui/card";
+} from "@/components/ui/card";
 import type {
   AdminAnalyticsOverviewAlertRow,
   AdminAnalyticsOverviewFreshnessRow,
   AdminAnalyticsOverviewResponse,
   KpiCard
-} from "../../../lib/admin_analytics/types";
+} from "@/lib/admin_analytics/types";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 

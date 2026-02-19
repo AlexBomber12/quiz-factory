@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 
-import { getTrackingContextFromRequest, parseCookies } from "../../../../lib/analytics/session";
-import { loadPublishedTestById } from "../../../../lib/content/provider";
-import { RESULT_COOKIE, verifyResultCookie } from "../../../../lib/product/result_cookie";
+import { getTrackingContextFromRequest, parseCookies } from "@/lib/analytics/session";
+import { loadPublishedTestById } from "@/lib/content/provider";
+import { RESULT_COOKIE, verifyResultCookie } from "@/lib/product/result_cookie";
 import {
   DEFAULT_EVENT_BODY_BYTES,
   DEFAULT_EVENT_RATE_LIMIT,
@@ -12,18 +12,18 @@ import {
   assertMaxBodyBytes,
   rateLimit,
   resolveRequestHost
-} from "../../../../lib/security/request_guards";
+} from "@/lib/security/request_guards";
 import {
   DEFAULT_OFFER_KEY,
   getOffer,
   isOfferKey,
   requireStripePriceId,
   type OfferKey
-} from "../../../../lib/pricing";
-import { createStripeClient } from "../../../../lib/stripe/client";
-import { assertStripeEnvConfigured } from "../../../../lib/stripe/env";
-import { buildStripeMetadata } from "../../../../lib/stripe/metadata";
-import { resolveLocale, resolveTenantAsync } from "../../../../lib/tenants/resolve";
+} from "@/lib/pricing";
+import { createStripeClient } from "@/lib/stripe/client";
+import { assertStripeEnvConfigured } from "@/lib/stripe/env";
+import { buildStripeMetadata } from "@/lib/stripe/metadata";
+import { resolveLocale, resolveTenantAsync } from "@/lib/tenants/resolve";
 import eventsContract from "../../../../../../../analytics/events.json";
 
 type EventsContract = {

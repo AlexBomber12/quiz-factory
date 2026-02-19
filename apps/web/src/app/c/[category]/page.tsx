@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { PublicNav } from "../../../components/public/PublicNav";
-import { Badge } from "../../../components/ui/badge";
-import { Button } from "../../../components/ui/button";
+import { PublicNav } from "@/components/public/PublicNav";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -11,11 +11,11 @@ import {
   CardFooter,
   CardHeader,
   CardTitle
-} from "../../../components/ui/card";
-import { loadTenantHubTests, normalizeCategoryParam } from "../../../lib/hub/categories";
-import { buildHubPageMetadata } from "../../../lib/hub/metadata";
-import { resolveRouteParams, safeTrim } from "../../../lib/seo/metadata_safety";
-import { resolveTenantContext } from "../../../lib/tenants/request";
+} from "@/components/ui/card";
+import { loadTenantHubTests, normalizeCategoryParam } from "@/lib/hub/categories";
+import { buildHubPageMetadata } from "@/lib/hub/metadata";
+import { resolveRouteParams, safeTrim } from "@/lib/seo/metadata_safety";
+import { resolveTenantContext } from "@/lib/tenants/request";
 
 type CategoryParams = {
   category?: string;

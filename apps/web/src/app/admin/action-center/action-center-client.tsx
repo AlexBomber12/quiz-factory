@@ -2,16 +2,16 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import { Badge } from "../../../components/ui/badge";
-import { Button } from "../../../components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle
-} from "../../../components/ui/card";
-import type { AlertAiInsightRecord, AlertInstanceRecord } from "../../../lib/alerts/types";
+} from "@/components/ui/card";
+import type { AlertAiInsightRecord, AlertInstanceRecord } from "@/lib/alerts/types";
 
 type InsightAction = {
   title: string;

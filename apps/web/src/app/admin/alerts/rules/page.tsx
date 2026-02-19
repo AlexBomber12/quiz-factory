@@ -2,18 +2,18 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { Button } from "../../../../components/ui/button";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle
-} from "../../../../components/ui/card";
-import { getAdminCsrfTokenForRender } from "../../../../lib/admin/csrf_server";
-import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "../../../../lib/admin/session";
-import { listAlertRules } from "../../../../lib/alerts/repo";
-import { ALERT_RULE_TYPES, type AlertRuleRecord } from "../../../../lib/alerts/types";
+} from "@/components/ui/card";
+import { getAdminCsrfTokenForRender } from "@/lib/admin/csrf_server";
+import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "@/lib/admin/session";
+import { listAlertRules } from "@/lib/alerts/repo";
+import { ALERT_RULE_TYPES, type AlertRuleRecord } from "@/lib/alerts/types";
 
 type SearchParams = {
   created?: string | string[];

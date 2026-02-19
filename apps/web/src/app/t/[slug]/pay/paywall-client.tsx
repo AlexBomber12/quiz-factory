@@ -2,17 +2,17 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import { Badge } from "../../../../components/ui/badge";
-import { Button } from "../../../../components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle
-} from "../../../../components/ui/card";
-import type { OfferKey } from "../../../../lib/pricing";
-import { cn } from "../../../../lib/ui/cn";
+} from "@/components/ui/card";
+import type { OfferKey } from "@/lib/pricing";
+import { cn } from "@/lib/ui/cn";
 
 type PaywallOption = {
   offerKey: OfferKey;

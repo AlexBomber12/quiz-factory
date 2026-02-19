@@ -8,7 +8,7 @@ import {
   readAdminCsrfTokenFromFormData,
   readAdminCsrfTokenFromHeader,
   readAdminCsrfTokenFromJson
-} from "../../../../../lib/admin/csrf";
+} from "@/lib/admin/csrf";
 import {
   ImportConversionError,
   buildImportPreview,
@@ -16,10 +16,10 @@ import {
   getDraftByImportId,
   getImportById,
   isValidImportId
-} from "../../../../../lib/admin/imports";
-import { logAdminEvent } from "../../../../../lib/admin/audit";
-import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "../../../../../lib/admin/session";
-import { buildRedirectUrl } from "../../../../../lib/security/redirect_base";
+} from "@/lib/admin/imports";
+import { logAdminEvent } from "@/lib/admin/audit";
+import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "@/lib/admin/session";
+import { buildRedirectUrl } from "@/lib/security/redirect_base";
 
 type RouteContext = {
   params: Promise<{ id: string }> | { id: string };

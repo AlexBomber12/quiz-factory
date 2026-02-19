@@ -591,7 +591,7 @@ Queue (in order)
 ## ============================================================
 
 116) PR-REFACTOR-01: TypeScript Path Aliases (@/ imports)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-REFACTOR-01.md
 - Depends on: none
 - Outcome:

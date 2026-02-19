@@ -8,16 +8,16 @@ import {
   readAdminCsrfTokenFromFormData,
   readAdminCsrfTokenFromHeader,
   readAdminCsrfTokenFromJson
-} from "../../../../lib/admin/csrf";
+} from "@/lib/admin/csrf";
 import {
   AdminTenantError,
   createAdminTenant,
   getAdminTenantsSource,
   listAdminTenantsWithCounts
-} from "../../../../lib/admin/tenants";
-import { logAdminEvent } from "../../../../lib/admin/audit";
-import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "../../../../lib/admin/session";
-import { buildRedirectUrl } from "../../../../lib/security/redirect_base";
+} from "@/lib/admin/tenants";
+import { logAdminEvent } from "@/lib/admin/audit";
+import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "@/lib/admin/session";
+import { buildRedirectUrl } from "@/lib/security/redirect_base";
 
 type ParsedCreatePayload = {
   tenant_id: string;

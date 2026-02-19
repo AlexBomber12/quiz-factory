@@ -1,5 +1,5 @@
-import { normalizeString } from "../../../../lib/analytics/session";
-import { handleAnalyticsEvent } from "../../../../lib/analytics/server";
+import { normalizeString } from "@/lib/analytics/session";
+import { handleAnalyticsEvent } from "@/lib/analytics/server";
 import {
   DEFAULT_EVENT_BODY_BYTES,
   DEFAULT_EVENT_RATE_LIMIT,
@@ -8,14 +8,14 @@ import {
   assertAllowedOriginAsync,
   assertMaxBodyBytes,
   rateLimit
-} from "../../../../lib/security/request_guards";
+} from "@/lib/security/request_guards";
 import {
   DEFAULT_OFFER_KEY,
   getOffer,
   isOfferKey,
   type OfferKey
-} from "../../../../lib/pricing";
-import { buildStripeMetadata } from "../../../../lib/stripe/metadata";
+} from "@/lib/pricing";
+import { buildStripeMetadata } from "@/lib/stripe/metadata";
 
 const normalizeBoolean = (value: unknown): boolean | null => {
   if (typeof value === "boolean") {

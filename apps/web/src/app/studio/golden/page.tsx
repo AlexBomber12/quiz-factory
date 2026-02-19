@@ -1,9 +1,9 @@
-import { FaqBlock } from "../../../studio/blocks/FaqBlock";
-import { FooterBlock } from "../../../studio/blocks/FooterBlock";
-import { HeroBlock } from "../../../studio/blocks/HeroBlock";
-import { HowItWorksBlock } from "../../../studio/blocks/HowItWorksBlock";
-import { NavbarBlock } from "../../../studio/blocks/NavbarBlock";
-import { SocialProofBlock } from "../../../studio/blocks/SocialProofBlock";
+import { FaqBlock } from "@/studio/blocks/FaqBlock";
+import { FooterBlock } from "@/studio/blocks/FooterBlock";
+import { HeroBlock } from "@/studio/blocks/HeroBlock";
+import { HowItWorksBlock } from "@/studio/blocks/HowItWorksBlock";
+import { NavbarBlock } from "@/studio/blocks/NavbarBlock";
+import { SocialProofBlock } from "@/studio/blocks/SocialProofBlock";
 
 export default function GoldenPage() {
   return (

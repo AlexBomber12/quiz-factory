@@ -3,21 +3,21 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import PublicationToggleButton from "./publication-toggle-button";
-import { Button } from "../../../components/ui/button";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle
-} from "../../../components/ui/card";
-import { getAdminCsrfTokenForRender } from "../../../lib/admin/csrf_server";
+} from "@/components/ui/card";
+import { getAdminCsrfTokenForRender } from "@/lib/admin/csrf_server";
 import {
   listAdminPublications,
   type AdminPublicationRow,
   type ListAdminPublicationsFilters
-} from "../../../lib/admin/publications";
-import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "../../../lib/admin/session";
+} from "@/lib/admin/publications";
+import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "@/lib/admin/session";
 
 type SearchParams = {
   q?: string | string[];

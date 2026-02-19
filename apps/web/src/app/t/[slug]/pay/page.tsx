@@ -2,24 +2,24 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
 
-import { PublicPage } from "../../../../components/public/PublicPage";
-import { Badge } from "../../../../components/ui/badge";
-import { Button } from "../../../../components/ui/button";
+import { PublicPage } from "@/components/public/PublicPage";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardDescription,
   CardFooter,
   CardHeader,
   CardTitle
-} from "../../../../components/ui/card";
-import type { LocaleTag } from "../../../../lib/content/types";
-import { loadPublishedTestBySlug } from "../../../../lib/content/provider";
+} from "@/components/ui/card";
+import type { LocaleTag } from "@/lib/content/types";
+import { loadPublishedTestBySlug } from "@/lib/content/provider";
 import {
   RESULT_COOKIE,
   verifyResultCookie
-} from "../../../../lib/product/result_cookie";
-import { createReportKey, parseCreditsCookie } from "../../../../lib/credits";
-import { isOfferKey, listOffers } from "../../../../lib/pricing";
+} from "@/lib/product/result_cookie";
+import { createReportKey, parseCreditsCookie } from "@/lib/credits";
+import { isOfferKey, listOffers } from "@/lib/pricing";
 import {
   buildCanonical,
   buildLocaleAlternatesForPath,
@@ -28,13 +28,13 @@ import {
   buildTenantLabel,
   resolveSeoTestContext,
   resolveTenantSeoContext
-} from "../../../../lib/seo/metadata";
+} from "@/lib/seo/metadata";
 import {
   resolveRouteParams,
   resolveTestMetadataCopy,
   safeLowercaseSlug
-} from "../../../../lib/seo/metadata_safety";
-import { resolveTenantContext } from "../../../../lib/tenants/request";
+} from "@/lib/seo/metadata_safety";
+import { resolveTenantContext } from "@/lib/tenants/request";
 import PaywallClient from "./paywall-client";
 
 type SlugParams = {

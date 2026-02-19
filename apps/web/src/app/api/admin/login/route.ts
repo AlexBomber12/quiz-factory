@@ -8,15 +8,15 @@ import {
   readAdminCsrfTokenFromHeader,
   readAdminCsrfTokenFromJson,
   readAdminCsrfTokenFromFormData
-} from "../../../../lib/admin/csrf";
+} from "@/lib/admin/csrf";
 import {
   ADMIN_SESSION_COOKIE,
   issueAdminSession,
   resolveAdminRoleFromToken
-} from "../../../../lib/admin/session";
-import { logAdminEvent } from "../../../../lib/admin/audit";
-import { buildRedirectUrl } from "../../../../lib/security/redirect_base";
-import { resolveTenantAsync } from "../../../../lib/tenants/resolve";
+} from "@/lib/admin/session";
+import { logAdminEvent } from "@/lib/admin/audit";
+import { buildRedirectUrl } from "@/lib/security/redirect_base";
+import { resolveTenantAsync } from "@/lib/tenants/resolve";
 
 const normalizeString = (value: unknown): string | null => {
   if (typeof value !== "string") {

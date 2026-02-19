@@ -7,18 +7,18 @@ vi.mock("next/headers", () => ({
 }));
 
 import { POST } from "./route";
-import { resetRateLimitState } from "../../../../lib/security/request_guards";
-import { resolveTestIdBySlug } from "../../../../lib/content/catalog";
-import { loadLocalizedTest } from "../../../../lib/content/load";
-import { RESULT_COOKIE, signResultCookie } from "../../../../lib/product/result_cookie";
+import { resetRateLimitState } from "@/lib/security/request_guards";
+import { resolveTestIdBySlug } from "@/lib/content/catalog";
+import { loadLocalizedTest } from "@/lib/content/load";
+import { RESULT_COOKIE, signResultCookie } from "@/lib/product/result_cookie";
 import {
   CREDITS_COOKIE,
   grantCredits,
   parseCreditsCookie,
   serializeCreditsCookie,
   setLastGrantMetadata
-} from "../../../../lib/credits";
-import { REPORT_TOKEN } from "../../../../lib/product/report_token";
+} from "@/lib/credits";
+import { REPORT_TOKEN } from "@/lib/product/report_token";
 
 const HOST = "tenant.example.com";
 const TENANT_ID = "tenant-tenant-example-com";

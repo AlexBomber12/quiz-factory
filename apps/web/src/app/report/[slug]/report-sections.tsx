@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { Badge } from "../../../components/ui/badge";
-import { Button } from "../../../components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -12,9 +12,9 @@ import {
   CardFooter,
   CardHeader,
   CardTitle
-} from "../../../components/ui/card";
-import { Separator } from "../../../components/ui/separator";
-import { emitUpsellAccept, emitUpsellView } from "../../../lib/product/client";
+} from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { emitUpsellAccept, emitUpsellView } from "@/lib/product/client";
 
 type ScaleEntry = {
   scale: string;

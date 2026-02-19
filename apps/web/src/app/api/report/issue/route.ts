@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { parseCookies } from "../../../../lib/analytics/session";
+import { parseCookies } from "@/lib/analytics/session";
 import {
   CREDITS_COOKIE,
   CREDITS_COOKIE_TTL_SECONDS,
@@ -9,14 +9,14 @@ import {
   serializeCreditsCookie,
   setLastGrantMetadata,
   type CreditsGrantMetadata
-} from "../../../../lib/credits";
-import { loadPublishedTestBySlug } from "../../../../lib/content/provider";
+} from "@/lib/credits";
+import { loadPublishedTestBySlug } from "@/lib/content/provider";
 import {
   REPORT_TOKEN,
   type ReportTokenPayload,
   signReportToken
-} from "../../../../lib/product/report_token";
-import { RESULT_COOKIE, verifyResultCookie } from "../../../../lib/product/result_cookie";
+} from "@/lib/product/report_token";
+import { RESULT_COOKIE, verifyResultCookie } from "@/lib/product/result_cookie";
 import {
   DEFAULT_EVENT_BODY_BYTES,
   DEFAULT_EVENT_RATE_LIMIT,
@@ -25,8 +25,8 @@ import {
   assertAllowedOriginAsync,
   assertMaxBodyBytes,
   rateLimit
-} from "../../../../lib/security/request_guards";
-import { resolveTenantContext } from "../../../../lib/tenants/request";
+} from "@/lib/security/request_guards";
+import { resolveTenantContext } from "@/lib/tenants/request";
 
 const REPORT_TOKEN_TTL_SECONDS = 60 * 60 * 24;
 

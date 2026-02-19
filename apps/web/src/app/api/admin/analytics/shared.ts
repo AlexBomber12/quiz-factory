@@ -4,12 +4,12 @@ import {
   getAdminAnalyticsProvider,
   isAdminAnalyticsNotImplementedError,
   type AdminAnalyticsProvider
-} from "../../../../lib/admin_analytics/provider";
+} from "@/lib/admin_analytics/provider";
 import {
   parseAdminAnalyticsFilters,
   type AdminAnalyticsFilters,
   type AdminAnalyticsValidationIssue
-} from "../../../../lib/admin_analytics/types";
+} from "@/lib/admin_analytics/types";
 
 const MAX_ROUTE_IDENTIFIER_LENGTH = 120;
 const TEST_ID_PATTERN = /^test-[a-z0-9-]+$/;

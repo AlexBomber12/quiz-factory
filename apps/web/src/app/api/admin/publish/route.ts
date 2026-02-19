@@ -8,22 +8,22 @@ import {
   readAdminCsrfTokenFromFormData,
   readAdminCsrfTokenFromHeader,
   readAdminCsrfTokenFromJson
-} from "../../../../lib/admin/csrf";
+} from "@/lib/admin/csrf";
 import {
   ADMIN_PUBLISH_RATE_LIMIT,
   consumeAdminRateLimit
-} from "../../../../lib/admin/rate_limit";
+} from "@/lib/admin/rate_limit";
 import {
   isPublishWorkflowError,
   publishVersionToTenants
-} from "../../../../lib/admin/publish";
+} from "@/lib/admin/publish";
 import {
   isPublishGuardrailValidationError,
   validatePublishGuardrails
-} from "../../../../lib/admin/publish_guardrails";
-import { logAdminEvent } from "../../../../lib/admin/audit";
-import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "../../../../lib/admin/session";
-import { buildRedirectUrl } from "../../../../lib/security/redirect_base";
+} from "@/lib/admin/publish_guardrails";
+import { logAdminEvent } from "@/lib/admin/audit";
+import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "@/lib/admin/session";
+import { buildRedirectUrl } from "@/lib/security/redirect_base";
 
 type PublishPayload = {
   test_id: string;

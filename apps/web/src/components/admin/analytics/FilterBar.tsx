@@ -3,7 +3,7 @@
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { getDefaultAnalyticsDateRange, resolveAnalyticsDateRange } from "../../../lib/admin/analytics_dates";
+import { getDefaultAnalyticsDateRange, resolveAnalyticsDateRange } from "@/lib/admin/analytics_dates";
 import { Button } from "../../ui/button";
 import { Input } from "../../ui/input";
 

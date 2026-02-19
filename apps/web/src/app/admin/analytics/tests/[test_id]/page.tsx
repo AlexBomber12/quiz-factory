@@ -1,13 +1,13 @@
 import { headers } from "next/headers";
 import Link from "next/link";
 
-import AdminAnalyticsPageScaffold from "../../../../../components/admin/analytics/PageScaffold";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../../../components/ui/card";
+import AdminAnalyticsPageScaffold from "@/components/admin/analytics/PageScaffold";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type {
   AdminAnalyticsTestDetailResponse,
   AdminAnalyticsTestTimeseriesRow,
   KpiCard
-} from "../../../../../lib/admin_analytics/types";
+} from "@/lib/admin_analytics/types";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 

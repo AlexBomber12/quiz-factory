@@ -9,21 +9,21 @@ import {
   hashMarkdown,
   isImportLocaleAllowed,
   parseImportLocaleFromFilename
-} from "../../../../lib/admin/imports";
+} from "@/lib/admin/imports";
 import {
   ADMIN_CSRF_COOKIE,
   isAdminCsrfTokenValid,
   normalizeAdminCsrfToken,
   readAdminCsrfTokenFromFormData,
   readAdminCsrfTokenFromHeader
-} from "../../../../lib/admin/csrf";
+} from "@/lib/admin/csrf";
 import {
   ADMIN_UPLOAD_RATE_LIMIT,
   consumeAdminRateLimit
-} from "../../../../lib/admin/rate_limit";
-import { logAdminEvent } from "../../../../lib/admin/audit";
-import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "../../../../lib/admin/session";
-import { buildRedirectUrl } from "../../../../lib/security/redirect_base";
+} from "@/lib/admin/rate_limit";
+import { logAdminEvent } from "@/lib/admin/audit";
+import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "@/lib/admin/session";
+import { buildRedirectUrl } from "@/lib/security/redirect_base";
 
 type UploadErrorCode =
   | "unauthorized"

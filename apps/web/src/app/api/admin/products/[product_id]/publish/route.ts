@@ -8,14 +8,14 @@ import {
   readAdminCsrfTokenFromFormData,
   readAdminCsrfTokenFromHeader,
   readAdminCsrfTokenFromJson
-} from "../../../../../../lib/admin/csrf";
-import { logAdminEvent } from "../../../../../../lib/admin/audit";
-import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "../../../../../../lib/admin/session";
+} from "@/lib/admin/csrf";
+import { logAdminEvent } from "@/lib/admin/audit";
+import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "@/lib/admin/session";
 import {
   publishProductVersionToTenant,
   ProductRepoError
-} from "../../../../../../lib/content_db/products_repo";
-import { buildRedirectUrl } from "../../../../../../lib/security/redirect_base";
+} from "@/lib/content_db/products_repo";
+import { buildRedirectUrl } from "@/lib/security/redirect_base";
 
 type RouteContext = {
   params: Promise<{ product_id: string }> | { product_id: string };

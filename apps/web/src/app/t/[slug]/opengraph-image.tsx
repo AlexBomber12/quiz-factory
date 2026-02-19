@@ -1,10 +1,10 @@
 import { ImageResponse } from "next/og";
 import type { CSSProperties } from "react";
 
-import { resolveTenantTestBySlug } from "../../../lib/catalog/catalog";
-import { buildTenantLabel } from "../../../lib/seo/metadata";
-import { resolveRouteParams, safeLowercaseSlug } from "../../../lib/seo/metadata_safety";
-import { resolveTenantContext } from "../../../lib/tenants/request";
+import { resolveTenantTestBySlug } from "@/lib/catalog/catalog";
+import { buildTenantLabel } from "@/lib/seo/metadata";
+import { resolveRouteParams, safeLowercaseSlug } from "@/lib/seo/metadata_safety";
+import { resolveTenantContext } from "@/lib/tenants/request";
 
 export const runtime = "nodejs";
 export const size = {

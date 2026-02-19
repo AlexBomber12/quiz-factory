@@ -8,19 +8,19 @@ import {
   readAdminCsrfTokenFromFormData,
   readAdminCsrfTokenFromHeader,
   readAdminCsrfTokenFromJson
-} from "../../../../../../lib/admin/csrf";
-import { logAdminEvent } from "../../../../../../lib/admin/audit";
-import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "../../../../../../lib/admin/session";
+} from "@/lib/admin/csrf";
+import { logAdminEvent } from "@/lib/admin/audit";
+import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "@/lib/admin/session";
 import {
   buildAlertInsightMarkdown,
   buildAlertInsightPrompt,
   generateAlertInsightFromPrompt
-} from "../../../../../../lib/alerts/insight";
+} from "@/lib/alerts/insight";
 import {
   getAlertAiInsightByInstanceId,
   getAlertInstanceWithRuleById,
   upsertAlertAiInsight
-} from "../../../../../../lib/alerts/repo";
+} from "@/lib/alerts/repo";
 
 const DEFAULT_OPENAI_MODEL = "gpt-4o";
 const TRUE_VALUES = new Set(["1", "true", "yes", "on"]);

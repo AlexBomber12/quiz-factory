@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import type { AdminAnalyticsAttributionOptions } from "../../../../../lib/admin_analytics/types";
+import type { AdminAnalyticsAttributionOptions } from "@/lib/admin_analytics/types";
 import { executeProviderCall, parseFiltersFromRequest } from "../shared";
 
 const MAX_OPTIONAL_FILTER_LENGTH = 120;
