@@ -17,6 +17,7 @@ const LEVEL_COLORS: Record<LogLevel, string> = {
 
 const COLOR_RESET = "\u001b[0m";
 const CIRCULAR_REFERENCE = "[Circular]";
+const UNSERIALIZABLE_OBJECT = "[Unserializable Object]";
 
 const parseLogLevel = (value: string | undefined): LogLevel | undefined => {
   if (!value) {
@@ -91,12 +92,16 @@ const serializeValue = (
     }
 
     visited.add(record);
-    const entries = Object.entries(record);
-    const serialized = Object.fromEntries(
-      entries.map(([key, item]) => [key, serializeValue(item, visited)])
-    );
-    visited.delete(record);
-    return serialized;
+    try {
+      const entries = Object.entries(record);
+      return Object.fromEntries(
+        entries.map(([key, item]) => [key, serializeValue(item, visited)])
+      );
+    } catch {
+      return UNSERIALIZABLE_OBJECT;
+    } finally {
+      visited.delete(record);
+    }
   }
 
   return value;

@@ -139,4 +139,25 @@ describe("logger", () => {
     expect(payload.list?.[0]).toBe("3");
     expect((payload.list?.[1] as { deep?: string }).deep).toBe("4");
   });
+
+  it("falls back when object serialization throws", () => {
+    setEnv("NODE_ENV", "production");
+    setEnv("LOG_LEVEL", "debug");
+
+    const throwingValue: Record<string, unknown> = {};
+    Object.defineProperty(throwingValue, "boom", {
+      enumerable: true,
+      get() {
+        throw new Error("getter failed");
+      }
+    });
+
+    expect(() => logger.error({ error: throwingValue }, "unserializable context")).not.toThrow();
+    expect(errorSpy).toHaveBeenCalledTimes(1);
+
+    const payload = JSON.parse(String(errorSpy.mock.calls[0]?.[0]).trim()) as {
+      error?: string;
+    };
+    expect(payload.error).toBe("[Unserializable Object]");
+  });
 });
