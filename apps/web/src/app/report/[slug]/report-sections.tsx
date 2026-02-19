@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { logger } from "@/lib/logger";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -75,7 +76,8 @@ const useResolvedLocale = (): string => {
 const formatReportDate = (locale: string): string => {
   try {
     return new Intl.DateTimeFormat(locale, { dateStyle: "long" }).format(new Date());
-  } catch {
+  } catch (error) {
+    logger.warn({ error }, "app/report/[slug]/report-sections.tsx fallback handling failed");
     return new Intl.DateTimeFormat("en", { dateStyle: "long" }).format(new Date());
   }
 };
@@ -371,7 +373,8 @@ export function UpsellSection({
         purchase_id: purchaseId,
         upsell_id: upsellId
       });
-    } catch {
+    } catch (error) {
+      logger.warn({ error }, "app/report/[slug]/report-sections.tsx fallback handling failed");
       // Best-effort analytics; continue to paywall.
     } finally {
       router.push(paywallHref);

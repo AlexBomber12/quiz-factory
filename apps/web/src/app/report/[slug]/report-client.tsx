@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { logger } from "@/lib/logger";
 
 import GeneratedReport, { parseGeneratedReportJson } from "./generated-report";
 import ReportAnalytics from "./report-analytics";
@@ -125,7 +126,8 @@ export default function ReportClient({
           },
           body: JSON.stringify(payload)
         });
-      } catch {
+      } catch (error) {
+        logger.warn({ error }, "app/report/[slug]/report-client.tsx fallback handling failed");
         response = null;
       }
 
@@ -166,7 +168,8 @@ export default function ReportClient({
           if (payload.paywall_url) {
             paywallUrl = payload.paywall_url;
           }
-        } catch {
+        } catch (error) {
+          logger.warn({ error }, "app/report/[slug]/report-client.tsx fallback handling failed");
           paywallUrl = paywallHrefForSlug(slug);
         }
         window.location.assign(paywallUrl);
@@ -179,17 +182,18 @@ export default function ReportClient({
       }
 
       if (response.status === 409) {
-        let error: unknown = null;
+        let generationError: unknown = null;
         try {
           const payload = (await response.json()) as { error?: unknown };
-          error = payload.error;
-        } catch {
-          error = null;
+          generationError = payload.error;
+        } catch (error) {
+          logger.warn({ error }, "app/report/[slug]/report-client.tsx fallback handling failed");
+          generationError = null;
         }
 
         setState({
           status: "error",
-          message: resolveGenerationError(error)
+          message: resolveGenerationError(generationError)
         });
         return;
       }
@@ -205,7 +209,8 @@ export default function ReportClient({
       let payload: ReportAccessPayload | null = null;
       try {
         payload = (await response.json()) as ReportAccessPayload;
-      } catch {
+      } catch (error) {
+        logger.warn({ error }, "app/report/[slug]/report-client.tsx fallback handling failed");
         payload = null;
       }
 

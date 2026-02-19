@@ -625,7 +625,7 @@ Queue (in order)
   - impossible to forget a guard on new routes
 
 120) PR-REFACTOR-05: Structured Logging (Replace empty catch blocks)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-REFACTOR-05.md
 - Depends on: PR-REFACTOR-01 and PR-REFACTOR-03
 - Outcome:

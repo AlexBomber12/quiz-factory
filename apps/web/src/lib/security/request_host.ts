@@ -1,5 +1,6 @@
 import { env } from "@/lib/env";
 import { normalizeStringStrict, parseBoolean } from "@/lib/utils/strings";
+import { logger } from "@/lib/logger";
 
 type HeaderLike = Pick<Headers, "get">;
 
@@ -62,7 +63,8 @@ export const resolveEffectiveRequestHost = (request: Request): string => {
   let fallbackHost: string | null = null;
   try {
     fallbackHost = new URL(request.url).host;
-  } catch {
+  } catch (error) {
+    logger.warn({ error }, "lib/security/request_host.ts fallback handling failed");
     fallbackHost = null;
   }
 

@@ -1,4 +1,5 @@
 import tenantsConfig from "../../../../../config/tenants.json";
+import { logger } from "@/lib/logger";
 
 import { normalizeString } from "@/lib/utils/strings";
 import { normalizeHostname, resolveEffectiveHost } from "../security/request_host";
@@ -142,7 +143,8 @@ export const resolveTenantAsync = async (
         defaultLocale: normalizeLocaleTag(tenant.defaultLocale)
       };
     }
-  } catch {
+  } catch (error) {
+    logger.warn({ error }, "lib/tenants/resolve.ts fallback handling failed");
     // If DB lookup fails we degrade to a slug fallback and preserve request flow.
   }
 

@@ -1,5 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+import { requestContext } from "@/lib/logger_context";
 
 import {
   ADMIN_CSRF_COOKIE,
@@ -37,7 +39,8 @@ const parseTokenAndCsrf = async (
     let body: unknown;
     try {
       body = await request.json();
-    } catch {
+    } catch (error) {
+      logger.error({ error, ...requestContext(request) }, "app/api/admin/login/route.ts operation failed");
       return { token: null, csrfToken: headerCsrfToken };
     }
     if (!body || typeof body !== "object") {
@@ -55,7 +58,8 @@ const parseTokenAndCsrf = async (
   let formData: FormData;
   try {
     formData = await request.formData();
-  } catch {
+  } catch (error) {
+    logger.error({ error, ...requestContext(request) }, "app/api/admin/login/route.ts operation failed");
     return {
       token: null,
       csrfToken: headerCsrfToken
@@ -93,7 +97,8 @@ export const POST = async (request: Request): Promise<Response> => {
   let session: Awaited<ReturnType<typeof issueAdminSession>>;
   try {
     session = await issueAdminSession(role);
-  } catch {
+  } catch (error) {
+    logger.error({ error, ...requestContext(request) }, "app/api/admin/login/route.ts operation failed");
     return NextResponse.redirect(buildLoginRedirect(request, "server_misconfigured"), 303);
   }
 

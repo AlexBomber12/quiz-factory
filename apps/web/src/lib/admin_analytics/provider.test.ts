@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { logger } from "@/lib/logger";
 import {
   __resetAdminAnalyticsProviderForTests,
   resolveAdminAnalyticsProviderMode
@@ -57,7 +58,7 @@ describe("resolveAdminAnalyticsProviderMode", () => {
   });
 
   it("falls back to mock when ADMIN_ANALYTICS_MODE=bigquery and required env vars are missing", () => {
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const warnSpy = vi.spyOn(logger, "warn").mockImplementation(() => undefined);
     const env = baseEnv();
     env.ADMIN_ANALYTICS_MODE = "bigquery";
 
@@ -66,7 +67,7 @@ describe("resolveAdminAnalyticsProviderMode", () => {
   });
 
   it("falls back to mock when ADMIN_ANALYTICS_MODE=content_db and CONTENT_DATABASE_URL is missing", () => {
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const warnSpy = vi.spyOn(logger, "warn").mockImplementation(() => undefined);
     const env = baseEnv();
     env.ADMIN_ANALYTICS_MODE = "content_db";
 

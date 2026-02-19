@@ -1,5 +1,7 @@
 import { env } from "@/lib/env";
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+import { requestContext } from "@/lib/logger_context";
 
 import { capturePosthogEvent } from "@/lib/analytics/posthog";
 import { assertAllowedMethod } from "@/lib/security/request_guards";
@@ -58,7 +60,10 @@ export const resolveStripeAnalyticsStores = (): NamedStripeStore[] => {
     try {
       stores.push({ name: "bigquery", store: createStripeBigQueryStore() });
     } catch (error) {
-      console.error("[stripe_webhook] Failed to initialize BigQuery store.", error);
+      logger.error(
+        { error },
+        "[stripe_webhook] Failed to initialize BigQuery store."
+      );
     }
   }
 
@@ -68,7 +73,10 @@ export const resolveStripeAnalyticsStores = (): NamedStripeStore[] => {
       stores.push({ name: "content_db", store: contentDbStore });
     }
   } catch (error) {
-    console.error("[stripe_webhook] Failed to initialize Content DB store.", error);
+    logger.error(
+      { error },
+      "[stripe_webhook] Failed to initialize Content DB store."
+    );
   }
 
   return stores;
@@ -99,9 +107,9 @@ class MultiStripeAnalyticsStore implements StripeAnalyticsStore {
         successfulWrites += 1;
         inserted = inserted || didInsert;
       } catch (error) {
-        console.error(
-          `[stripe_webhook] ${name} store failed during ${String(methodName)}.`,
-          error
+        logger.error(
+          { error, store: name, method: String(methodName) },
+          "[stripe_webhook] Store write failed."
         );
       }
     }
@@ -183,7 +191,8 @@ export const POST = async (request: Request): Promise<Response> => {
   let event: unknown;
   try {
     event = JSON.parse(payload);
-  } catch {
+  } catch (error) {
+    logger.error({ error, ...requestContext(request) }, "app/api/stripe/webhook/route.ts operation failed");
     return NextResponse.json({ error: "Invalid payload." }, { status: 400 });
   }
 

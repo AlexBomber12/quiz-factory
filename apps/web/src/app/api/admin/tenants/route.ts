@@ -1,5 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+import { requestContext } from "@/lib/logger_context";
 
 import {
   ADMIN_CSRF_COOKIE,
@@ -204,7 +206,8 @@ export const GET = async (): Promise<Response> => {
       },
       { status: 200 }
     );
-  } catch {
+  } catch (error) {
+    logger.error({ error }, "app/api/admin/tenants/route.ts operation failed");
     return NextResponse.json({ error: "db_error" }, { status: 500 });
   }
 };
@@ -223,7 +226,8 @@ export const POST = async (request: Request): Promise<Response> => {
   let parsedPayload: ParsedCreatePayload;
   try {
     parsedPayload = await parseCreatePayload(request);
-  } catch {
+  } catch (error) {
+    logger.error({ error, ...requestContext(request) }, "app/api/admin/tenants/route.ts operation failed");
     return buildErrorResponse(request, "invalid_payload", 400);
   }
 

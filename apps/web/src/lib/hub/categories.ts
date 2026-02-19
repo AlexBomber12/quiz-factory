@@ -7,6 +7,7 @@ import {
 } from "../content/provider";
 import { normalizeLocaleTag } from "../content/types";
 import { toHumanCategoryLabel } from "../public/category_label";
+import { logger } from "@/lib/logger";
 
 export type HubTest = {
   test_id: string;
@@ -40,7 +41,8 @@ const normalizeCategoryLabel = (value: string): string | null => {
 const decodeCategoryParam = (value: string): string => {
   try {
     return decodeURIComponent(value);
-  } catch {
+  } catch (error) {
+    logger.warn({ error }, "lib/hub/categories.ts fallback handling failed");
     return value;
   }
 };

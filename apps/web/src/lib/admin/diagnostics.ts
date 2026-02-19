@@ -2,6 +2,7 @@ import { env } from "@/lib/env";
 import { getContentDbPool, hasContentDatabaseUrl } from "../content_db/pool";
 import { resolveContentSource, type ContentSource } from "../content/provider";
 import { listTenantRegistry } from "./publish";
+import { logger } from "@/lib/logger";
 
 type AppliedMigrationsTableRow = {
   table_exists: boolean;
@@ -50,7 +51,8 @@ const readAppliedMigrationsState = async (): Promise<boolean> => {
       "SELECT EXISTS (SELECT 1 FROM applied_migrations LIMIT 1) AS has_rows"
     );
     return hasRowsResult.rows[0]?.has_rows ?? false;
-  } catch {
+  } catch (error) {
+    logger.error({ error }, "lib/admin/diagnostics.ts operation failed");
     return false;
   }
 };

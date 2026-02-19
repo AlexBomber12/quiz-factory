@@ -2,6 +2,7 @@ import { env } from "@/lib/env";
 import { createHmac, timingSafeEqual } from "crypto";
 import { normalizeString } from "@/lib/utils/strings";
 import { encodeBase64Url, decodeBase64Url } from "@/lib/utils/encoding";
+import { logger } from "@/lib/logger";
 
 export const CREDITS_COOKIE = "QF_CREDITS";
 export const CREDITS_COOKIE_TTL_SECONDS = 60 * 60 * 24 * 365;
@@ -106,7 +107,8 @@ const decodeGrantFilter = (value: unknown): Buffer => {
     }
 
     return decoded;
-  } catch {
+  } catch (error) {
+    logger.error({ error }, "lib/credits.ts operation failed");
     return createEmptyGrantFilter();
   }
 };
@@ -306,7 +308,8 @@ const parseCookiePayload = (value: string | null): CreditsCookiePayload => {
   try {
     const decoded = decodeBase64Url(payloadEncoded);
     return sanitizePayload(JSON.parse(decoded));
-  } catch {
+  } catch (error) {
+    logger.error({ error }, "lib/credits.ts operation failed");
     return { v: CREDITS_COOKIE_VERSION, tenants: {} };
   }
 };

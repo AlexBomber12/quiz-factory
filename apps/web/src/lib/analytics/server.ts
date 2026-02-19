@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 
 import {
   buildBaseEventProperties,
@@ -90,7 +91,8 @@ const parseJsonBody = async (request: Request): Promise<Record<string, unknown>>
 
   try {
     return (await request.json()) as Record<string, unknown>;
-  } catch {
+  } catch (error) {
+    logger.warn({ error }, "lib/analytics/server.ts fallback handling failed");
     return {};
   }
 };
@@ -189,7 +191,8 @@ export const handleAnalyticsEvent = async (
     let verifiedToken: ReturnType<typeof verifyAttemptToken>;
     try {
       verifiedToken = verifyAttemptToken(requestAttemptToken);
-    } catch {
+    } catch (error) {
+      logger.warn({ error }, "lib/analytics/server.ts fallback handling failed");
       return respondUnauthorized("Attempt token is invalid.");
     }
 
@@ -199,7 +202,8 @@ export const handleAnalyticsEvent = async (
         session_id: sessionId,
         distinct_id: distinctId
       });
-    } catch {
+    } catch (error) {
+      logger.warn({ error }, "lib/analytics/server.ts fallback handling failed");
       return respondUnauthorized("Attempt token does not match request context.");
     }
   }

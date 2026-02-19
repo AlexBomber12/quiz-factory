@@ -6,6 +6,7 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
+import { logger } from "@/lib/logger";
 
 import type { PoolClient } from "pg";
 
@@ -292,7 +293,8 @@ const resolveImportLocaleAllowlistRegex = (): RegExp => {
 
   try {
     return new RegExp(pattern);
-  } catch {
+  } catch (error) {
+    logger.error({ error }, "lib/admin/imports.ts operation failed");
     return new RegExp(DEFAULT_IMPORT_LOCALE_ALLOWLIST_REGEX);
   }
 };
@@ -1424,7 +1426,8 @@ const convertImportFilesToValidatedSpec = async (
     let parsedSpec: unknown;
     try {
       parsedSpec = JSON.parse(rawSpec);
-    } catch {
+    } catch (error) {
+      logger.error({ error }, "lib/admin/imports.ts operation failed");
       throw new ImportConversionError({
         code: "conversion_failed",
         status: 422,

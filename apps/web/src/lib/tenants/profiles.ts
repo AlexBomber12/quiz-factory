@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { logger } from "@/lib/logger";
 
 export type TenantProfile = {
   tenant_id: string;
@@ -161,7 +162,8 @@ const parseProfilesDocument = (rawText: string): Map<string, TenantProfile> | nu
   let parsed: unknown;
   try {
     parsed = JSON.parse(rawText);
-  } catch {
+  } catch (error) {
+    logger.warn({ error }, "lib/tenants/profiles.ts fallback handling failed");
     return null;
   }
 
@@ -208,7 +210,8 @@ const loadProfiles = (
     try {
       const rawText = fs.readFileSync(profilesPath, "utf-8");
       profilesByTenant = parseProfilesDocument(rawText);
-    } catch {
+    } catch (error) {
+      logger.warn({ error }, "lib/tenants/profiles.ts fallback handling failed");
       profilesByTenant = null;
     }
   }

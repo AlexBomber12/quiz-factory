@@ -1,5 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+import { requestContext } from "@/lib/logger_context";
 
 import {
   ADMIN_CSRF_COOKIE,
@@ -163,7 +165,8 @@ export const POST = async (request: Request): Promise<Response> => {
   let parsedRequest: ParsedRequest;
   try {
     parsedRequest = await parsePayload(request);
-  } catch {
+  } catch (error) {
+    logger.error({ error, ...requestContext(request) }, "app/api/admin/rollback/route.ts operation failed");
     return handleRequestError(request, "invalid_payload", 400);
   }
 

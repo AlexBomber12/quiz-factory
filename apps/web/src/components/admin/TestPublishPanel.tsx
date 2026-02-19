@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { logger } from "@/lib/logger";
 
 import { ADMIN_CSRF_FORM_FIELD, ADMIN_CSRF_HEADER } from "../../lib/admin/csrf";
 import { Button } from "../ui/button";
@@ -92,7 +93,8 @@ const readErrorMessage = async (response: Response): Promise<string> => {
     const errorCode = typeof payload.error === "string" ? payload.error : null;
     const detail = typeof payload.detail === "string" ? payload.detail : null;
     return buildErrorMessage(errorCode, detail);
-  } catch {
+  } catch (error) {
+    logger.warn({ error }, "components/admin/TestPublishPanel.tsx fallback handling failed");
     return `Action failed with status ${response.status}.`;
   }
 };

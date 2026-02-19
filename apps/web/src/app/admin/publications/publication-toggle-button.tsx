@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { logger } from "@/lib/logger";
 
 import { ADMIN_CSRF_FORM_FIELD, ADMIN_CSRF_HEADER } from "@/lib/admin/csrf";
 import { Button } from "@/components/ui/button";
@@ -23,7 +24,8 @@ const readErrorMessage = async (response: Response): Promise<string> => {
     const errorCode = typeof payload.error === "string" ? payload.error : "request_failed";
     const detail = typeof payload.detail === "string" ? payload.detail : null;
     return detail ? `${errorCode}: ${detail}` : errorCode;
-  } catch {
+  } catch (error) {
+    logger.error({ error }, "app/admin/publications/publication-toggle-button.tsx operation failed");
     return `request_failed: ${response.status}`;
   }
 };

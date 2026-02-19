@@ -1,5 +1,6 @@
 import { env } from "@/lib/env";
 import { normalizeString } from "@/lib/utils/strings";
+import { logger } from "@/lib/logger";
 
 const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
@@ -106,7 +107,8 @@ const verifySignature = async (
   let signatureBytes: Uint8Array;
   try {
     signatureBytes = fromBase64Url(signatureEncoded);
-  } catch {
+  } catch (error) {
+    logger.error({ error }, "lib/admin/session.ts operation failed");
     return false;
   }
 
@@ -226,7 +228,8 @@ export const verifyAdminSession = async (
   let parsed: unknown;
   try {
     parsed = JSON.parse(decodeString(payloadEncoded));
-  } catch {
+  } catch (error) {
+    logger.error({ error }, "lib/admin/session.ts operation failed");
     return null;
   }
 

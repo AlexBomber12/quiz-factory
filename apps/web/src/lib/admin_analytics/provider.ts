@@ -18,6 +18,7 @@ import { createBigQueryAdminAnalyticsProvider } from "./providers/bigquery";
 import { createContentDbAdminAnalyticsProvider } from "./providers/content_db";
 import { createMockAdminAnalyticsProvider } from "./providers/mock";
 import { env } from "@/lib/env";
+import { logger } from "@/lib/logger";
 
 export interface AdminAnalyticsProvider {
   getOverview(filters: AdminAnalyticsFilters): Promise<AdminAnalyticsOverviewResponse>;
@@ -90,7 +91,7 @@ const logProviderSelectionWarning = (key: string, message: string): void => {
   }
 
   loggedWarnings.add(key);
-  console.warn(`[admin_analytics.provider] ${message}`);
+  logger.warn({ key }, `[admin_analytics.provider] ${message}`);
 };
 
 export const resolveAdminAnalyticsProviderMode = (

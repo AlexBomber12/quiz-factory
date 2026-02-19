@@ -1,5 +1,6 @@
 import { BigQuery } from "@google-cloud/bigquery";
 import { env } from "@/lib/env";
+import { logger } from "@/lib/logger";
 
 import {
   combineHealthStatus,
@@ -2081,7 +2082,8 @@ export class BigQueryAdminAnalyticsProvider implements AdminAnalyticsProvider {
       }
 
       return result;
-    } catch {
+    } catch (error) {
+      logger.error({ error }, "lib/admin_analytics/providers/bigquery.ts operation failed");
       return new Map();
     }
   }

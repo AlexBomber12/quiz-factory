@@ -1,5 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+import { requestContext } from "@/lib/logger_context";
 
 import {
   ADMIN_CSRF_COOKIE,
@@ -115,7 +117,8 @@ export const POST = async (request: Request): Promise<Response> => {
   let parsed: ParsedRequest;
   try {
     parsed = await parseRequest(request);
-  } catch {
+  } catch (error) {
+    logger.error({ error, ...requestContext(request) }, "app/api/admin/products/route.ts operation failed");
     return buildErrorResponse(request, "invalid_slug", 400);
   }
 

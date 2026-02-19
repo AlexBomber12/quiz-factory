@@ -1,5 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+import { requestContext } from "@/lib/logger_context";
 
 import { listAdminPublications } from "@/lib/admin/publications";
 import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "@/lib/admin/session";
@@ -93,7 +95,8 @@ export const GET = async (request: Request): Promise<Response> => {
         "content-type": "text/csv; charset=utf-8"
       }
     });
-  } catch {
+  } catch (error) {
+    logger.error({ error, ...requestContext(request) }, "app/api/admin/publications/export/route.ts operation failed");
     return NextResponse.json(
       {
         error: "export_failed"

@@ -1,3 +1,5 @@
+import { logger } from "@/lib/logger";
+
 const RESUME_STATE_PREFIX = "quiz_factory:resume_state";
 
 export const RESUME_STATE_VERSION = 1;
@@ -93,7 +95,8 @@ const getStorage = (): Storage | null => {
     }
 
     return globalThis.localStorage;
-  } catch {
+  } catch (error) {
+    logger.warn({ error }, "lib/product/resume_state.ts fallback handling failed");
     return null;
   }
 };
@@ -128,7 +131,8 @@ export const loadResumeState = (testId: string, slug: string): ResumeState | nul
     }
 
     return parsed;
-  } catch {
+  } catch (error) {
+    logger.warn({ error }, "lib/product/resume_state.ts fallback handling failed");
     return null;
   }
 };

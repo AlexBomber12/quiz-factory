@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+import { requestContext } from "@/lib/logger_context";
 
 import { getDistinctIdFromRequest, parseCookies } from "@/lib/analytics/session";
 import { loadPublishedTestById } from "@/lib/content/provider";
@@ -34,7 +36,8 @@ export const POST = withApiGuards(async (request: Request): Promise<Response> =>
   let body: Record<string, unknown> | null = null;
   try {
     body = requireRecord(await request.json());
-  } catch {
+  } catch (error) {
+    logger.error({ error, ...requestContext(request) }, "app/api/test/score-preview/route.ts operation failed");
     body = null;
   }
 
@@ -77,7 +80,8 @@ export const POST = withApiGuards(async (request: Request): Promise<Response> =>
   let verifiedToken: ReturnType<typeof verifyAttemptToken>;
   try {
     verifiedToken = verifyAttemptToken(attemptToken);
-  } catch {
+  } catch (error) {
+    logger.error({ error, ...requestContext(request) }, "app/api/test/score-preview/route.ts operation failed");
     return NextResponse.json({ error: "Attempt token is invalid." }, { status: 401 });
   }
 
@@ -87,7 +91,8 @@ export const POST = withApiGuards(async (request: Request): Promise<Response> =>
       session_id: sessionId,
       distinct_id: distinctId
     });
-  } catch {
+  } catch (error) {
+    logger.error({ error, ...requestContext(request) }, "app/api/test/score-preview/route.ts operation failed");
     return NextResponse.json(
       { error: "Attempt token does not match request context." },
       { status: 401 }
@@ -107,7 +112,8 @@ export const POST = withApiGuards(async (request: Request): Promise<Response> =>
   let scoring: ReturnType<typeof scoreTest>;
   try {
     scoring = scoreTest(testSpec, answers);
-  } catch {
+  } catch (error) {
+    logger.error({ error, ...requestContext(request) }, "app/api/test/score-preview/route.ts operation failed");
     return NextResponse.json({ error: "Invalid answers." }, { status: 400 });
   }
 
@@ -127,7 +133,8 @@ export const POST = withApiGuards(async (request: Request): Promise<Response> =>
   if (attemptSummaryInput) {
     try {
       await upsertAttemptSummary(attemptSummaryInput);
-    } catch {
+    } catch (error) {
+      logger.error({ error, ...requestContext(request) }, "app/api/test/score-preview/route.ts operation failed");
       // Best-effort write; preview should still succeed without DB.
     }
   }

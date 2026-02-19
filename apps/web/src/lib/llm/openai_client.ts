@@ -1,5 +1,6 @@
 import { env } from "@/lib/env";
 import { normalizeString } from "@/lib/utils/strings";
+import { logger } from "@/lib/logger";
 
 const DEFAULT_OPENAI_BASE_URL = "https://api.openai.com/v1";
 const REQUEST_TIMEOUT_MS = 15_000;
@@ -144,7 +145,8 @@ export const createStructuredJsonResponse = async <T>({
   let responsePayload: unknown;
   try {
     responsePayload = await response.json();
-  } catch {
+  } catch (error) {
+    logger.error({ error }, "lib/llm/openai_client.ts operation failed");
     throw new Error("OpenAI response was not valid JSON.");
   }
 
@@ -164,7 +166,8 @@ export const createStructuredJsonResponse = async <T>({
 
   try {
     return JSON.parse(outputText) as T;
-  } catch {
+  } catch (error) {
+    logger.error({ error }, "lib/llm/openai_client.ts operation failed");
     throw new Error("OpenAI output_text was not valid JSON.");
   }
 };

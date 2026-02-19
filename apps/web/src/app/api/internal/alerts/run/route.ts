@@ -1,5 +1,7 @@
 import { env } from "@/lib/env";
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+import { requestContext } from "@/lib/logger_context";
 
 import { runAlertRules } from "@/lib/alerts/engine";
 
@@ -51,7 +53,8 @@ export const POST = async (request: Request): Promise<Response> => {
     });
 
     return NextResponse.json(result, { status: 200 });
-  } catch {
+  } catch (error) {
+    logger.error({ error, ...requestContext(request) }, "app/api/internal/alerts/run/route.ts operation failed");
     return NextResponse.json(
       {
         error: "internal_error"

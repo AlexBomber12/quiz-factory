@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { logger } from "@/lib/logger";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -144,7 +145,8 @@ const buildDraftPreview = (draft: ImportDraftRecord): DraftPreview | null => {
       scales: [...spec.scoring.scales],
       promptRows
     };
-  } catch {
+  } catch (error) {
+    logger.error({ error }, "app/admin/imports/[id]/page.tsx operation failed");
     return null;
   }
 };

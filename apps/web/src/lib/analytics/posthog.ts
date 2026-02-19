@@ -1,5 +1,6 @@
 import { env } from "@/lib/env";
 import type { AnalyticsEventName, AnalyticsEventProperties } from "./events";
+import { logger } from "@/lib/logger";
 
 type CapturePayload = {
   api_key: string;
@@ -58,7 +59,8 @@ export const capturePosthogEvent = async (
       if (response.ok) {
         return { ok: true, skipped: false };
       }
-    } catch {
+    } catch (error) {
+      logger.warn({ error }, "lib/analytics/posthog.ts fallback handling failed");
       // Best-effort retry.
     }
 

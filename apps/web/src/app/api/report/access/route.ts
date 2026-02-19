@@ -1,5 +1,7 @@
 import { env } from "@/lib/env";
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+import { requestContext } from "@/lib/logger_context";
 
 import { parseCookies } from "@/lib/analytics/session";
 import {
@@ -300,7 +302,8 @@ export const POST = withApiGuards(async (request: Request): Promise<Response> =>
   let body: Record<string, unknown> | null = null;
   try {
     body = requireRecord(await request.json());
-  } catch {
+  } catch (error) {
+    logger.error({ error, ...requestContext(request) }, "app/api/report/access/route.ts operation failed");
     body = null;
   }
 
@@ -327,7 +330,8 @@ export const POST = withApiGuards(async (request: Request): Promise<Response> =>
   if (reportLinkTokenValue) {
     try {
       reportLinkPayload = verifyReportLinkToken(reportLinkTokenValue);
-    } catch {
+    } catch (error) {
+      logger.error({ error, ...requestContext(request) }, "app/api/report/access/route.ts operation failed");
       reportLinkPayload = null;
     }
   }

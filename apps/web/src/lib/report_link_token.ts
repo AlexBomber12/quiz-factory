@@ -1,5 +1,6 @@
 import { env } from "@/lib/env";
 import { createHmac, timingSafeEqual } from "crypto";
+import { logger } from "@/lib/logger";
 
 import { normalizeLocaleTag, type LocaleTag } from "./content/types";
 import { normalizeString } from "@/lib/utils/strings";
@@ -222,7 +223,8 @@ export const verifyReportLinkToken = (token: string): ReportLinkTokenPayload => 
   let parsed: unknown = null;
   try {
     parsed = JSON.parse(decodeBase64Url(payloadEncoded));
-  } catch {
+  } catch (error) {
+    logger.error({ error }, "lib/report_link_token.ts operation failed");
     throw new Error("Report link token is invalid.");
   }
 

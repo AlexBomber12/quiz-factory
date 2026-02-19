@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+import { requestContext } from "@/lib/logger_context";
 
 import { handleAnalyticsEvent } from "@/lib/analytics/server";
 import { parseCookies } from "@/lib/analytics/session";
@@ -42,7 +44,8 @@ const parseReportPdfBody = async (
   let parsed: ReportPdfRequestBody | null = null;
   try {
     parsed = (await request.json()) as ReportPdfRequestBody;
-  } catch {
+  } catch (error) {
+    logger.error({ error, ...requestContext(request) }, "app/api/report/pdf/route.ts operation failed");
     parsed = null;
   }
 
@@ -170,7 +173,8 @@ export const POST = withApiGuards(async (request: Request): Promise<Response> =>
     await writeReportPdfCache(cacheParts, pdfBuffer);
 
     return buildPdfResponse(pdfBuffer, `${spec.slug}-report.pdf`, analyticsResponse);
-  } catch {
+  } catch (error) {
+    logger.error({ error, ...requestContext(request) }, "app/api/report/pdf/route.ts operation failed");
     return buildErrorResponse(500, "Failed to generate PDF.", analyticsResponse);
   }
 }, { methods: ["POST"] });

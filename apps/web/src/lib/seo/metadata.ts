@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { logger } from "@/lib/logger";
 
 import catalogConfig from "../../../../../config/catalog.json";
 
@@ -89,7 +90,8 @@ const resolveTenantTestIds = (tenantId: string, catalog: CatalogConfig = DEFAULT
 const resolveSpec = (testId: string): TestSpec | null => {
   try {
     return loadValuesCompassSpecById(testId);
-  } catch {
+  } catch (error) {
+    logger.warn({ error }, "lib/seo/metadata.ts fallback handling failed");
     return null;
   }
 };

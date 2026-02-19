@@ -2,6 +2,7 @@ import { env } from "@/lib/env";
 import { createHmac, timingSafeEqual } from "crypto";
 import { normalizeString } from "@/lib/utils/strings";
 import { encodeBase64Url, decodeBase64Url } from "@/lib/utils/encoding";
+import { logger } from "@/lib/logger";
 
 export type ResultCookiePayload = {
   tenant_id: string;
@@ -120,7 +121,8 @@ export const verifyResultCookie = (value: string): ResultCookiePayload | null =>
   let parsed: unknown = null;
   try {
     parsed = JSON.parse(decodeBase64Url(payloadEncoded));
-  } catch {
+  } catch (error) {
+    logger.error({ error }, "lib/product/result_cookie.ts operation failed");
     return null;
   }
 

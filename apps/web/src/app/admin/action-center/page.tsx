@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { logger } from "@/lib/logger";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -80,7 +81,8 @@ export default async function AdminActionCenterPage({ searchParams }: PageProps)
   if (initialSelectedAlertId) {
     try {
       initialInsight = await getAlertAiInsightByInstanceId(initialSelectedAlertId);
-    } catch {
+    } catch (error) {
+      logger.error({ error }, "app/admin/action-center/page.tsx operation failed");
       initialInsight = null;
     }
   }

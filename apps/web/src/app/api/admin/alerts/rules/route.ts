@@ -1,5 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
+import { requestContext } from "@/lib/logger_context";
 
 import {
   ADMIN_CSRF_COOKIE,
@@ -70,7 +72,8 @@ const parseRecordObject = (value: unknown, fieldName: string): Record<string, un
       }
 
       return parsed as Record<string, unknown>;
-    } catch {
+    } catch (error) {
+      logger.error({ error }, "app/api/admin/alerts/rules/route.ts operation failed");
       throw new Error(`${fieldName} must be valid JSON.`);
     }
   }
@@ -189,7 +192,8 @@ export const POST = async (request: Request): Promise<Response> => {
   let payload: ParsedCreatePayload;
   try {
     payload = await parsePayload(request);
-  } catch {
+  } catch (error) {
+    logger.error({ error, ...requestContext(request) }, "app/api/admin/alerts/rules/route.ts operation failed");
     return buildErrorResponse(request, "invalid_payload", 400);
   }
 
