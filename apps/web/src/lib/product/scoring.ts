@@ -1,4 +1,5 @@
 import type { TestSpec } from "../content/types";
+import { normalizeString } from "@/lib/utils/strings";
 
 export type ScoreResult = {
   scale_scores: Record<string, number>;
@@ -6,14 +7,6 @@ export type ScoreResult = {
   band_id: string;
 };
 
-const normalizeString = (value: unknown): string | null => {
-  if (typeof value !== "string") {
-    return null;
-  }
-
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-};
 
 const ensureAnswersObject = (answers: Record<string, unknown>): Record<string, string> => {
   const normalized: Record<string, string> = {};

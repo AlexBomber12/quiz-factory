@@ -1,4 +1,6 @@
 import { createHmac, timingSafeEqual } from "crypto";
+import { normalizeString, parsePositiveInt } from "@/lib/utils/strings";
+import { encodeBase64Url, decodeBase64Url } from "@/lib/utils/encoding";
 
 export type AttemptTokenPayload = {
   tenant_id: string;
@@ -17,28 +19,6 @@ export const ATTEMPT_TOKEN_COOKIE_NAME = "qf_attempt_token";
 
 const DEFAULT_ATTEMPT_TOKEN_TTL_SECONDS = 60 * 60 * 24 * 2;
 const DEV_ATTEMPT_TOKEN_SECRET = "dev-attempt-token-secret";
-
-const normalizeString = (value: unknown): string | null => {
-  if (typeof value !== "string") {
-    return null;
-  }
-
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-};
-
-const parsePositiveInt = (value: string | undefined): number | undefined => {
-  if (!value) {
-    return undefined;
-  }
-
-  const parsed = Number.parseInt(value, 10);
-  if (!Number.isFinite(parsed) || parsed <= 0) {
-    return undefined;
-  }
-
-  return parsed;
-};
 
 export const resolveAttemptTokenTtlSeconds = (override?: number): number => {
   if (typeof override === "number" && Number.isFinite(override) && override > 0) {
@@ -62,13 +42,7 @@ const resolveAttemptTokenSecret = (): string => {
   return DEV_ATTEMPT_TOKEN_SECRET;
 };
 
-const encodeBase64Url = (value: string): string => {
-  return Buffer.from(value, "utf8").toString("base64url");
-};
 
-const decodeBase64Url = (value: string): string => {
-  return Buffer.from(value, "base64url").toString("utf8");
-};
 
 const signPayload = (payloadEncoded: string): string => {
   return createHmac("sha256", resolveAttemptTokenSecret())

@@ -1,4 +1,4 @@
-import { normalizeString } from "@/lib/analytics/session";
+import { normalizeString } from "@/lib/utils/strings";
 import { handleAnalyticsEvent } from "@/lib/analytics/server";
 import {
   DEFAULT_EVENT_BODY_BYTES,

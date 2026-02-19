@@ -9,6 +9,7 @@ import { invalidateTenant, invalidateTest } from "../content_db/repo";
 import { getContentDbPool } from "../content_db/pool";
 import { invalidateTenant as invalidateTenantSitemap } from "../seo/sitemap_cache";
 import { type AdminRole } from "./session";
+import { normalizeString } from "@/lib/utils/strings";
 
 type TimestampValue = Date | string;
 
@@ -109,14 +110,6 @@ export class PublishWorkflowError extends Error {
   }
 }
 
-const normalizeString = (value: unknown): string | null => {
-  if (typeof value !== "string") {
-    return null;
-  }
-
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-};
 
 const toIsoString = (value: TimestampValue | null): string | null => {
   if (!value) {

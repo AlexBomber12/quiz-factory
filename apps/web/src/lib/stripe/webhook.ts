@@ -1,7 +1,7 @@
 import { createHmac, timingSafeEqual } from "crypto";
 
 import type { AnalyticsEventProperties, AnalyticsEventName } from "../analytics/events";
-import { normalizeString } from "../analytics/session";
+import { normalizeString } from "@/lib/utils/strings";
 import { validateAnalyticsEventPayload } from "../analytics/validate";
 import { resolveTenantKind } from "../tenants/profiles";
 import { parseStripeMetadata } from "./metadata";

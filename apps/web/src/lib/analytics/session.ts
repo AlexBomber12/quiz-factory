@@ -10,6 +10,7 @@ import {
   type ClickIdField,
   type UtmField
 } from "./constants";
+import { normalizeString } from "@/lib/utils/strings";
 
 export type UtmParams = Record<UtmField, string | null>;
 export type ClickIdParams = Record<ClickIdField, string | null>;
@@ -28,14 +29,6 @@ const EMPTY_CLICK_IDS: ClickIdParams = {
   ttclid: null
 };
 
-const normalizeString = (value: unknown): string | null => {
-  if (typeof value !== "string") {
-    return null;
-  }
-
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-};
 
 export const createSessionId = (): string => {
   return randomUUID();

@@ -1,5 +1,6 @@
 import { getContentDbPool } from "../content_db/pool";
 import { normalizeHostname } from "../security/request_host";
+import { normalizeString } from "@/lib/utils/strings";
 
 export const TENANT_RUNTIME_CACHE_TTL_MS = 60_000;
 export const TENANT_DOMAIN_CACHE_MAX_ENTRIES = 1_024;
@@ -31,14 +32,6 @@ type AllowedHostsCacheEntry = {
 const tenantByDomainCache = new Map<string, TenantCacheEntry>();
 let allowedHostsCache: AllowedHostsCacheEntry | null = null;
 
-const normalizeString = (value: unknown): string | null => {
-  if (typeof value !== "string") {
-    return null;
-  }
-
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-};
 
 const normalizeDomain = (value: unknown): string | null => {
   return normalizeHostname(normalizeString(value));

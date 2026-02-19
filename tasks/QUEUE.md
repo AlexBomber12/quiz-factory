@@ -599,7 +599,7 @@ Queue (in order)
   - tsconfig paths configured for @/lib, @/components, @/app, @/studio
 
 117) PR-REFACTOR-02: Shared Utility Functions (Deduplicate normalizeString and friends)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-REFACTOR-02.md
 - Depends on: PR-REFACTOR-01
 - Outcome:

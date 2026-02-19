@@ -3,6 +3,7 @@ import { createHash } from "crypto";
 import { createStructuredJsonResponse } from "../llm/openai_client";
 
 import type { AlertInstanceWithRuleRecord } from "./types";
+import { normalizeString } from "@/lib/utils/strings";
 
 export const ALERT_INSIGHT_SCHEMA_NAME = "alert_insight_v1";
 const MAX_OUTPUT_TOKENS = 1_400;
@@ -39,14 +40,6 @@ export type AlertInsightPrompt = {
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value) && typeof value === "object" && !Array.isArray(value);
 
-const normalizeString = (value: unknown): string | null => {
-  if (typeof value !== "string") {
-    return null;
-  }
-
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-};
 
 const hasForbiddenKey = (key: string): boolean => {
   return /(email|phone|name|person|customer|token|session|distinct|ip|address|street)/i.test(key);

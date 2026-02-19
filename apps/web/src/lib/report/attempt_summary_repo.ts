@@ -6,6 +6,7 @@ import {
   stableSerializeScaleScores,
   type AttemptSummaryInput
 } from "./report_job_inputs";
+import { normalizeString } from "@/lib/utils/strings";
 
 type TimestampValue = Date | string;
 
@@ -21,14 +22,6 @@ type AttemptSummaryRow = {
   total_score: number;
 };
 
-const normalizeString = (value: unknown): string | null => {
-  if (typeof value !== "string") {
-    return null;
-  }
-
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-};
 
 const toIsoString = (value: TimestampValue): string => {
   if (value instanceof Date) {

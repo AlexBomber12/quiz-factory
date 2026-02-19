@@ -1,3 +1,5 @@
+import { normalizeStringStrict } from "@/lib/utils/strings";
+
 type AdminRateLimitEntry = {
   count: number;
   resetAt: number;
@@ -27,14 +29,6 @@ export const ADMIN_PUBLISH_RATE_LIMIT: AdminRateLimitOptions = {
   maxRequests: 20
 };
 
-const normalizeString = (value: string | null | undefined): string | null => {
-  if (!value) {
-    return null;
-  }
-
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-};
 
 const cleanup = (now: number): void => {
   if (now - lastCleanupAt < CLEANUP_INTERVAL_MS) {
@@ -50,16 +44,16 @@ const cleanup = (now: number): void => {
 };
 
 const resolveClientKey = (request: Request): string => {
-  const forwarded = normalizeString(request.headers.get("x-forwarded-for"));
+  const forwarded = normalizeStringStrict(request.headers.get("x-forwarded-for"));
   if (forwarded) {
     const [firstIp] = forwarded.split(",");
-    const candidate = normalizeString(firstIp);
+    const candidate = normalizeStringStrict(firstIp);
     if (candidate) {
       return `ip:${candidate}`;
     }
   }
 
-  const realIp = normalizeString(request.headers.get("x-real-ip"));
+  const realIp = normalizeStringStrict(request.headers.get("x-real-ip"));
   if (realIp) {
     return `ip:${realIp}`;
   }

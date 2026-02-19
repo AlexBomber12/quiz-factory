@@ -24,6 +24,7 @@ import {
 import { logAdminEvent } from "@/lib/admin/audit";
 import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "@/lib/admin/session";
 import { buildRedirectUrl } from "@/lib/security/redirect_base";
+import { normalizeString } from "@/lib/utils/strings";
 
 type RollbackPayload = {
   test_id: string;
@@ -44,14 +45,6 @@ type RequestErrorCode =
   | "invalid_payload"
   | "rollback_failed";
 
-const normalizeString = (value: unknown): string | null => {
-  if (typeof value !== "string") {
-    return null;
-  }
-
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-};
 
 const prefersJson = (request: Request): boolean => {
   const accept = request.headers.get("accept") ?? "";

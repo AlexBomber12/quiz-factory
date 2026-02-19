@@ -24,6 +24,7 @@ import {
 import { logAdminEvent } from "@/lib/admin/audit";
 import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "@/lib/admin/session";
 import { buildRedirectUrl } from "@/lib/security/redirect_base";
+import { normalizeString } from "@/lib/utils/strings";
 
 type PublishPayload = {
   test_id: string;
@@ -45,14 +46,6 @@ type RequestErrorCode =
   | "invalid_payload"
   | "publish_failed";
 
-const normalizeString = (value: unknown): string | null => {
-  if (typeof value !== "string") {
-    return null;
-  }
-
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-};
 
 const parseBoolean = (value: unknown): boolean | null => {
   if (typeof value === "boolean") {

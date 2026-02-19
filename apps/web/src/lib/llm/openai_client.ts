@@ -1,3 +1,5 @@
+import { normalizeString } from "@/lib/utils/strings";
+
 const DEFAULT_OPENAI_BASE_URL = "https://api.openai.com/v1";
 const REQUEST_TIMEOUT_MS = 15_000;
 
@@ -10,14 +12,6 @@ type CreateStructuredJsonResponseInput = {
   maxOutputTokens?: number;
 };
 
-const normalizeString = (value: unknown): string | null => {
-  if (typeof value !== "string") {
-    return null;
-  }
-
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-};
 
 const requireNonEmptyString = (value: string, name: string): string => {
   const normalized = normalizeString(value);

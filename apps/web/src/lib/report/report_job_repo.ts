@@ -5,6 +5,7 @@ import {
   sanitizeEnqueueReportJobInput,
   type EnqueueReportJobInput
 } from "./report_job_inputs";
+import { normalizeString } from "@/lib/utils/strings";
 
 type TimestampValue = Date | string | null;
 
@@ -42,14 +43,6 @@ export type ReportJobRecord = {
   completed_at: string | null;
 };
 
-const normalizeString = (value: unknown): string | null => {
-  if (typeof value !== "string") {
-    return null;
-  }
-
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-};
 
 const toIsoString = (value: TimestampValue): string | null => {
   if (!value) {

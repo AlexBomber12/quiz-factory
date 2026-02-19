@@ -21,6 +21,7 @@ import {
   type AdminSessionPayload
 } from "@/lib/admin/session";
 import { buildRedirectUrl } from "@/lib/security/redirect_base";
+import { normalizeString } from "@/lib/utils/strings";
 
 type RouteContext = {
   params: Promise<{ tenant_id: string }> | { tenant_id: string };
@@ -37,14 +38,6 @@ const resolveParams = async (
   return Promise.resolve(params);
 };
 
-const normalizeString = (value: unknown): string | null => {
-  if (typeof value !== "string") {
-    return null;
-  }
-
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-};
 
 const prefersJson = (request: Request): boolean => {
   const accept = request.headers.get("accept") ?? "";

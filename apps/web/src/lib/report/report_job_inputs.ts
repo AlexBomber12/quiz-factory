@@ -1,3 +1,5 @@
+import { normalizeString } from "@/lib/utils/strings";
+
 export const DEFAULT_REPORT_JOB_CLAIM_LIMIT = 5;
 const MAX_REPORT_JOB_CLAIM_LIMIT = 50;
 
@@ -23,14 +25,6 @@ export type EnqueueReportJobInput = {
   locale: string;
 };
 
-const normalizeString = (value: unknown): string | null => {
-  if (typeof value !== "string") {
-    return null;
-  }
-
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-};
 
 const normalizeInteger = (value: unknown): number | null => {
   if (typeof value === "number") {

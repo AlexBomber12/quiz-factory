@@ -1,4 +1,5 @@
 import { getContentDbPool } from "../content_db/pool";
+import { normalizeString } from "@/lib/utils/strings";
 
 type ReportArtifactInput = {
   purchase_id: string;
@@ -49,14 +50,6 @@ export type ReportArtifactRecord = {
   created_at: string | null;
 };
 
-const normalizeString = (value: unknown): string | null => {
-  if (typeof value !== "string") {
-    return null;
-  }
-
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-};
 
 const requireString = (value: unknown, fieldName: string): string => {
   const normalized = normalizeString(value);
