@@ -2,18 +2,18 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { Button } from "../../../components/ui/button";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle
-} from "../../../components/ui/card";
-import { ADMIN_CSRF_FORM_FIELD } from "../../../lib/admin/csrf";
-import { getAdminCsrfTokenForRender } from "../../../lib/admin/csrf_server";
-import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "../../../lib/admin/session";
-import { listAdminProducts, type AdminProductListRecord } from "../../../lib/content_db/products_repo";
+} from "@/components/ui/card";
+import { ADMIN_CSRF_FORM_FIELD } from "@/lib/admin/csrf";
+import { getAdminCsrfTokenForRender } from "@/lib/admin/csrf_server";
+import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "@/lib/admin/session";
+import { listAdminProducts, type AdminProductListRecord } from "@/lib/content_db/products_repo";
 
 type SearchParams = {
   q?: string | string[];

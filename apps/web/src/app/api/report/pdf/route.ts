@@ -1,19 +1,19 @@
 import { NextResponse } from "next/server";
 
-import { handleAnalyticsEvent } from "../../../../lib/analytics/server";
-import { parseCookies } from "../../../../lib/analytics/session";
-import { createReportKey } from "../../../../lib/credits";
-import { loadPublishedTestById } from "../../../../lib/content/provider";
-import { REPORT_TOKEN, verifyReportToken } from "../../../../lib/product/report_token";
-import { RESULT_COOKIE, verifyResultCookie } from "../../../../lib/product/result_cookie";
+import { handleAnalyticsEvent } from "@/lib/analytics/server";
+import { parseCookies } from "@/lib/analytics/session";
+import { createReportKey } from "@/lib/credits";
+import { loadPublishedTestById } from "@/lib/content/provider";
+import { REPORT_TOKEN, verifyReportToken } from "@/lib/product/report_token";
+import { RESULT_COOKIE, verifyResultCookie } from "@/lib/product/result_cookie";
 import {
   cleanupExpiredCacheEntries,
   readReportPdfCache,
   resolveReportPdfTemplateVersion,
   writeReportPdfCache
-} from "../../../../lib/report/pdf_cache";
-import { resolveReportPdfMode } from "../../../../lib/report/pdf_mode";
-import { renderReportPdf } from "../../../../lib/report/pdf_renderer";
+} from "@/lib/report/pdf_cache";
+import { resolveReportPdfMode } from "@/lib/report/pdf_mode";
+import { renderReportPdf } from "@/lib/report/pdf_renderer";
 import {
   DEFAULT_EVENT_BODY_BYTES,
   DEFAULT_EVENT_RATE_LIMIT,
@@ -22,8 +22,8 @@ import {
   assertAllowedOriginAsync,
   assertMaxBodyBytes,
   rateLimit
-} from "../../../../lib/security/request_guards";
-import { resolveTenantContext } from "../../../../lib/tenants/request";
+} from "@/lib/security/request_guards";
+import { resolveTenantContext } from "@/lib/tenants/request";
 
 type ReportPdfRequestBody = {
   test_id?: unknown;

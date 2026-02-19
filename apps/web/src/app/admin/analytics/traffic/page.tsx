@@ -1,19 +1,19 @@
 import { headers } from "next/headers";
 import Link from "next/link";
 
-import AdminChart from "../../../../components/admin/charts/AdminChart";
-import { buildStackedBarOption } from "../../../../components/admin/charts/options";
-import AdminAnalyticsPageScaffold from "../../../../components/admin/analytics/PageScaffold";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../../components/ui/card";
+import AdminChart from "@/components/admin/charts/AdminChart";
+import { buildStackedBarOption } from "@/components/admin/charts/options";
+import AdminAnalyticsPageScaffold from "@/components/admin/analytics/PageScaffold";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type {
   AdminAnalyticsTrafficResponse,
   AdminAnalyticsTrafficSegmentRow,
   KpiCard
-} from "../../../../lib/admin_analytics/types";
+} from "@/lib/admin_analytics/types";
 import {
   ADMIN_ANALYTICS_TRAFFIC_DEFAULT_LIMIT,
   ADMIN_ANALYTICS_TRAFFIC_MAX_LIMIT
-} from "../../../../lib/admin_analytics/types";
+} from "@/lib/admin_analytics/types";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 

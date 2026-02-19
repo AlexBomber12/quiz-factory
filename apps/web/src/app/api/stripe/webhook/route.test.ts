@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { StripeAnalyticsStore } from "../../../../lib/stripe/store";
+import type { StripeAnalyticsStore } from "@/lib/stripe/store";
 
 const mocks = vi.hoisted(() => ({
   createStripeBigQueryStore: vi.fn(),

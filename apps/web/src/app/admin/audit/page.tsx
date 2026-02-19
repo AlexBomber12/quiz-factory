@@ -2,19 +2,19 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { Button } from "../../../components/ui/button";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle
-} from "../../../components/ui/card";
+} from "@/components/ui/card";
 import {
   listAdminAuditEvents,
   type AdminAuditEventRecord
-} from "../../../lib/admin/audit";
-import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "../../../lib/admin/session";
+} from "@/lib/admin/audit";
+import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "@/lib/admin/session";
 
 type SearchParams = {
   q?: string | string[];

@@ -2,14 +2,14 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import TestPublishPanel from "../../../../components/admin/TestPublishPanel";
-import { Button } from "../../../../components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../../components/ui/card";
-import { getAdminCsrfTokenForRender } from "../../../../lib/admin/csrf_server";
-import { readAdminDiagnostics } from "../../../../lib/admin/diagnostics";
-import { listTenantRegistry } from "../../../../lib/admin/publish";
-import { getAdminTestDetail, type AdminTestDetailPublication } from "../../../../lib/admin/tests";
-import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "../../../../lib/admin/session";
+import TestPublishPanel from "@/components/admin/TestPublishPanel";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { getAdminCsrfTokenForRender } from "@/lib/admin/csrf_server";
+import { readAdminDiagnostics } from "@/lib/admin/diagnostics";
+import { listTenantRegistry } from "@/lib/admin/publish";
+import { getAdminTestDetail, type AdminTestDetailPublication } from "@/lib/admin/tests";
+import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "@/lib/admin/session";
 
 type PageProps = {
   params: Promise<{ test_id: string }> | { test_id: string };

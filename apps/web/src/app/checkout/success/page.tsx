@@ -6,8 +6,8 @@ import {
   buildOpenGraphLocales,
   buildTenantLabel,
   resolveTenantSeoContext
-} from "../../../lib/seo/metadata";
-import { resolveTenantContext } from "../../../lib/tenants/request";
+} from "@/lib/seo/metadata";
+import { resolveTenantContext } from "@/lib/tenants/request";
 import CheckoutSuccessClient from "./checkout-success-client";
 
 export const generateMetadata = async (): Promise<Metadata> => {

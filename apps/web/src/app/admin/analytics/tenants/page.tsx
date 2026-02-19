@@ -1,11 +1,11 @@
 import { headers } from "next/headers";
 import Link from "next/link";
 
-import AdminChart from "../../../../components/admin/charts/AdminChart";
-import { buildLineChartOption, buildStackedBarOption } from "../../../../components/admin/charts/options";
-import AdminAnalyticsPageScaffold from "../../../../components/admin/analytics/PageScaffold";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../../components/ui/card";
-import type { AdminAnalyticsTenantsResponse, AdminAnalyticsTenantsRow } from "../../../../lib/admin_analytics/types";
+import AdminChart from "@/components/admin/charts/AdminChart";
+import { buildLineChartOption, buildStackedBarOption } from "@/components/admin/charts/options";
+import AdminAnalyticsPageScaffold from "@/components/admin/analytics/PageScaffold";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import type { AdminAnalyticsTenantsResponse, AdminAnalyticsTenantsRow } from "@/lib/admin_analytics/types";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 

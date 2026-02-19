@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 
-import { getDistinctIdFromRequest, parseCookies } from "../../../../lib/analytics/session";
-import { loadPublishedTestById } from "../../../../lib/content/provider";
-import { signResultCookie, RESULT_COOKIE } from "../../../../lib/product/result_cookie";
-import { scoreTest } from "../../../../lib/product/scoring";
-import { upsertAttemptSummary } from "../../../../lib/report/attempt_summary_repo";
-import { sanitizeAttemptSummaryInput } from "../../../../lib/report/report_job_inputs";
+import { getDistinctIdFromRequest, parseCookies } from "@/lib/analytics/session";
+import { loadPublishedTestById } from "@/lib/content/provider";
+import { signResultCookie, RESULT_COOKIE } from "@/lib/product/result_cookie";
+import { scoreTest } from "@/lib/product/scoring";
+import { upsertAttemptSummary } from "@/lib/report/attempt_summary_repo";
+import { sanitizeAttemptSummaryInput } from "@/lib/report/report_job_inputs";
 import {
   DEFAULT_EVENT_BODY_BYTES,
   DEFAULT_EVENT_RATE_LIMIT,
@@ -14,12 +14,12 @@ import {
   assertAllowedOriginAsync,
   assertMaxBodyBytes,
   rateLimit
-} from "../../../../lib/security/request_guards";
+} from "@/lib/security/request_guards";
 import {
   assertAttemptTokenMatchesContext,
   verifyAttemptToken
-} from "../../../../lib/security/attempt_token";
-import { resolveTenantAsync } from "../../../../lib/tenants/resolve";
+} from "@/lib/security/attempt_token";
+import { resolveTenantAsync } from "@/lib/tenants/resolve";
 
 const requireString = (value: unknown): string | null => {
   if (typeof value !== "string") {

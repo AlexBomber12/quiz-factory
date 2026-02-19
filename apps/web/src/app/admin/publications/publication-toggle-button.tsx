@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { ADMIN_CSRF_FORM_FIELD, ADMIN_CSRF_HEADER } from "../../../lib/admin/csrf";
-import { Button } from "../../../components/ui/button";
+import { ADMIN_CSRF_FORM_FIELD, ADMIN_CSRF_HEADER } from "@/lib/admin/csrf";
+import { Button } from "@/components/ui/button";
 
 type PublicationToggleButtonProps = {
   csrfToken: string;

@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { POST } from "./route";
-import { resetRateLimitState } from "../../../../lib/security/request_guards";
-import { RESULT_COOKIE, signResultCookie } from "../../../../lib/product/result_cookie";
-import { getOffer } from "../../../../lib/pricing";
-import { createStripeClient } from "../../../../lib/stripe/client";
-import { buildStripeMetadata } from "../../../../lib/stripe/metadata";
+import { resetRateLimitState } from "@/lib/security/request_guards";
+import { RESULT_COOKIE, signResultCookie } from "@/lib/product/result_cookie";
+import { getOffer } from "@/lib/pricing";
+import { createStripeClient } from "@/lib/stripe/client";
+import { buildStripeMetadata } from "@/lib/stripe/metadata";
 
 vi.mock("../../../../lib/stripe/client", () => ({
   createStripeClient: vi.fn()

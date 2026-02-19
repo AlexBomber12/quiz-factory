@@ -4,7 +4,7 @@ import {
   ADMIN_ANALYTICS_TRAFFIC_DEFAULT_LIMIT,
   ADMIN_ANALYTICS_TRAFFIC_MAX_LIMIT,
   type AdminAnalyticsTrafficOptions
-} from "../../../../../lib/admin_analytics/types";
+} from "@/lib/admin_analytics/types";
 import { executeProviderCall, parseFiltersFromRequest } from "../shared";
 
 const INTEGER_PATTERN = /^\d+$/;

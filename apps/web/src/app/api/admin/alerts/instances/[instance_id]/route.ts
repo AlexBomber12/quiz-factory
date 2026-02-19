@@ -8,12 +8,12 @@ import {
   readAdminCsrfTokenFromFormData,
   readAdminCsrfTokenFromHeader,
   readAdminCsrfTokenFromJson
-} from "../../../../../../lib/admin/csrf";
-import { logAdminEvent } from "../../../../../../lib/admin/audit";
-import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "../../../../../../lib/admin/session";
-import { updateAlertInstanceStatus } from "../../../../../../lib/alerts/repo";
-import { ALERT_INSTANCE_STATUSES, type AlertInstanceStatus } from "../../../../../../lib/alerts/types";
-import { buildRedirectUrl } from "../../../../../../lib/security/redirect_base";
+} from "@/lib/admin/csrf";
+import { logAdminEvent } from "@/lib/admin/audit";
+import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "@/lib/admin/session";
+import { updateAlertInstanceStatus } from "@/lib/alerts/repo";
+import { ALERT_INSTANCE_STATUSES, type AlertInstanceStatus } from "@/lib/alerts/types";
+import { buildRedirectUrl } from "@/lib/security/redirect_base";
 
 type RouteContext = {
   params: Promise<{ instance_id: string }> | { instance_id: string };

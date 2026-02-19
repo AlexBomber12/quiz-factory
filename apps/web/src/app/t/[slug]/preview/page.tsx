@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
 
-import { PublicPage } from "../../../../components/public/PublicPage";
-import { Badge } from "../../../../components/ui/badge";
-import { Button } from "../../../../components/ui/button";
+import { PublicPage } from "@/components/public/PublicPage";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -12,14 +12,14 @@ import {
   CardFooter,
   CardHeader,
   CardTitle
-} from "../../../../components/ui/card";
-import type { LocaleTag } from "../../../../lib/content/types";
-import { loadPublishedTestBySlug } from "../../../../lib/content/provider";
+} from "@/components/ui/card";
+import type { LocaleTag } from "@/lib/content/types";
+import { loadPublishedTestBySlug } from "@/lib/content/provider";
 import {
   RESULT_COOKIE,
   verifyResultCookie
-} from "../../../../lib/product/result_cookie";
-import { ATTEMPT_TOKEN_COOKIE_NAME } from "../../../../lib/security/attempt_token";
+} from "@/lib/product/result_cookie";
+import { ATTEMPT_TOKEN_COOKIE_NAME } from "@/lib/security/attempt_token";
 import {
   buildCanonical,
   buildLocaleAlternatesForPath,
@@ -28,13 +28,13 @@ import {
   buildTenantLabel,
   resolveSeoTestContext,
   resolveTenantSeoContext
-} from "../../../../lib/seo/metadata";
+} from "@/lib/seo/metadata";
 import {
   resolveRouteParams,
   resolveTestMetadataCopy,
   safeLowercaseSlug
-} from "../../../../lib/seo/metadata_safety";
-import { resolveTenantContext } from "../../../../lib/tenants/request";
+} from "@/lib/seo/metadata_safety";
+import { resolveTenantContext } from "@/lib/tenants/request";
 import PreviewAnalytics from "./preview-analytics";
 
 type SlugParams = {

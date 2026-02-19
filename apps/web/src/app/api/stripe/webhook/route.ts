@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 
-import { capturePosthogEvent } from "../../../../lib/analytics/posthog";
-import { assertAllowedMethod } from "../../../../lib/security/request_guards";
-import { createStripeBigQueryStore } from "../../../../lib/stripe/bigquery";
-import { createStripeClient } from "../../../../lib/stripe/client";
-import { createStripeContentDbStore } from "../../../../lib/stripe/content_db";
+import { capturePosthogEvent } from "@/lib/analytics/posthog";
+import { assertAllowedMethod } from "@/lib/security/request_guards";
+import { createStripeBigQueryStore } from "@/lib/stripe/bigquery";
+import { createStripeClient } from "@/lib/stripe/client";
+import { createStripeContentDbStore } from "@/lib/stripe/content_db";
 import type {
   StripeAnalyticsStore,
   StripeDisputeRow,
@@ -12,11 +12,11 @@ import type {
   StripePurchaseRow,
   StripeRefundRow,
   StripeWebhookEventRow
-} from "../../../../lib/stripe/store";
+} from "@/lib/stripe/store";
 import {
   handleStripeWebhookEvent,
   verifyStripeSignature
-} from "../../../../lib/stripe/webhook";
+} from "@/lib/stripe/webhook";
 
 type NamedStripeStore = {
   name: "bigquery" | "content_db";

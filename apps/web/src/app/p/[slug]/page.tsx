@@ -1,7 +1,7 @@
 import Link from "next/link";
 
-import { PublicPage } from "../../../components/public/PublicPage";
-import { Button } from "../../../components/ui/button";
+import { PublicPage } from "@/components/public/PublicPage";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -9,9 +9,9 @@ import {
   CardFooter,
   CardHeader,
   CardTitle
-} from "../../../components/ui/card";
-import { loadPublishedProductBySlug } from "../../../lib/content/provider";
-import { resolveTenantContext } from "../../../lib/tenants/request";
+} from "@/components/ui/card";
+import { loadPublishedProductBySlug } from "@/lib/content/provider";
+import { resolveTenantContext } from "@/lib/tenants/request";
 
 type SlugParams = {
   slug?: string;

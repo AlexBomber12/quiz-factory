@@ -1,15 +1,15 @@
 import { NextResponse } from "next/server";
 
-import { buildBaseEventProperties } from "../../../../lib/analytics/events";
-import { recordAnalyticsEventToContentDb } from "../../../../lib/analytics/event_store";
-import { capturePosthogEvent } from "../../../../lib/analytics/posthog";
+import { buildBaseEventProperties } from "@/lib/analytics/events";
+import { recordAnalyticsEventToContentDb } from "@/lib/analytics/event_store";
+import { capturePosthogEvent } from "@/lib/analytics/posthog";
 import {
   normalizeString,
   parseCookies,
   type ClickIdParams,
   type UtmParams
-} from "../../../../lib/analytics/session";
-import { validateAnalyticsEventPayload } from "../../../../lib/analytics/validate";
+} from "@/lib/analytics/session";
+import { validateAnalyticsEventPayload } from "@/lib/analytics/validate";
 import {
   CREDITS_COOKIE,
   CREDITS_COOKIE_TTL_SECONDS,
@@ -18,15 +18,15 @@ import {
   parseCreditsCookie,
   setLastGrantMetadata,
   serializeCreditsCookie
-} from "../../../../lib/credits";
-import { getOffer, isOfferKey } from "../../../../lib/pricing";
+} from "@/lib/credits";
+import { getOffer, isOfferKey } from "@/lib/pricing";
 import {
   REPORT_TOKEN,
   type ReportTokenPayload,
   signReportToken
-} from "../../../../lib/product/report_token";
-import { sanitizeEnqueueReportJobInput } from "../../../../lib/report/report_job_inputs";
-import { enqueueReportJob } from "../../../../lib/report/report_job_repo";
+} from "@/lib/product/report_token";
+import { sanitizeEnqueueReportJobInput } from "@/lib/report/report_job_inputs";
+import { enqueueReportJob } from "@/lib/report/report_job_repo";
 import {
   DEFAULT_EVENT_BODY_BYTES,
   DEFAULT_EVENT_RATE_LIMIT,
@@ -35,10 +35,10 @@ import {
   assertAllowedOriginAsync,
   assertMaxBodyBytes,
   rateLimit
-} from "../../../../lib/security/request_guards";
-import { createStripeClient } from "../../../../lib/stripe/client";
-import { assertStripeEnvConfigured } from "../../../../lib/stripe/env";
-import { parseStripeMetadata } from "../../../../lib/stripe/metadata";
+} from "@/lib/security/request_guards";
+import { createStripeClient } from "@/lib/stripe/client";
+import { assertStripeEnvConfigured } from "@/lib/stripe/env";
+import { parseStripeMetadata } from "@/lib/stripe/metadata";
 
 const REPORT_TOKEN_TTL_SECONDS = 60 * 60 * 24;
 

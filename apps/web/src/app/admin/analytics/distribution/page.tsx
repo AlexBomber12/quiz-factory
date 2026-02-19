@@ -1,17 +1,17 @@
 import Link from "next/link";
 
-import AdminChart from "../../../../components/admin/charts/AdminChart";
-import { buildHeatmapOption } from "../../../../components/admin/charts/options";
-import AdminAnalyticsPageScaffold from "../../../../components/admin/analytics/PageScaffold";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../../components/ui/card";
-import { getAdminAnalyticsProvider } from "../../../../lib/admin_analytics/provider";
+import AdminChart from "@/components/admin/charts/AdminChart";
+import { buildHeatmapOption } from "@/components/admin/charts/options";
+import AdminAnalyticsPageScaffold from "@/components/admin/analytics/PageScaffold";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { getAdminAnalyticsProvider } from "@/lib/admin_analytics/provider";
 import {
   ADMIN_ANALYTICS_DISTRIBUTION_DEFAULT_LIMIT,
   ADMIN_ANALYTICS_DISTRIBUTION_MAX_LIMIT,
   parseAdminAnalyticsFilters,
   type AdminAnalyticsDistributionOptions,
   type AdminAnalyticsDistributionResponse
-} from "../../../../lib/admin_analytics/types";
+} from "@/lib/admin_analytics/types";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 

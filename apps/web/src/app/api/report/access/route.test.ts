@@ -18,9 +18,9 @@ vi.mock("../../../../lib/report/report_job_repo", () => ({
 }));
 
 import { POST } from "./route";
-import { resetRateLimitState } from "../../../../lib/security/request_guards";
-import { resolveTestIdBySlug } from "../../../../lib/content/catalog";
-import { loadLocalizedTest } from "../../../../lib/content/load";
+import { resetRateLimitState } from "@/lib/security/request_guards";
+import { resolveTestIdBySlug } from "@/lib/content/catalog";
+import { loadLocalizedTest } from "@/lib/content/load";
 import {
   CREDITS_COOKIE,
   consumeCreditForReport,
@@ -29,16 +29,16 @@ import {
   parseCreditsCookie,
   serializeCreditsCookie,
   setLastGrantMetadata
-} from "../../../../lib/credits";
+} from "@/lib/credits";
 import {
   REPORT_TOKEN,
   signReportToken,
   type ReportTokenPayload
-} from "../../../../lib/product/report_token";
-import { RESULT_COOKIE, signResultCookie } from "../../../../lib/product/result_cookie";
-import { issueReportLinkToken } from "../../../../lib/report_link_token";
-import { getReportArtifactByPurchaseId } from "../../../../lib/report/report_artifact_repo";
-import { getReportJobByPurchaseId } from "../../../../lib/report/report_job_repo";
+} from "@/lib/product/report_token";
+import { RESULT_COOKIE, signResultCookie } from "@/lib/product/result_cookie";
+import { issueReportLinkToken } from "@/lib/report_link_token";
+import { getReportArtifactByPurchaseId } from "@/lib/report/report_artifact_repo";
+import { getReportJobByPurchaseId } from "@/lib/report/report_job_repo";
 
 const HOST = "tenant.example.com";
 const TENANT_ID = "tenant-tenant-example-com";

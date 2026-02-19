@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { PublicPage } from "../../../components/public/PublicPage";
-import { buildTestLandingProps } from "../../../components/public/test_landing_props";
-import { Button } from "../../../components/ui/button";
+import { PublicPage } from "@/components/public/PublicPage";
+import { buildTestLandingProps } from "@/components/public/test_landing_props";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -11,9 +11,9 @@ import {
   CardFooter,
   CardHeader,
   CardTitle
-} from "../../../components/ui/card";
-import { resolveTenantTestBySlug } from "../../../lib/catalog/catalog";
-import { loadPublishedTestBySlug } from "../../../lib/content/provider";
+} from "@/components/ui/card";
+import { resolveTenantTestBySlug } from "@/lib/catalog/catalog";
+import { loadPublishedTestBySlug } from "@/lib/content/provider";
 import {
   buildCanonical,
   buildLocaleAlternatesForPath,
@@ -22,18 +22,18 @@ import {
   buildTenantLabel,
   resolveSeoTestContext,
   resolveTenantSeoContext
-} from "../../../lib/seo/metadata";
+} from "@/lib/seo/metadata";
 import {
   resolveRouteParams,
   resolveTestMetadataCopy,
   safeLowercaseSlug
-} from "../../../lib/seo/metadata_safety";
-import { resolveTenantContext, type TenantRequestContext } from "../../../lib/tenants/request";
-import { FaqBlock } from "../../../studio/blocks/FaqBlock";
-import { FooterBlock } from "../../../studio/blocks/FooterBlock";
-import { HeroBlock } from "../../../studio/blocks/HeroBlock";
-import { NavbarBlock } from "../../../studio/blocks/NavbarBlock";
-import { SocialProofBlock } from "../../../studio/blocks/SocialProofBlock";
+} from "@/lib/seo/metadata_safety";
+import { resolveTenantContext, type TenantRequestContext } from "@/lib/tenants/request";
+import { FaqBlock } from "@/studio/blocks/FaqBlock";
+import { FooterBlock } from "@/studio/blocks/FooterBlock";
+import { HeroBlock } from "@/studio/blocks/HeroBlock";
+import { NavbarBlock } from "@/studio/blocks/NavbarBlock";
+import { SocialProofBlock } from "@/studio/blocks/SocialProofBlock";
 
 type SlugParams = {
   slug?: string;

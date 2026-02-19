@@ -1,8 +1,8 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-import { listAdminPublications } from "../../../../../lib/admin/publications";
-import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "../../../../../lib/admin/session";
+import { listAdminPublications } from "@/lib/admin/publications";
+import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "@/lib/admin/session";
 
 const TRUE_BOOLEAN_VALUES = new Set(["1", "true", "yes", "on"]);
 

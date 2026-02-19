@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
 
-import { loadPublishedTestById } from "../../../../../lib/content/provider";
-import { generateLlmReport } from "../../../../../lib/report/llm_report_generator";
-import { PROMPT_VERSION } from "../../../../../lib/report/llm_report_schema";
-import { buildReportBrief, SCORING_VERSION } from "../../../../../lib/report/report_brief";
-import { hasReportArtifact, insertReportArtifact } from "../../../../../lib/report/report_artifact_repo";
-import { getAttemptSummary } from "../../../../../lib/report/attempt_summary_repo";
-import { parseReportJobClaimLimit } from "../../../../../lib/report/report_job_inputs";
-import { claimQueuedJobs, markJobFailed, markJobReady } from "../../../../../lib/report/report_job_repo";
-import { inferStyleIdFromBrief } from "../../../../../lib/report/style_inference";
+import { loadPublishedTestById } from "@/lib/content/provider";
+import { generateLlmReport } from "@/lib/report/llm_report_generator";
+import { PROMPT_VERSION } from "@/lib/report/llm_report_schema";
+import { buildReportBrief, SCORING_VERSION } from "@/lib/report/report_brief";
+import { hasReportArtifact, insertReportArtifact } from "@/lib/report/report_artifact_repo";
+import { getAttemptSummary } from "@/lib/report/attempt_summary_repo";
+import { parseReportJobClaimLimit } from "@/lib/report/report_job_inputs";
+import { claimQueuedJobs, markJobFailed, markJobReady } from "@/lib/report/report_job_repo";
+import { inferStyleIdFromBrief } from "@/lib/report/style_inference";
 
 const DEFAULT_OPENAI_MODEL = "gpt-4o";
 const OPENAI_NOT_CONFIGURED_ERROR = "openai not configured";

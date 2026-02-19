@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { parseCookies } from "../../../../lib/analytics/session";
+import { parseCookies } from "@/lib/analytics/session";
 import {
   CREDITS_COOKIE,
   CREDITS_COOKIE_TTL_SECONDS,
@@ -9,23 +9,23 @@ import {
   parseCreditsCookie,
   serializeCreditsCookie,
   type CreditsState
-} from "../../../../lib/credits";
-import { loadPublishedTestBySlug } from "../../../../lib/content/provider";
-import type { LocalizedTest, TestSpec } from "../../../../lib/content/types";
-import { REPORT_TOKEN, verifyReportToken } from "../../../../lib/product/report_token";
-import { RESULT_COOKIE, verifyResultCookie } from "../../../../lib/product/result_cookie";
-import { getAttemptSummary } from "../../../../lib/report/attempt_summary_repo";
-import { generateLlmReport } from "../../../../lib/report/llm_report_generator";
-import { PROMPT_VERSION } from "../../../../lib/report/llm_report_schema";
-import { buildReportBrief, SCORING_VERSION } from "../../../../lib/report/report_brief";
+} from "@/lib/credits";
+import { loadPublishedTestBySlug } from "@/lib/content/provider";
+import type { LocalizedTest, TestSpec } from "@/lib/content/types";
+import { REPORT_TOKEN, verifyReportToken } from "@/lib/product/report_token";
+import { RESULT_COOKIE, verifyResultCookie } from "@/lib/product/result_cookie";
+import { getAttemptSummary } from "@/lib/report/attempt_summary_repo";
+import { generateLlmReport } from "@/lib/report/llm_report_generator";
+import { PROMPT_VERSION } from "@/lib/report/llm_report_schema";
+import { buildReportBrief, SCORING_VERSION } from "@/lib/report/report_brief";
 import {
   getReportArtifactByPurchaseId,
   type ReportArtifactRecord,
   upsertReportArtifact
-} from "../../../../lib/report/report_artifact_repo";
-import { enqueueReportJob, getReportJobByPurchaseId, markJobReady } from "../../../../lib/report/report_job_repo";
-import { inferStyleIdFromBrief } from "../../../../lib/report/style_inference";
-import { verifyReportLinkToken } from "../../../../lib/report_link_token";
+} from "@/lib/report/report_artifact_repo";
+import { enqueueReportJob, getReportJobByPurchaseId, markJobReady } from "@/lib/report/report_job_repo";
+import { inferStyleIdFromBrief } from "@/lib/report/style_inference";
+import { verifyReportLinkToken } from "@/lib/report_link_token";
 import {
   DEFAULT_EVENT_BODY_BYTES,
   DEFAULT_EVENT_RATE_LIMIT,
@@ -34,8 +34,8 @@ import {
   assertAllowedOriginAsync,
   assertMaxBodyBytes,
   rateLimit
-} from "../../../../lib/security/request_guards";
-import { resolveTenantContext } from "../../../../lib/tenants/request";
+} from "@/lib/security/request_guards";
+import { resolveTenantContext } from "@/lib/tenants/request";
 
 const DEFAULT_OPENAI_MODEL = "gpt-4o";
 

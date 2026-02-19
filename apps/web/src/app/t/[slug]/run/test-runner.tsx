@@ -10,8 +10,8 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 
-import { Badge } from "../../../../components/ui/badge";
-import { Button } from "../../../../components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -19,22 +19,22 @@ import {
   CardFooter,
   CardHeader,
   CardTitle
-} from "../../../../components/ui/card";
-import { Separator } from "../../../../components/ui/separator";
-import type { LocalizedQuestion } from "../../../../lib/content/types";
+} from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import type { LocalizedQuestion } from "@/lib/content/types";
 import {
   completeAttempt,
   emitAttemptEntryPageView,
   startAttempt
-} from "../../../../lib/product/client";
+} from "@/lib/product/client";
 import {
   RESUME_STATE_VERSION,
   clearResumeState,
   loadResumeState,
   saveResumeState,
   type ResumeState
-} from "../../../../lib/product/resume_state";
-import { cn } from "../../../../lib/ui/cn";
+} from "@/lib/product/resume_state";
+import { cn } from "@/lib/ui/cn";
 
 const FLOW_CARD_CLASS_NAME =
   "border-border/70 bg-card/95 shadow-[0_14px_34px_-28px_rgba(15,23,42,0.55)]";

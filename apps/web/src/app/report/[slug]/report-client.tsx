@@ -7,7 +7,7 @@ import GeneratedReport, { parseGeneratedReportJson } from "./generated-report";
 import ReportAnalytics from "./report-analytics";
 import ReportPdfButton from "./report-pdf-button";
 import ReportShare from "./report-share";
-import type { ReportPdfMode } from "../../../lib/report/pdf_mode";
+import type { ReportPdfMode } from "@/lib/report/pdf_mode";
 import {
   DisclaimerSection,
   InterpretationSection,

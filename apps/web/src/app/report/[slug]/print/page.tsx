@@ -2,10 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
 
-import { REPORT_TOKEN, verifyReportToken } from "../../../../lib/product/report_token";
-import { RESULT_COOKIE, verifyResultCookie } from "../../../../lib/product/result_cookie";
-import type { LocaleTag } from "../../../../lib/content/types";
-import { loadPublishedTestBySlug } from "../../../../lib/content/provider";
+import { REPORT_TOKEN, verifyReportToken } from "@/lib/product/report_token";
+import { RESULT_COOKIE, verifyResultCookie } from "@/lib/product/result_cookie";
+import type { LocaleTag } from "@/lib/content/types";
+import { loadPublishedTestBySlug } from "@/lib/content/provider";
 import {
   buildCanonical,
   buildLocaleAlternatesForPath,
@@ -14,14 +14,14 @@ import {
   buildTenantLabel,
   resolveSeoTestContext,
   resolveTenantSeoContext
-} from "../../../../lib/seo/metadata";
+} from "@/lib/seo/metadata";
 import {
   resolveRouteParams,
   resolveTestMetadataCopy,
   safeLowercaseSlug,
   safeTrim
-} from "../../../../lib/seo/metadata_safety";
-import { resolveTenantContext } from "../../../../lib/tenants/request";
+} from "@/lib/seo/metadata_safety";
+import { resolveTenantContext } from "@/lib/tenants/request";
 import styles from "./print.module.css";
 import PrintClient from "./print-client";
 

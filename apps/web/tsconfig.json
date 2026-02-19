@@ -20,6 +20,13 @@
     "types": [
       "vitest/globals"
     ],
+    "baseUrl": ".",
+    "paths": {
+      "@/lib/*": ["src/lib/*"],
+      "@/components/*": ["src/components/*"],
+      "@/app/*": ["src/app/*"],
+      "@/studio/*": ["src/studio/*"]
+    },
     "plugins": [
       {
         "name": "next"

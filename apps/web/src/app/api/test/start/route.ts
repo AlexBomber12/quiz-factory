@@ -1,4 +1,4 @@
-import { handleAnalyticsEvent } from "../../../../lib/analytics/server";
+import { handleAnalyticsEvent } from "@/lib/analytics/server";
 import {
   DEFAULT_EVENT_BODY_BYTES,
   DEFAULT_EVENT_RATE_LIMIT,
@@ -7,7 +7,7 @@ import {
   assertAllowedOriginAsync,
   assertMaxBodyBytes,
   rateLimit
-} from "../../../../lib/security/request_guards";
+} from "@/lib/security/request_guards";
 
 export const POST = async (request: Request): Promise<Response> => {
   const methodResponse = assertAllowedMethod(request, ["POST"]);

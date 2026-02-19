@@ -1,18 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { POST } from "./route";
-import { resetRateLimitState } from "../../../../lib/security/request_guards";
+import { resetRateLimitState } from "@/lib/security/request_guards";
 import {
   CREDITS_COOKIE,
   grantCredits,
   parseCreditsCookie,
   serializeCreditsCookie
-} from "../../../../lib/credits";
-import { REPORT_TOKEN } from "../../../../lib/product/report_token";
-import { createStripeClient } from "../../../../lib/stripe/client";
-import { recordAnalyticsEventToContentDb } from "../../../../lib/analytics/event_store";
-import { capturePosthogEvent } from "../../../../lib/analytics/posthog";
-import { enqueueReportJob } from "../../../../lib/report/report_job_repo";
+} from "@/lib/credits";
+import { REPORT_TOKEN } from "@/lib/product/report_token";
+import { createStripeClient } from "@/lib/stripe/client";
+import { recordAnalyticsEventToContentDb } from "@/lib/analytics/event_store";
+import { capturePosthogEvent } from "@/lib/analytics/posthog";
+import { enqueueReportJob } from "@/lib/report/report_job_repo";
 
 vi.mock("../../../../lib/stripe/client", () => ({
   createStripeClient: vi.fn()

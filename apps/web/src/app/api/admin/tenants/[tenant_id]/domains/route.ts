@@ -8,19 +8,19 @@ import {
   readAdminCsrfTokenFromFormData,
   readAdminCsrfTokenFromHeader,
   readAdminCsrfTokenFromJson
-} from "../../../../../../lib/admin/csrf";
+} from "@/lib/admin/csrf";
 import {
   AdminTenantError,
   addAdminTenantDomain,
   removeAdminTenantDomain
-} from "../../../../../../lib/admin/tenants";
-import { logAdminEvent } from "../../../../../../lib/admin/audit";
+} from "@/lib/admin/tenants";
+import { logAdminEvent } from "@/lib/admin/audit";
 import {
   ADMIN_SESSION_COOKIE,
   verifyAdminSession,
   type AdminSessionPayload
-} from "../../../../../../lib/admin/session";
-import { buildRedirectUrl } from "../../../../../../lib/security/redirect_base";
+} from "@/lib/admin/session";
+import { buildRedirectUrl } from "@/lib/security/redirect_base";
 
 type RouteContext = {
   params: Promise<{ tenant_id: string }> | { tenant_id: string };

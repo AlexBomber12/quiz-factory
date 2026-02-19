@@ -3,9 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { emitReportPdfDownload } from "../../../lib/product/client";
-import type { ReportPdfMode } from "../../../lib/report/pdf_mode";
-import { Button } from "../../../components/ui/button";
+import { emitReportPdfDownload } from "@/lib/product/client";
+import type { ReportPdfMode } from "@/lib/report/pdf_mode";
+import { Button } from "@/components/ui/button";
 
 type ReportPdfButtonProps = {
   testId: string;

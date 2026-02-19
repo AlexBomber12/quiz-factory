@@ -2,13 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
 
-import { createReportKey } from "../../../lib/credits";
-import { REPORT_TOKEN, verifyReportToken } from "../../../lib/product/report_token";
-import { RESULT_COOKIE, verifyResultCookie } from "../../../lib/product/result_cookie";
-import { issueReportLinkToken } from "../../../lib/report_link_token";
-import { resolveReportPdfMode } from "../../../lib/report/pdf_mode";
-import type { LocaleTag } from "../../../lib/content/types";
-import { loadPublishedTestBySlug } from "../../../lib/content/provider";
+import { createReportKey } from "@/lib/credits";
+import { REPORT_TOKEN, verifyReportToken } from "@/lib/product/report_token";
+import { RESULT_COOKIE, verifyResultCookie } from "@/lib/product/result_cookie";
+import { issueReportLinkToken } from "@/lib/report_link_token";
+import { resolveReportPdfMode } from "@/lib/report/pdf_mode";
+import type { LocaleTag } from "@/lib/content/types";
+import { loadPublishedTestBySlug } from "@/lib/content/provider";
 import {
   buildCanonical,
   buildLocaleAlternatesForPath,
@@ -17,14 +17,14 @@ import {
   buildTenantLabel,
   resolveSeoTestContext,
   resolveTenantSeoContext
-} from "../../../lib/seo/metadata";
+} from "@/lib/seo/metadata";
 import {
   resolveRouteParams,
   resolveTestMetadataCopy,
   safeLowercaseSlug,
   safeTrim
-} from "../../../lib/seo/metadata_safety";
-import { resolveTenantContext } from "../../../lib/tenants/request";
+} from "@/lib/seo/metadata_safety";
+import { resolveTenantContext } from "@/lib/tenants/request";
 import ReportClient from "./report-client";
 
 type SlugParams = {

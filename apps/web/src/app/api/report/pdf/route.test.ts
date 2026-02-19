@@ -82,15 +82,15 @@ vi.mock("../../../../lib/report/pdf_renderer", () => ({
 }));
 
 import { POST } from "./route";
-import { resetRateLimitState } from "../../../../lib/security/request_guards";
-import { resolveTestIdBySlug } from "../../../../lib/content/catalog";
-import { loadLocalizedTest } from "../../../../lib/content/load";
-import { REPORT_TOKEN, signReportToken } from "../../../../lib/product/report_token";
-import { RESULT_COOKIE, signResultCookie } from "../../../../lib/product/result_cookie";
+import { resetRateLimitState } from "@/lib/security/request_guards";
+import { resolveTestIdBySlug } from "@/lib/content/catalog";
+import { loadLocalizedTest } from "@/lib/content/load";
+import { REPORT_TOKEN, signReportToken } from "@/lib/product/report_token";
+import { RESULT_COOKIE, signResultCookie } from "@/lib/product/result_cookie";
 import {
   DISTINCT_COOKIE_NAME,
   SESSION_COOKIE_NAME
-} from "../../../../lib/analytics/session";
+} from "@/lib/analytics/session";
 
 const HOST = "tenant.example.com";
 const TENANT_ID = "tenant-tenant-example-com";

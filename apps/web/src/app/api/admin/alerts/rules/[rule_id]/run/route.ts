@@ -8,11 +8,11 @@ import {
   readAdminCsrfTokenFromFormData,
   readAdminCsrfTokenFromHeader,
   readAdminCsrfTokenFromJson
-} from "../../../../../../../lib/admin/csrf";
-import { logAdminEvent } from "../../../../../../../lib/admin/audit";
-import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "../../../../../../../lib/admin/session";
-import { runAlertRules } from "../../../../../../../lib/alerts/engine";
-import { buildRedirectUrl } from "../../../../../../../lib/security/redirect_base";
+} from "@/lib/admin/csrf";
+import { logAdminEvent } from "@/lib/admin/audit";
+import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "@/lib/admin/session";
+import { runAlertRules } from "@/lib/alerts/engine";
+import { buildRedirectUrl } from "@/lib/security/redirect_base";
 
 type RouteContext = {
   params: Promise<{ rule_id: string }> | { rule_id: string };

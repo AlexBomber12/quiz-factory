@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { executeProviderCall, parseFiltersFromRequest } from "../shared";
-import type { AdminAnalyticsOverviewResponse } from "../../../../../lib/admin_analytics/types";
+import type { AdminAnalyticsOverviewResponse } from "@/lib/admin_analytics/types";
 
 const OVERVIEW_CACHE_TTL_MS = 45_000;
 

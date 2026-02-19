@@ -8,11 +8,11 @@ import {
   readAdminCsrfTokenFromFormData,
   readAdminCsrfTokenFromHeader,
   readAdminCsrfTokenFromJson
-} from "../../../../lib/admin/csrf";
-import { logAdminEvent } from "../../../../lib/admin/audit";
-import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "../../../../lib/admin/session";
-import { buildRedirectUrl } from "../../../../lib/security/redirect_base";
-import { resolveTenantAsync } from "../../../../lib/tenants/resolve";
+} from "@/lib/admin/csrf";
+import { logAdminEvent } from "@/lib/admin/audit";
+import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "@/lib/admin/session";
+import { buildRedirectUrl } from "@/lib/security/redirect_base";
+import { resolveTenantAsync } from "@/lib/tenants/resolve";
 
 const parseCsrfToken = async (request: Request): Promise<string | null> => {
   const headerToken = readAdminCsrfTokenFromHeader(request);

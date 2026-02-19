@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { runAlertRules } from "../../../../../lib/alerts/engine";
+import { runAlertRules } from "@/lib/alerts/engine";
 
 const TRUE_VALUES = new Set(["1", "true", "yes", "on"]);
 

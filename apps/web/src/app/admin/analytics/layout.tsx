@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "../../../lib/admin/session";
+import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "@/lib/admin/session";
 
 type AnalyticsLayoutProps = {
   children: ReactNode;

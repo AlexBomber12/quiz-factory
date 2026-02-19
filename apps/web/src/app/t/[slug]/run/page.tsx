@@ -1,17 +1,17 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { PublicPage } from "../../../../components/public/PublicPage";
-import { Button } from "../../../../components/ui/button";
+import { PublicPage } from "@/components/public/PublicPage";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardDescription,
   CardFooter,
   CardHeader,
   CardTitle
-} from "../../../../components/ui/card";
-import type { LocaleTag } from "../../../../lib/content/types";
-import { loadPublishedTestBySlug } from "../../../../lib/content/provider";
+} from "@/components/ui/card";
+import type { LocaleTag } from "@/lib/content/types";
+import { loadPublishedTestBySlug } from "@/lib/content/provider";
 import {
   buildCanonical,
   buildLocaleAlternatesForPath,
@@ -20,13 +20,13 @@ import {
   buildTenantLabel,
   resolveSeoTestContext,
   resolveTenantSeoContext
-} from "../../../../lib/seo/metadata";
+} from "@/lib/seo/metadata";
 import {
   resolveRouteParams,
   resolveTestMetadataCopy,
   safeLowercaseSlug
-} from "../../../../lib/seo/metadata_safety";
-import { resolveTenantContext } from "../../../../lib/tenants/request";
+} from "@/lib/seo/metadata_safety";
+import { resolveTenantContext } from "@/lib/tenants/request";
 import TestRunnerClient from "./test-runner";
 
 type SlugParams = {

@@ -2,26 +2,26 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { Badge } from "../../../../components/ui/badge";
-import { Button } from "../../../../components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle
-} from "../../../../components/ui/card";
+} from "@/components/ui/card";
 import {
   buildImportPreview,
   getDraftByImportId,
   getImportById,
   isValidImportId,
   type ImportDraftRecord
-} from "../../../../lib/admin/imports";
-import { ADMIN_CSRF_FORM_FIELD } from "../../../../lib/admin/csrf";
-import { getAdminCsrfTokenForRender } from "../../../../lib/admin/csrf_server";
-import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "../../../../lib/admin/session";
-import { validateTestSpec } from "../../../../lib/content/validate";
+} from "@/lib/admin/imports";
+import { ADMIN_CSRF_FORM_FIELD } from "@/lib/admin/csrf";
+import { getAdminCsrfTokenForRender } from "@/lib/admin/csrf_server";
+import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "@/lib/admin/session";
+import { validateTestSpec } from "@/lib/content/validate";
 
 type SearchParams = {
   error?: string | string[];
