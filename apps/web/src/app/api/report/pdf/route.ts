@@ -14,15 +14,7 @@ import {
 } from "@/lib/report/pdf_cache";
 import { resolveReportPdfMode } from "@/lib/report/pdf_mode";
 import { renderReportPdf } from "@/lib/report/pdf_renderer";
-import {
-  DEFAULT_EVENT_BODY_BYTES,
-  DEFAULT_EVENT_RATE_LIMIT,
-  assertAllowedHostAsync,
-  assertAllowedMethod,
-  assertAllowedOriginAsync,
-  assertMaxBodyBytes,
-  rateLimit
-} from "@/lib/security/request_guards";
+import { withApiGuards } from "@/lib/security/with_api_guards";
 import { resolveTenantContext } from "@/lib/tenants/request";
 
 type ReportPdfRequestBody = {
@@ -91,32 +83,7 @@ const buildPdfResponse = (
   return new Response(body, { status: 200, headers });
 };
 
-export const POST = async (request: Request): Promise<Response> => {
-  const methodResponse = assertAllowedMethod(request, ["POST"]);
-  if (methodResponse) {
-    return methodResponse;
-  }
-
-  const hostResponse = await assertAllowedHostAsync(request);
-  if (hostResponse) {
-    return hostResponse;
-  }
-
-  const originResponse = await assertAllowedOriginAsync(request);
-  if (originResponse) {
-    return originResponse;
-  }
-
-  const rateLimitResponse = rateLimit(request, DEFAULT_EVENT_RATE_LIMIT);
-  if (rateLimitResponse) {
-    return rateLimitResponse;
-  }
-
-  const bodyResponse = await assertMaxBodyBytes(request, DEFAULT_EVENT_BODY_BYTES);
-  if (bodyResponse) {
-    return bodyResponse;
-  }
-
+export const POST = withApiGuards(async (request: Request): Promise<Response> => {
   const analyticsRequest = request.clone();
   const bodyRequest = request.clone();
   const body = await parseReportPdfBody(bodyRequest);
@@ -206,4 +173,4 @@ export const POST = async (request: Request): Promise<Response> => {
   } catch {
     return buildErrorResponse(500, "Failed to generate PDF.", analyticsResponse);
   }
-};
+}, { methods: ["POST"] });

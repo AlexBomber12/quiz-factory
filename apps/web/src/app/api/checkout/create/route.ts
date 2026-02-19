@@ -3,16 +3,8 @@ import { NextResponse } from "next/server";
 import { getTrackingContextFromRequest, parseCookies } from "@/lib/analytics/session";
 import { loadPublishedTestById } from "@/lib/content/provider";
 import { RESULT_COOKIE, verifyResultCookie } from "@/lib/product/result_cookie";
-import {
-  DEFAULT_EVENT_BODY_BYTES,
-  DEFAULT_EVENT_RATE_LIMIT,
-  assertAllowedHostAsync,
-  assertAllowedMethod,
-  assertAllowedOriginAsync,
-  assertMaxBodyBytes,
-  rateLimit,
-  resolveRequestHost
-} from "@/lib/security/request_guards";
+import { resolveRequestHost } from "@/lib/security/request_guards";
+import { withApiGuards } from "@/lib/security/with_api_guards";
 import {
   DEFAULT_OFFER_KEY,
   getOffer,
@@ -120,32 +112,7 @@ const resolveMetadataMismatches = (
   return mismatches;
 };
 
-export const POST = async (request: Request): Promise<Response> => {
-  const methodResponse = assertAllowedMethod(request, ["POST"]);
-  if (methodResponse) {
-    return methodResponse;
-  }
-
-  const hostResponse = await assertAllowedHostAsync(request);
-  if (hostResponse) {
-    return hostResponse;
-  }
-
-  const originResponse = await assertAllowedOriginAsync(request);
-  if (originResponse) {
-    return originResponse;
-  }
-
-  const rateLimitResponse = rateLimit(request, DEFAULT_EVENT_RATE_LIMIT);
-  if (rateLimitResponse) {
-    return rateLimitResponse;
-  }
-
-  const bodyResponse = await assertMaxBodyBytes(request, DEFAULT_EVENT_BODY_BYTES);
-  if (bodyResponse) {
-    return bodyResponse;
-  }
-
+export const POST = withApiGuards(async (request: Request): Promise<Response> => {
   let body: Record<string, unknown> | null = null;
   try {
     body = requireRecord(await request.json());
@@ -325,4 +292,4 @@ export const POST = async (request: Request): Promise<Response> => {
     checkout_url: session.url,
     stripe_session_id: session.id
   });
-};
+}, { methods: ["POST"] });

@@ -616,7 +616,7 @@ Queue (in order)
   - .env.example updated with documentation
 
 119) PR-REFACTOR-04: API Route Guards Wrapper (withApiGuards)
-- Status: TODO
+- Status: DONE
 - Tasks file: tasks/PR-REFACTOR-04.md
 - Depends on: PR-REFACTOR-01 and PR-REFACTOR-02
 - Outcome:
