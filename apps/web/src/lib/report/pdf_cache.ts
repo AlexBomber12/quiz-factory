@@ -1,6 +1,7 @@
 import { createHash } from "crypto";
 import { promises as fs } from "fs";
 import path from "path";
+import { normalizeStringStrict, parsePositiveInt } from "@/lib/utils/strings";
 
 const DEFAULT_CACHE_DIR = path.join(process.cwd(), ".cache", "report-pdf");
 const DEFAULT_TTL_SECONDS = 60 * 60 * 24;
@@ -23,31 +24,8 @@ export type ReportPdfCacheHit = {
   ageSeconds: number;
 };
 
-const normalizeString = (value: string | undefined | null): string | null => {
-  if (typeof value !== "string") {
-    return null;
-  }
-
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-};
-
-const parsePositiveInt = (value: string | undefined): number | null => {
-  const normalized = normalizeString(value);
-  if (!normalized) {
-    return null;
-  }
-
-  const parsed = Number.parseInt(normalized, 10);
-  if (!Number.isFinite(parsed) || parsed <= 0) {
-    return null;
-  }
-
-  return parsed;
-};
-
 export const resolveReportPdfCacheDir = (): string => {
-  const fromEnv = normalizeString(process.env.REPORT_PDF_CACHE_DIR);
+  const fromEnv = normalizeStringStrict(process.env.REPORT_PDF_CACHE_DIR);
   return fromEnv ?? DEFAULT_CACHE_DIR;
 };
 
@@ -57,7 +35,7 @@ export const resolveReportPdfCacheTtlSeconds = (): number => {
 };
 
 const resolveTemplateSeed = (): string => {
-  const fromEnv = normalizeString(process.env.REPORT_PDF_TEMPLATE_VERSION);
+  const fromEnv = normalizeStringStrict(process.env.REPORT_PDF_TEMPLATE_VERSION);
   return fromEnv ?? DEFAULT_TEMPLATE_VERSION;
 };
 

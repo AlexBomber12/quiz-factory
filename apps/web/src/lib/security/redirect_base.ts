@@ -1,19 +1,13 @@
+import { normalizeStringStrict } from "@/lib/utils/strings";
+
 export type PublicBaseParts = { origin: string; protocol: string; host: string };
 
 const DEFAULT_PROTOCOL = "https";
 const DEFAULT_HOST = "localhost";
 
-const normalizeString = (value: string | null | undefined): string | null => {
-  if (!value) {
-    return null;
-  }
-
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-};
 
 const takeFirst = (value: string | null | undefined): string | null => {
-  const normalized = normalizeString(value);
+  const normalized = normalizeStringStrict(value);
   if (!normalized) {
     return null;
   }
@@ -24,7 +18,7 @@ const takeFirst = (value: string | null | undefined): string | null => {
 };
 
 const normalizeProtocol = (value: string | null | undefined): "http" | "https" | null => {
-  const normalized = normalizeString(value)?.toLowerCase().replace(/:$/, "");
+  const normalized = normalizeStringStrict(value)?.toLowerCase().replace(/:$/, "");
   if (normalized === "http" || normalized === "https") {
     return normalized;
   }
@@ -56,7 +50,7 @@ export const resolvePublicBase = (request: Request): PublicBaseParts => {
   const hostHeader = takeFirst(request.headers.get("host"));
 
   const requestUrl = parseRequestUrl(request);
-  const requestHost = normalizeString(requestUrl?.host);
+  const requestHost = normalizeStringStrict(requestUrl?.host);
   const requestProto = normalizeProtocol(requestUrl?.protocol);
 
   let host = forwardedHost ?? hostHeader ?? requestHost ?? DEFAULT_HOST;

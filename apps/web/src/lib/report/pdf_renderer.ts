@@ -1,3 +1,5 @@
+import { normalizeStringStrict, parsePositiveInt } from "@/lib/utils/strings";
+
 const DEFAULT_RENDER_TIMEOUT_MS = 45_000;
 
 export type ReportPdfCookie = {
@@ -9,29 +11,6 @@ export type ReportPdfRenderOptions = {
   url: string;
   locale: string;
   cookies: ReportPdfCookie[];
-};
-
-const normalizeString = (value: string | undefined | null): string | null => {
-  if (typeof value !== "string") {
-    return null;
-  }
-
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-};
-
-const parsePositiveInt = (value: string | undefined): number | null => {
-  const normalized = normalizeString(value);
-  if (!normalized) {
-    return null;
-  }
-
-  const parsed = Number.parseInt(normalized, 10);
-  if (!Number.isFinite(parsed) || parsed <= 0) {
-    return null;
-  }
-
-  return parsed;
 };
 
 const resolveRenderTimeoutMs = (): number => {
@@ -53,8 +32,8 @@ export const renderReportPdf = async (options: ReportPdfRenderOptions): Promise<
     try {
       const cookieList = options.cookies
         .map((cookie) => ({
-          name: normalizeString(cookie.name),
-          value: normalizeString(cookie.value)
+          name: normalizeStringStrict(cookie.name),
+          value: normalizeStringStrict(cookie.value)
         }))
         .filter(
           (cookie): cookie is { name: string; value: string } =>

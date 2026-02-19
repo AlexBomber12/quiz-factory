@@ -9,19 +9,12 @@ import { getAttemptSummary } from "@/lib/report/attempt_summary_repo";
 import { parseReportJobClaimLimit } from "@/lib/report/report_job_inputs";
 import { claimQueuedJobs, markJobFailed, markJobReady } from "@/lib/report/report_job_repo";
 import { inferStyleIdFromBrief } from "@/lib/report/style_inference";
+import { normalizeString } from "@/lib/utils/strings";
 
 const DEFAULT_OPENAI_MODEL = "gpt-4o";
 const OPENAI_NOT_CONFIGURED_ERROR = "openai not configured";
 const MAX_ERROR_LENGTH = 160;
 
-const normalizeString = (value: unknown): string | null => {
-  if (typeof value !== "string") {
-    return null;
-  }
-
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-};
 
 const resolveModel = (): string => normalizeString(process.env.OPENAI_MODEL) ?? DEFAULT_OPENAI_MODEL;
 

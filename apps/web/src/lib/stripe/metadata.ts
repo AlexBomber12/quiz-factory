@@ -1,5 +1,5 @@
 import type { ClickIdParams, UtmParams } from "../analytics/session";
-import { normalizeString } from "../analytics/session";
+import { normalizeString } from "@/lib/utils/strings";
 
 export type StripeMetadataInput = {
   tenantId?: string | null;

@@ -17,15 +17,8 @@ import {
 import { logAdminEvent } from "@/lib/admin/audit";
 import { buildRedirectUrl } from "@/lib/security/redirect_base";
 import { resolveTenantAsync } from "@/lib/tenants/resolve";
+import { normalizeString } from "@/lib/utils/strings";
 
-const normalizeString = (value: unknown): string | null => {
-  if (typeof value !== "string") {
-    return null;
-  }
-
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-};
 
 const buildLoginRedirect = (request: Request, error?: string): URL => {
   const loginUrl = buildRedirectUrl(request, "/admin/login");

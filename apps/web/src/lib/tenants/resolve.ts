@@ -1,6 +1,6 @@
 import tenantsConfig from "../../../../../config/tenants.json";
 
-import { normalizeString } from "../analytics/session";
+import { normalizeString } from "@/lib/utils/strings";
 import { normalizeHostname, resolveEffectiveHost } from "../security/request_host";
 import { resolveTenantByDomainFromDb } from "./runtime_db";
 import { getTenantsSource } from "./source";

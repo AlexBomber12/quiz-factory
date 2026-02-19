@@ -1,6 +1,8 @@
 import { createHmac, timingSafeEqual } from "crypto";
 
 import { normalizeLocaleTag, type LocaleTag } from "./content/types";
+import { normalizeString } from "@/lib/utils/strings";
+import { encodeBase64Url, decodeBase64Url } from "@/lib/utils/encoding";
 
 export type ReportLinkTokenPayload = {
   tenant_id: string;
@@ -29,15 +31,6 @@ export type ReportLinkTokenInput = {
 };
 
 const DEV_REPORT_LINK_TOKEN_SECRET = "dev-report-token-secret";
-
-const normalizeString = (value: unknown): string | null => {
-  if (typeof value !== "string") {
-    return null;
-  }
-
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-};
 
 const normalizeLocale = (value: unknown): LocaleTag | null => {
   if (typeof value !== "string") {
@@ -99,13 +92,7 @@ const resolveReportLinkTokenSecret = (): string => {
   return DEV_REPORT_LINK_TOKEN_SECRET;
 };
 
-const encodeBase64Url = (value: string): string => {
-  return Buffer.from(value, "utf8").toString("base64url");
-};
 
-const decodeBase64Url = (value: string): string => {
-  return Buffer.from(value, "base64url").toString("utf8");
-};
 
 const signPayload = (payloadEncoded: string): string => {
   return createHmac("sha256", resolveReportLinkTokenSecret())

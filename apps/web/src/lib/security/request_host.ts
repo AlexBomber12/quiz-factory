@@ -1,33 +1,13 @@
+import { normalizeStringStrict, parseBoolean } from "@/lib/utils/strings";
+
 type HeaderLike = Pick<Headers, "get">;
 
 const HOST_PORT_PATTERN = /:\d+$/;
 
-const normalizeString = (value: string | null | undefined): string | null => {
-  if (!value) {
-    return null;
-  }
 
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-};
-
-const parseBoolean = (value: string | undefined): boolean | undefined => {
-  if (!value) {
-    return undefined;
-  }
-
-  const normalized = value.trim().toLowerCase();
-  if (["1", "true", "yes", "on"].includes(normalized)) {
-    return true;
-  }
-  if (["0", "false", "no", "off"].includes(normalized)) {
-    return false;
-  }
-  return undefined;
-};
 
 const takeFirstHost = (value: string | null | undefined): string | null => {
-  const trimmed = normalizeString(value);
+  const trimmed = normalizeStringStrict(value);
   if (!trimmed) {
     return null;
   }

@@ -18,6 +18,7 @@ import {
 import { logAdminEvent } from "@/lib/admin/audit";
 import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "@/lib/admin/session";
 import { buildRedirectUrl } from "@/lib/security/redirect_base";
+import { normalizeString } from "@/lib/utils/strings";
 
 type ParsedCreatePayload = {
   tenant_id: string;
@@ -27,14 +28,6 @@ type ParsedCreatePayload = {
   csrfToken: string | null;
 };
 
-const normalizeString = (value: unknown): string | null => {
-  if (typeof value !== "string") {
-    return null;
-  }
-
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-};
 
 const normalizeBoolean = (value: unknown): boolean | null => {
   if (typeof value === "boolean") {

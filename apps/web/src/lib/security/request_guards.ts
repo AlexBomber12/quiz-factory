@@ -8,6 +8,7 @@ import { parseCookies } from "../analytics/session";
 import { listAllowedHostsFromDb } from "../tenants/runtime_db";
 import { getTenantsSource } from "../tenants/source";
 import { normalizeHostname, resolveEffectiveRequestHost } from "./request_host";
+import { normalizeStringStrict, parsePositiveInt, parseBoolean } from "@/lib/utils/strings";
 
 type TenantConfig = {
   tenant_id: string;
@@ -42,17 +43,8 @@ export const DEFAULT_EVENT_RATE_LIMIT: RateLimitOptions = {
   maxRequests: 60
 };
 
-const normalizeString = (value: string | null | undefined): string | null => {
-  if (!value) {
-    return null;
-  }
-
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-};
-
 const normalizeOrigin = (originHeader: string | null | undefined): string | null => {
-  const trimmed = normalizeString(originHeader);
+  const trimmed = normalizeStringStrict(originHeader);
   if (!trimmed) {
     return null;
   }
@@ -182,36 +174,10 @@ const isAllowedOriginAsync = async (
   return isAllowedHostAsync(originHost);
 };
 
-const parseBoolean = (value: string | undefined): boolean | undefined => {
-  if (!value) {
-    return undefined;
-  }
 
-  const normalized = value.trim().toLowerCase();
-  if (["1", "true", "yes", "on"].includes(normalized)) {
-    return true;
-  }
-  if (["0", "false", "no", "off"].includes(normalized)) {
-    return false;
-  }
-  return undefined;
-};
-
-const parsePositiveInt = (value: string | undefined): number | undefined => {
-  if (!value) {
-    return undefined;
-  }
-
-  const parsed = Number.parseInt(value, 10);
-  if (!Number.isFinite(parsed) || parsed <= 0) {
-    return undefined;
-  }
-
-  return parsed;
-};
 
 const parseForwardedFor = (value: string | null): string | null => {
-  const trimmed = normalizeString(value);
+  const trimmed = normalizeStringStrict(value);
   if (!trimmed) {
     return null;
   }
@@ -257,7 +223,7 @@ const resolveRateLimitKey = (
   request: Request
 ): { key: string | null; error: Response | null } => {
   const cookies = parseCookies(request.headers.get("cookie"));
-  const distinctId = normalizeString(cookies[DISTINCT_COOKIE_NAME]);
+  const distinctId = normalizeStringStrict(cookies[DISTINCT_COOKIE_NAME]);
   if (distinctId) {
     return { key: `distinct:${distinctId}`, error: null };
   }

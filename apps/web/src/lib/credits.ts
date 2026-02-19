@@ -1,4 +1,6 @@
 import { createHmac, timingSafeEqual } from "crypto";
+import { normalizeString } from "@/lib/utils/strings";
+import { encodeBase64Url, decodeBase64Url } from "@/lib/utils/encoding";
 
 export const CREDITS_COOKIE = "QF_CREDITS";
 export const CREDITS_COOKIE_TTL_SECONDS = 60 * 60 * 24 * 365;
@@ -49,15 +51,6 @@ export type CreditsState = {
   grant_filter: string | null;
   last_grant: CreditsGrantMetadata | null;
   payload: CreditsCookiePayload;
-};
-
-const normalizeString = (value: unknown): string | null => {
-  if (typeof value !== "string") {
-    return null;
-  }
-
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
 };
 
 const normalizeNonNegativeInt = (value: unknown): number => {
@@ -183,13 +176,7 @@ const getCookieValue = (cookies: CookieSource, name: string): string | null => {
   return typeof value === "string" ? value : null;
 };
 
-const encodeBase64Url = (value: string): string => {
-  return Buffer.from(value, "utf8").toString("base64url");
-};
 
-const decodeBase64Url = (value: string): string => {
-  return Buffer.from(value, "base64url").toString("utf8");
-};
 
 const resolveCreditsCookieSecret = (): string => {
   const secret = normalizeString(process.env.REPORT_TOKEN_SECRET);

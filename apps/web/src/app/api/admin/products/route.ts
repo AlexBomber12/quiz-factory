@@ -13,20 +13,13 @@ import { logAdminEvent } from "@/lib/admin/audit";
 import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "@/lib/admin/session";
 import { createProduct, ProductRepoError } from "@/lib/content_db/products_repo";
 import { buildRedirectUrl } from "@/lib/security/redirect_base";
+import { normalizeString } from "@/lib/utils/strings";
 
 type ParsedRequest = {
   slug: string;
   csrfToken: string | null;
 };
 
-const normalizeString = (value: unknown): string | null => {
-  if (typeof value !== "string") {
-    return null;
-  }
-
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-};
 
 const prefersJson = (request: Request): boolean => {
   const accept = request.headers.get("accept") ?? "";

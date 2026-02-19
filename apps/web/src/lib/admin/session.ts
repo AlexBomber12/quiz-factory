@@ -1,3 +1,5 @@
+import { normalizeString } from "@/lib/utils/strings";
+
 const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
 
@@ -14,14 +16,6 @@ export const ADMIN_SESSION_TTL_SECONDS = 60 * 60 * 12;
 const ADMIN_ROLES = new Set<AdminRole>(["admin", "editor"]);
 const keyCache = new Map<string, Promise<CryptoKey>>();
 
-const normalizeString = (value: unknown): string | null => {
-  if (typeof value !== "string") {
-    return null;
-  }
-
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-};
 
 const toBase64 = (bytes: Uint8Array): string => {
   let binary = "";

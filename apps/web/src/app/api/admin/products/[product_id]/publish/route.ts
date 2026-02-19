@@ -16,6 +16,7 @@ import {
   ProductRepoError
 } from "@/lib/content_db/products_repo";
 import { buildRedirectUrl } from "@/lib/security/redirect_base";
+import { normalizeString } from "@/lib/utils/strings";
 
 type RouteContext = {
   params: Promise<{ product_id: string }> | { product_id: string };
@@ -34,14 +35,6 @@ const resolveParams = async (
   return Promise.resolve(params);
 };
 
-const normalizeString = (value: unknown): string | null => {
-  if (typeof value !== "string") {
-    return null;
-  }
-
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-};
 
 const parseBoolean = (value: unknown): boolean | null => {
   if (typeof value === "boolean") {

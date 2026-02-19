@@ -5,6 +5,7 @@ import { getContentDbPool } from "../content_db/pool";
 import { normalizeHostname } from "../security/request_host";
 import { invalidateTenantRuntimeCache } from "../tenants/runtime_db";
 import { getTenantsSource, type TenantsSource } from "../tenants/source";
+import { normalizeString } from "@/lib/utils/strings";
 
 type TenantRegistryEntryRaw = {
   tenant_id: string;
@@ -98,14 +99,6 @@ const TENANT_ID_PATTERN = /^tenant-[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const TRUE_VALUES = new Set(["1", "true", "yes", "on"]);
 const FALSE_VALUES = new Set(["0", "false", "no", "off"]);
 
-const normalizeString = (value: unknown): string | null => {
-  if (typeof value !== "string") {
-    return null;
-  }
-
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-};
 
 const normalizeCount = (value: number | null | undefined): number => {
   if (typeof value !== "number" || !Number.isFinite(value)) {
